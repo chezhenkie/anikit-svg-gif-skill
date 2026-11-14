@@ -29,22 +29,22 @@ def run(script, *args):
 
 
 def ascii_sample():
-    lines = []
+    frames = []
     for pct in (0, 20, 40, 60, 80, 100):
         filled = round(pct / 100 * 22)
         bar = ESC + "[38;5;51m" + "#" * filled + ESC + "[38;5;240m" + "-" * (22 - filled)
-        lines.append("animated gif")
-        lines.append("  [" + bar + ESC + "[0m] " + ESC + "[38;5;231m" + "%3d%%" % pct + ESC + "[0m")
-        lines.append("ascii route")
-    text = ""
-    for i in range(0, len(lines), 3):
-        if i:
-            text += "---\n"
-        text += "\n".join(lines[i:i + 3]) + "\n"
+        frame = [
+            "  ",
+            "  animated gif          ",
+            "  [" + bar + ESC + "[0m] " + ESC + "[38;5;231m" + "%3d%%" % pct + ESC + "[0m  ",
+            "  ascii route           ",
+            "  ",
+        ]
+        frames.append("\n".join(frame))
     src = WORK / "loader.txt"
-    src.write_text(text, encoding="ascii")
-    run("ascii_gif.py", src, "-o", DOCS / "ascii.gif",
-        "--size", 22, "--delay", 140, "--bg", "#0b0d12")
+    src.write_text("\n---\n".join(frames) + "\n", encoding="ascii")
+    run("ascii_gif.py", src, "-o", DOCS / "ascii-loader.gif",
+        "--size", 24, "--delay", 140, "--bg", "#0b0d12")
 
 
 def pics_sample():
@@ -92,7 +92,7 @@ def main():
     ascii_sample()
     pics_sample()
     svg_sample()
-    for name in ("ascii.gif", "pics.gif", "svg.gif"):
+    for name in ("ascii-loader.gif", "pics.gif", "svg.gif"):
         path = DOCS / name
         print("%s  %.1f KB" % (name, path.stat().st_size / 1024.0))
     return 0
