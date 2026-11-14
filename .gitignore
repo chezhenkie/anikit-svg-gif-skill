@@ -1,0 +1,11 @@
+# scratch runs: fixtures, checks, docs generation
+scratch/
+# Python bytecode
+__pycache__/
+*.pyc
+# logs
+*.log
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
