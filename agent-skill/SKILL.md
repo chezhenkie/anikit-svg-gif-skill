@@ -3,7 +3,7 @@ name: animated-gif
 description: "Build animated GIFs from ASCII text frames, a folder of images, or an SVG or HTML animation, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, animate ASCII art, turn photos into a slideshow GIF, or animate an SVG."
 license: MIT
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 # Animated GIF
@@ -106,7 +106,7 @@ frames = [Image.new("RGB", (320, 180), (n * 20, 40, 90)) for n in range(12)]
 gifkit.write_gif(frames, "project/gradient.gif", [100] * 12)
 ```
 
-`write_gif` builds one palette, merges identical consecutive frames, writes atomically and verifies the result. Use this route for data animations, generated diagrams or any frames the four tools do not cover.
+`write_gif` builds one palette, merges identical consecutive frames, writes atomically and verifies the result. Use this route for data animations, generated diagrams or any frames these routes do not cover.
 
 ## Contract
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+### Fixes
+
+* Corrected the route count in the custom frames section.
+
 ## 0.1.0
 
 ### New features
