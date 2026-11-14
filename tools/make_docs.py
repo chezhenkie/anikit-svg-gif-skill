@@ -31,8 +31,8 @@ def run(script, *args):
 def ascii_sample():
     frames = []
     for pct in (0, 20, 40, 60, 80, 100):
-        filled = round(pct / 100 * 22)
-        bar = ESC + "[38;5;51m" + "#" * filled + ESC + "[38;5;240m" + "-" * (22 - filled)
+        filled = round(pct / 100 * 16)
+        bar = ESC + "[38;5;51m" + "#" * filled + ESC + "[38;5;240m" + "-" * (16 - filled)
         frame = [
             "  ",
             "  animated gif          ",
@@ -43,8 +43,9 @@ def ascii_sample():
         frames.append("\n".join(frame))
     src = WORK / "loader.txt"
     src.write_text("\n---\n".join(frames) + "\n", encoding="ascii")
-    run("ascii_gif.py", src, "-o", DOCS / "ascii-loader.gif",
-        "--size", 24, "--delay", 140, "--bg", "#0b0d12")
+    run("ascii_gif.py", src, "-o", DOCS / "demo-ascii.gif",
+        "--size", 28, "--delay", 140, "--width", 480, "--height", 270,
+        "--bg", "#0b0d12")
 
 
 def pics_sample():
@@ -62,9 +63,9 @@ def pics_sample():
         else:
             d.polygon([(320, 70), (455, 330), (185, 330)], fill=(245, 245, 240))
         im.save(folder / ("card-%d.png" % (i + 1)))
-    run("pics_gif.py", folder, "-o", DOCS / "pics.gif",
+    run("pics_gif.py", folder, "-o", DOCS / "demo-pics.gif",
         "--mode", "crossfade", "--fps", 10, "--hold", 0.6,
-        "--transition", 0.3, "--width", 460)
+        "--transition", 0.3, "--width", 480, "--height", 270)
 
 
 def svg_sample():
@@ -79,7 +80,7 @@ def svg_sample():
         '<circle cx="178" cy="186" r="18" fill="#7aa2ff"/>'
         '<circle cx="240" cy="150" r="7" fill="#e6edf6"/>'
         '</g></svg>', encoding="utf-8")
-    run("svg_gif.py", svg, "-o", DOCS / "svg.gif",
+    run("svg_gif.py", svg, "-o", DOCS / "demo-svg.gif",
         "--animate", "rotate", "--selector", "#ring",
         "--duration", 2, "--fps", 12, "--background", "#0b0d12")
 
@@ -92,7 +93,7 @@ def main():
     ascii_sample()
     pics_sample()
     svg_sample()
-    for name in ("ascii-loader.gif", "pics.gif", "svg.gif"):
+    for name in ("demo-ascii.gif", "demo-pics.gif", "demo-svg.gif"):
         path = DOCS / name
         print("%s  %.1f KB" % (name, path.stat().st_size / 1024.0))
     return 0

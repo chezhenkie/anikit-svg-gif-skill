@@ -137,8 +137,8 @@ def find_font(explicit, size):
         return ImageFont.load_default(), "pillow default"
 
 
-def render_frames(frames, font, line_h, advance, fg_default, bg):
-    """Draw every frame at the global grid size."""
+def render_frames(frames, font, line_h, advance, fg_default, bg, canvas=None):
+    """Draw every frame at the global grid size, optionally centered on a fixed canvas."""
     grids = []
     cols = 0
     rows = 0
@@ -152,16 +152,26 @@ def render_frames(frames, font, line_h, advance, fg_default, bg):
 
     w = max(1, int(round(cols * advance)))
     h = max(1, int(round(rows * line_h)))
+    if canvas:
+        cw, ch = canvas
+        if cw < w or ch < h:
+            raise gifkit.GifError(
+                "canvas %dx%d is smaller than the %dx%d text grid" % (cw, ch, w, h))
+        out_w, out_h = cw, ch
+        ox, oy = (cw - w) // 2, (ch - h) // 2
+    else:
+        out_w, out_h = w, h
+        ox, oy = 0, 0
     images = []
     for grid in grids:
-        im = Image.new("RGB", (w, h), bg)
+        im = Image.new("RGB", (out_w, out_h), bg)
         d = ImageDraw.Draw(im)
         for r, line in enumerate(grid):
-            y = r * line_h
+            y = oy + r * line_h
             for c, (ch, color) in enumerate(line):
                 if ch == " ":
                     continue
-                d.text((c * advance, y), ch, font=font, fill=color)
+                d.text((ox + c * advance, y), ch, font=font, fill=color)
         images.append(im)
     return images
 
@@ -173,6 +183,8 @@ def main(argv=None):
     p.add_argument("-o", "--out", default="ascii.gif", help="output GIF path")
     p.add_argument("--font", help="monospace TTF/TTC path")
     p.add_argument("--size", type=int, default=28, help="font size in px")
+    p.add_argument("--width", type=int, help="fixed canvas width in px, centers the text grid")
+    p.add_argument("--height", type=int, help="fixed canvas height in px, requires --width")
     p.add_argument("--fg", default="#e6edf6", help="default glyph color")
     p.add_argument("--bg", default="#0a0d12", help="canvas color")
     p.add_argument("--delay", type=int, default=100, help="default frame delay in ms")
@@ -185,6 +197,13 @@ def main(argv=None):
     try:
         fg = gifkit.parse_color(args.fg)
         bg = gifkit.parse_color(args.bg)
+        if (args.width is None) != (args.height is None):
+            raise gifkit.GifError("--width and --height must be given together")
+        canvas = None
+        if args.width is not None:
+            if args.width < 8 or args.height < 8:
+                raise gifkit.GifError("canvas width and height must be at least 8")
+            canvas = (args.width, args.height)
         frames = load_frames(args.input, max(gifkit.MIN_DELAY_MS, args.delay))
         font, font_name = find_font(args.font, args.size)
         if "default" in font_name:
@@ -196,7 +215,7 @@ def main(argv=None):
         if abs(font.getlength("i") - advance) > 0.5:
             print("WARN font is not monospace, columns may not line up",
                   file=sys.stderr)
-        images = render_frames(frames, font, line_h, advance, fg, bg)
+        images = render_frames(frames, font, line_h, advance, fg, bg, canvas)
         delays = [delay for _lines, delay in frames]
         result = gifkit.write_gif(images, args.out, delays, loop=args.loop,
                                   colors=args.colors, dither=args.dither)

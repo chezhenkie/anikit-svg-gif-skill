@@ -50,6 +50,7 @@ python bin/ascii_gif.py frames/ -o project/loader.gif --preview project/loader.p
 ```
 
 - `--font` must be a monospace TTF or TTC; common monospace fonts are auto-detected when it is omitted.
+- `--width` and `--height` fix the canvas and center the text grid. Give both, or neither. Use this to match a size across several samples.
 - `--fg` and `--bg` default to light text on a near-black canvas.
 - `--delay` is the default frame delay; separator delays override it per frame.
 - Keep frames within about 120 columns and 40 rows; larger canvases make long GIFs.

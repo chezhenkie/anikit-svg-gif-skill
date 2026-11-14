@@ -87,6 +87,12 @@ def test_ascii():
     require(hashlib.sha256(out.read_bytes()).digest()
             == hashlib.sha256(again.read_bytes()).digest(), "ascii not deterministic")
 
+    fixed = WORK / "ascii-fixed.gif"
+    run("ascii_gif.py", src, "-o", fixed, "--size", 24,
+        "--width", 320, "--height", 160)
+    _fc, _ft, fsize, _ff = gif_info(fixed)
+    require(fsize == (320, 160), "ascii fixed canvas %s" % (fsize,))
+
 
 def make_pics(count=3):
     folder = WORK / "pics"
