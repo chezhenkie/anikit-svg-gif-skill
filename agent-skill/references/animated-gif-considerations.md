@@ -74,13 +74,6 @@ def scaled_durations(runs, speed):
 - JS-driven canvas and WebGL pages are outside this tool. They need a frame hook that renders at a requested time, or pre-rendered frames.
 - External web fonts and network assets make capture slow and non-deterministic. Inline them when possible.
 
-## Video
-
-- Sample at the GIF rate, not the source rate. Extract frames with ffmpeg, then assemble with the shared palette.
-- Trim before conversion. Duration times fps is the frame count, and every frame goes into memory.
-- Scale width explicitly; height follows the aspect and must stay even for common codecs.
-- Video is truecolor and noisy. Expect a visible palette step at low color counts; dithering helps photographs but grows the file.
-
 ## Scaling and size
 
 - Render at the target size. If downscaling, resize each frame with LANCZOS; resizing the finished GIF does not work.

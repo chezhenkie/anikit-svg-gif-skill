@@ -1,31 +1,29 @@
 ---
 name: animated-gif
-description: "Build animated GIFs from ASCII text frames, a folder of images, an SVG or HTML animation, or a video clip, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, animate ASCII art, turn photos into a slideshow GIF, animate an SVG, or convert a video to GIF."
+description: "Build animated GIFs from ASCII text frames, a folder of images, or an SVG or HTML animation, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, animate ASCII art, turn photos into a slideshow GIF, or animate an SVG."
 license: MIT
 metadata:
-  version: "1.0"
+  version: "0.1.0"
 ---
 
 # Animated GIF
 
-Four tools, one assembly core. Pick the route that matches the input.
+Three tools, one assembly core. Pick the route that matches the input.
 
 | Input | Tool | Motion |
 |---|---|---|
 | Text frames with ANSI colors | `bin/ascii_gif.py` | frame sequence |
 | Folder of photos or images | `bin/pics_gif.py` | holds, crossfade, Ken Burns |
 | SVG or HTML animation | `bin/svg_gif.py` | SMIL, CSS, or preset rotate/pulse/fade |
-| Video clip | `bin/video_gif.py` | sampled at a fixed rate |
 
 All routes share `bin/gifkit.py`: one palette across the loop, 10 ms timing grid, identical consecutive frames merged into longer delays, atomic write, read-back verification.
 
 ## Dependencies
 
-Pillow is required. Video needs ffmpeg on PATH. SVG and HTML need Node with Playwright and a Chromium headless shell.
+Pillow is required. SVG and HTML need Node with Playwright and a Chromium headless shell.
 
 ```powershell
 python -c "import PIL; print(PIL.__version__)"
-ffmpeg -version
 node -e "require('playwright')"
 npx playwright install chromium --only-shell
 ```
@@ -86,19 +84,6 @@ python bin/svg_gif.py page.html -o project/page.gif --width 960 --height 540 --d
 - `--dpr 2` captures at twice the viewport, for sharper text; the GIF is then twice the pixel size.
 - JS-driven canvas or WebGL pages are not driven by this tool. Use a page that exposes a frame hook, or pre-render frames and assemble them with gifkit.
 
-## Video route
-
-ffmpeg extracts PNG frames, then gifkit builds the palette and writes the GIF. Nothing is left in temp.
-
-```powershell
-python bin/video_gif.py clip.mp4 -o project/clip.gif --fps 12 --width 800 --start 2 --duration 3
-```
-
-- `--fps` is the GIF rate, not the source rate. 10-15 is usually enough.
-- `--width` scales the source; height follows the aspect and stays even.
-- `--start` and `--duration` trim in seconds. Without `--duration`, the whole remaining clip is converted.
-- A 30 s clip at 12 fps is 360 frames; trim first.
-
 ## Shared options
 
 - `--colors` up to 255. Lower it only when the palette is simple or the file must shrink.
@@ -157,7 +142,6 @@ See [references/animated-gif-considerations.md](references/animated-gif-consider
 - `bin/pics_gif.py` - image folder to GIF.
 - `bin/svg_gif.py` - SVG/HTML animation to GIF.
 - `bin/render_frames.cjs` - Playwright frame capture helper.
-- `bin/video_gif.py` - video to GIF through ffmpeg.
 - `references/animated-gif-considerations.md` - format notes.
 
 Repository checks and sample generation are in `tools/`, outside the installed skill payload.

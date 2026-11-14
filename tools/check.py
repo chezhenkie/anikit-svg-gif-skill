@@ -191,26 +191,6 @@ def test_svg():
     require(differing(pframes[0], pframes[4]), "svg preset did not move")
 
 
-def test_video():
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        raise Skip("ffmpeg not installed")
-    clip = WORK / "clip.mp4"
-    proc = subprocess.run(
-        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-         "-f", "lavfi", "-i", "testsrc=size=320x240:rate=15", "-t", "1.5",
-         "-pix_fmt", "yuv420p", str(clip)], capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise Fail("ffmpeg fixture failed: %s" % proc.stderr.strip()[-200:])
-    out = WORK / "video.gif"
-    run("video_gif.py", clip, "-o", out, "--fps", 8, "--width", 240,
-        "--duration", 1)
-    count, total, size, _frames = gif_info(out)
-    require(count == 8, "video frames %d" % count)
-    require(total == 960, "video duration %d" % total)
-    require(size == (240, 180), "video size %s" % (size,))
-
-
 def test_errors():
     bad = WORK / "missing.txt"
     proc = run("ascii_gif.py", bad, "-o", WORK / "nope.gif", expect=1)
@@ -277,7 +257,6 @@ TESTS = [
     ("ascii route", test_ascii),
     ("pics route", test_pics),
     ("svg route", test_svg),
-    ("video route", test_video),
     ("error contract", test_errors),
     ("repository hygiene", test_hygiene),
 ]
