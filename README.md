@@ -49,7 +49,7 @@ The tools are written for Windows, Linux and macOS: no drive letters, no hardcod
 The skill payload is in `agent-skill/`. Clone the repository, then copy that folder into the skills folder for your agent and name the copy `animated-gif`. The folder name must match the `name` in `SKILL.md`.
 
 ```sh
-git clone https://github.com/chezhenkie/animated-gif-skill.git
+git clone https://github.com/chezhenkie/anikit-svg-gif-skill.git
 ```
 
 | Agent | All projects | One project |
@@ -59,14 +59,14 @@ git clone https://github.com/chezhenkie/animated-gif-skill.git
 | Pi | `~/.pi/agent/skills` | `.pi/skills` |
 | OMP | `~/.omp/agent/skills` | `.omp/skills` |
 
-Copy `animated-gif-skill/agent-skill` to the path from the table as `animated-gif`. `~` is your home directory; if your shell does not expand it, use the full path. For example:
+Copy `anikit-svg-gif-skill/agent-skill` to the path from the table as `animated-gif`. `~` is your home directory; if your shell does not expand it, use the full path. For example:
 
 ```powershell
-Copy-Item -Recurse animated-gif-skill/agent-skill "$HOME/.config/opencode/skills/animated-gif"
+Copy-Item -Recurse anikit-svg-gif-skill/agent-skill "$HOME/.config/opencode/skills/animated-gif"
 ```
 
 ```sh
-cp -r animated-gif-skill/agent-skill ~/.config/opencode/skills/animated-gif
+cp -r anikit-svg-gif-skill/agent-skill ~/.config/opencode/skills/animated-gif
 ```
 
 Codex scans `.agents/skills` from the current folder up to the repository root. Pi and OMP scan one level under `skills/`. Restart the agent if the skill does not appear.

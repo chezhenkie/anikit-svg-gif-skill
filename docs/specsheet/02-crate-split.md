@@ -4,17 +4,17 @@ Status: agreed direction, not implemented. Package naming is open in 09, row 7; 
 
 ## 2.1 Crates
 
-Seven crates, one binary.
+Seven crates, one binary. Every package carries the `anikit-` prefix; this part and the parts after it use the short name, so `tween` means `anikit-tween`.
 
-| crate | kind | owns |
+| package | kind | owns |
 |---|---|---|
-| core | lib | frame buffer and pixel format, palette rules, quantisation interface, GIF writer, readback verification, the error type |
-| time | lib | presentation times, the 10 ms grid, cumulative rounding, the frame plan, loop modes |
-| tween | lib | timeline, tracks, keys, easing, property values, layers and composition |
-| render-text | lib | glyph grid, ANSI SGR parsing, font discovery and metrics |
-| render-raster | lib | image decoding, EXIF rotation, fit, Ken Burns, crossfade, pixel adjustments |
-| render-svg | lib | browser discovery, page construction, seek and capture, preset animation |
-| cli | bin | argument parsing, route dispatch, messages, exit codes, preview output |
+| anikit-core | lib | frame buffer and pixel format, palette rules, quantisation interface, GIF writer, readback verification, the error type |
+| anikit-time | lib | presentation times, the 10 ms grid, cumulative rounding, the frame plan, loop modes |
+| anikit-tween | lib | timeline, tracks, keys, easing, property values, layers and composition |
+| anikit-render-text | lib | glyph grid, ANSI SGR parsing, font discovery and metrics |
+| anikit-render-raster | lib | image decoding, EXIF rotation, fit, Ken Burns, crossfade, pixel adjustments |
+| anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation |
+| anikit-cli | bin | argument parsing, route dispatch, messages, exit codes, preview output |
 
 There is no render-web crate. HTML and JavaScript pages are out of scope for the port, so the vector route handles SVG plus pages whose animation is CSS, WAAPI or SMIL.
 
@@ -44,6 +44,6 @@ One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer
 
 ## 2.4 Binary and subcommands
 
-One binary, because the three routes share the core and a second executable would duplicate the writer and the error contract. The route is selected by a subcommand that matches the current script name, so `ascii`, `images` and `vector` replace `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`.
+One binary, `anikit` (`anikit.exe` on Windows), because the three routes share the core and a second executable would duplicate the writer and the error contract. The route is selected by a subcommand that matches the current script name, so `anikit ascii`, `anikit images` and `anikit vector` replace `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`.
 
-The package and binary names are open in 09, row 7. The skill's invocation table in README.md is updated in the same change that introduces the binary.
+The binary is produced by the `anikit-cli` package; the other packages are libraries and ship no executable. The skill's invocation table in README.md is updated in the same change that introduces the binary.

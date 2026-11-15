@@ -1,5 +1,7 @@
 # scratch runs: fixtures, checks, docs generation
 scratch/
+# Rust build output
+rust/target/
 # Python bytecode
 __pycache__/
 *.pyc

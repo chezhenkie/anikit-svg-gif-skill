@@ -10,16 +10,17 @@ Status: living document. One row per question. Status is `open`, `decided` or `p
 | 4 | Duplicate key times: reject, or allow a hold? | Allow only when the earlier key holds | decided | Allowed only as a hold; lookup takes the last key at or before the time. Part 04. |
 | 5 | Repetition: inside the timeline or outside it? | Outside, as a time map | decided | Loop mode and rate live in `Timing`; play count lives in the frame plan. Part 04. |
 | 6 | Mesh warp for raster keys: in the first version? | No | decided | Out of the first version; crossfade and affine cover the GIF cases. Part 06. |
-| 7 | Package and binary naming | `gifkit`, with subcommands `ascii`, `images`, `vector` | open | The crate name and the binary name are one decision because the skill calls the binary by name. |
+| 7 | Package and binary naming | `anikit-` package prefix, binary `anikit` | decided | Packages `anikit-core`, `anikit-time`, `anikit-tween`, `anikit-render-text`, `anikit-render-raster`, `anikit-render-svg`, `anikit-cli`. One binary, `anikit` (`anikit.exe` on Windows), built by `anikit-cli`. Part 02. |
 | 8 | Cargo features for optional routes | None; the crate split is the split | open | Features would let one build drop the browser route, but the skill installs all three. |
 | 9 | Animated GIF or WebP as an image source | Expand every frame, route timing wins | open | The frozen Python reads frame 1 only and says nothing. Expansion needs its own delays reconciled with `--hold` and `--fps`. |
 | 10 | Alpha policy on the way into GIF | Matte onto `--bg`, no semi-transparent output | open | GIF has 1-bit alpha. A matte is predictable; a threshold is sharper for text. |
 | 11 | Font asset for the text route | No bundled font; system discovery plus an override | open | Bundling fixes metrics across platforms at the cost of repository size and licence review. Tests need a fixture font either way. |
 | 12 | Route order and Python deletion | Text, images, vector; delete each after its tests pass, core last | open | Not decided. The tag `python-freeze` marks the reference point either way. |
 | 13 | When the tween crate is built | After the Rust workspace exists | decided | It depends on `time` and `core` types, so it cannot be built before them. Parts 04 to 07 are its specification. |
+| 14 | Repository name and release tags | `anikit-svg-gif-skill`; lightweight `vX.Y.Z` tags, existing tags kept | decided | The GitHub repository was renamed from `animated-gif-skill`, which keeps redirects. Tags `v0.1.0`, `v0.1.1` and `python-freeze` remain. The installed skill folder stays `animated-gif` because the folder name must match `SKILL.md`. |
 
 ## Notes
 
-- Rows 1 to 6 and 13 are settled by the research in docs/research/ and by the direction already agreed for the port. They are recorded here so a later change has to reopen them explicitly.
+- Rows 1 to 7, 13 and 14 are settled by the research in docs/research/ and by the direction already agreed for the port. They are recorded here so a later change has to reopen them explicitly.
 - Row 9 changes behaviour, so it needs the message text and the fixture at the same time.
 - Row 10 interacts with row 9: an animated source with alpha needs a policy for every frame, not only the first.
