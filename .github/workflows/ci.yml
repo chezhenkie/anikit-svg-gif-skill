@@ -35,7 +35,7 @@ jobs:
           test -s "$RUNNER_TEMP/text.gif"
           test -s "$RUNNER_TEMP/images.gif"
       - name: static link
-        run: file rust/target/x86_64-unknown-linux-musl/release/anikit | grep -q "statically linked"
+        run: file rust/target/x86_64-unknown-linux-musl/release/anikit | grep -Eq "static(-pie)? linked"
 
   windows:
     runs-on: windows-latest

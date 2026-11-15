@@ -103,7 +103,7 @@ fn peak_rss_kb() -> Option<u64> {
 
     unsafe extern "system" {
         fn GetCurrentProcess() -> isize;
-        fn GetProcessMemoryInfo(process: isize, counters: *mut Counters, size: u32) -> i32;
+        fn K32GetProcessMemoryInfo(process: isize, counters: *mut Counters, size: u32) -> i32;
     }
 
     // SAFETY: the call only fills the structure passed to it, and its size is
@@ -111,7 +111,7 @@ fn peak_rss_kb() -> Option<u64> {
     unsafe {
         let mut counters: Counters = std::mem::zeroed();
         counters.cb = std::mem::size_of::<Counters>() as u32;
-        if GetProcessMemoryInfo(GetCurrentProcess(), &mut counters, counters.cb) == 0 {
+        if K32GetProcessMemoryInfo(GetCurrentProcess(), &mut counters, counters.cb) == 0 {
             return None;
         }
         Some(counters.peak_working_set as u64 / 1024)
