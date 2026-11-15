@@ -34,42 +34,9 @@ Cost assumes 640x360, about 50 frames, single core. "Fit" means usable from Pyth
 | 24 | Global palette and fixed quantization | Build one palette from sampled frames, map all frames | Stable, no flicker | ~10 ms total | Pillow, or [gifsicle](https://github.com/kohler/gifsicle) (GPL-2.0) | Native / external | Dither noise inflates LZW; delta rectangles stop helping |
 | 25 | Motion blur | N subframe renders averaged per output frame | Better fast motion | N times render | same | Native | Smears with only 40 ms per frame; cost linear |
 
-## 2. Keyframe schema sketch
+## 2. Keyframe schema
 
-One file, absolute times in ms, keys carry the easing of the outgoing segment (WAAPI semantics).
-
-```json
-{
-  "version": 1,
-  "canvas": {"w": 640, "h": 360, "bg": "#101014", "fps": 25, "loop": "cycle"},
-  "tracks": [
-    {"id": "logo", "kind": "svg.transform", "src": "keys/logo.svg#mark",
-     "keys": [
-       {"t": 0,   "translate": [0, 0],   "scale": [1, 1], "rotate": 0, "easing": "ease-out"},
-       {"t": 800, "translate": [120, 40], "scale": [1.4, 1.4], "rotate": 12, "easing": [0.33, 0, 0.67, 1]},
-       {"t": 1400, "translate": [120, 40], "scale": [1.4, 1.4], "rotate": 12, "easing": "hold"}
-     ]},
-    {"id": "blob", "kind": "svg.path", "src": "keys/blob_a.svg#blob",
-     "keys": [
-       {"t": 0,    "d": "M...", "opacity": 1},
-       {"t": 900,  "d": "M...", "opacity": 0.6, "easing": {"spring": {"stiffness": 120, "damping": 14}}}
-     ]},
-    {"id": "bg", "kind": "raster.image", "keys": [
-       {"t": 0,   "src": "keys/a.png", "fit": "cover", "crop": [0, 0, 1, 1], "zoom": 1.0},
-       {"t": 2000,"src": "keys/b.png", "fit": "cover", "crop": [0.05, 0, 0.95, 1], "zoom": 1.15,
-        "easing": "linear", "blend": "crossfade"}
-     ]},
-    {"id": "grid", "kind": "ascii.cells", "cols": 64, "rows": 32, "font": "monospace",
-     "keys": [
-       {"t": 0,   "rows_data": ["  .:-=+*#%@  ", "..."], "fg": "#c8ffd0", "bg": "#000000"},
-       {"t": 1200,"rows_data": ["..."], "fg": "#ffd0c8", "easing": "ease-in-out"}
-     ]}
-  ],
-  "output": {"gif": {"frame_ms": 40, "dither": "none", "palette": "global"}}
-}
-```
-
-Rules: `kind` selects the renderer; `src` uses `file.svg#elementId`; missing attributes inherit; `easing` is a preset name, 4-float bezier, `{"spring":{...}}`, `{"points":[[0,0],[0.5,0.8],[1,1]]}`, or `"hold"`. `loop` is `cycle`, `pingpong` or `once`. ASCII stores rows as strings plus a separate color grid when per-cell color is needed, so the payload stays compact and diffable.
+The canonical input shape is specified in `docs/specsheet/04-tween-model.md`, section 4.6. The sketch that started this note is superseded and has been removed so the repository holds one copy of it.
 
 ## 3. Pipeline
 
@@ -102,36 +69,4 @@ Rules: `kind` selects the renderer; `src` uses `file.svg#elementId`; missing att
 
 ## 6. Composition
 
-Layers exist so one effect can be reused over several animations: a shake, a pulse, a drift, a camera move. A layer is a named set of bindings, one binding per property, plus a weight track, an optional time window and an optional spatial mask. The stack is per property, which is the unit Web Animations composites, not per element and not per document.
-
-Three rules make layering safe:
-
-- Weight applies to the result, not to the value: `v = mix(v, combine(v, x), w)`. Then `w = 0` is an exact identity and `w = 1` is an exact combine for every operation, including multiply and transform concatenation, where scaling the value would not scale the effect. At `w = 1` the mix is skipped, so endpoints stay exact. The weight is itself a track, so a fade in or out is two keys.
-- Order is an explicit integer, sorted on, with duplicates rejected at prepare. Neither array position nor id order may decide the output, because a rewritten array or a renamed element would then change the animation.
-- Clamp once, after the whole stack, and reject an add that the type cannot express instead of silently replacing.
-
-| Type | Replace | Add | Multiply | Note |
-|---|---|---|---|---|
-| number | default | sum | product | clamp only where the property declares a range |
-| opacity | default | sum, then clamp to 0..1 | product | add saturates; independent overlays need multiply |
-| transform | default | list concatenation | matrix product | append keeps the layer in the base axes, prepend in screen space; add with scale or perspective is rejected |
-| colour | default | RGB sum, premultiplied | premultiplied product | CSS says colour is not additive, so add needs explicit permission |
-| path | default | rejected | rejected | a shift belongs in the transform; weight is a dissolve, not a composition |
-| raster | default, weight crossfades | rejected | rejected | composition is renderer side |
-| ASCII grid | default | per-cell density sum, clamped to the ramp | density scale | the glyph is chosen after composition, glyph identity is not addable |
-
-A binding may own part of a property. A transform layer may supply translation only, and a colour layer may supply alpha only. Append puts the translation on the base's rotated and scaled axes, which is what a shake wants; prepend keeps it in screen space, which a camera move wants and CSS cannot express.
-
-Prepare resolves the stack into either a single prepared track or one contiguous range of prepared layers, so the common one-layer case runs the current path with no per-frame cost. A closed time window is one integer compare, a zero weight skips the value sample, and only a weight strictly between 0 and 1 pays for the mix.
-
-Known failure modes: accumulation is order dependent, so order must be serialised; weights outside 0..1 are rejected unless a binding declares overshoot; a binding to a missing element must fail at prepare, not render a frame; and a round trip through a format with no layer concept (GIF, Lottie) bakes the stack and cannot recover it, so the source timeline stays the only editable copy.
-
-The full treatment, including the borrowed semantics, tool prior art, Rust types, cost and tests, is in `docs/research/tween-composition.md`.
-
-## 7. Research notes
-
-- `docs/research/tween-math-easing.md`: bezier solvers as WebKit and Chromium write them, springs by closed form, splines, matrix and colour interpolation, precision, libm.
-- `docs/research/tween-timeline-model.md`: easing ownership, duplicate times, loop and play count outside `sample(t)`, one data model that covers Lottie, CSS, WAAPI, SMIL and GSAP.
-- `docs/research/tween-performance-memory.md`: streaming frames against a palette pass, sink and disposal constraints, stage costs, memory at 480p, 1080p and 4K, benchmark plan.
-- `docs/research/tween-property-types.md`: path morph algorithms and their cost, raster cost, ASCII grids, and the prepare versus sample split.
-- `docs/research/tween-composition.md`: layers, weights, composite operations and per-type add rules.
+Superseded by `docs/specsheet/07-tween-composition.md`. The evidence, the format comparison and the tool prior art stay in `docs/research/tween-composition.md`.

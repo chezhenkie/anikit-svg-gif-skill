@@ -31,6 +31,8 @@ Every route is checked for the same facts, in both languages:
 
 The Python gate is `python tools/check.py --strict`: three routes plus the error contract plus repository hygiene. It runs before every commit that changes behaviour and must pass 5 of 5.
 
+The porting checklist that gates each route merge is docs/research/python-to-rust-refactor-pitfalls.md. A route is not merged until that checklist passes for it, because the list records the behaviours that break silently in a port.
+
 The Rust gate adds:
 
 - `cargo test` for the workspace, including the fixture comparisons.
