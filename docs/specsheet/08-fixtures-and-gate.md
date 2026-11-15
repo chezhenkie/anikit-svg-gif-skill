@@ -35,6 +35,7 @@ The Rust gate adds:
 
 - `cargo test` for the workspace, including the fixture comparisons.
 - `cargo clippy -- -D warnings` and `cargo fmt --check`.
+- A musl build of the text and images routes, since those two must work with no system libraries (part 02).
 - The hygiene checks ported from the Python gate: ASCII only, LF only, no secrets, no machine paths, and every README link resolving.
 - A memory check: a 1000-frame run stays within the stated multiple of a 100-frame run (part 03).
 

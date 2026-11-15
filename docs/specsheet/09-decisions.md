@@ -18,9 +18,10 @@ Status: living document. One row per question. Status is `open`, `decided` or `p
 | 12 | Route order and Python deletion | Text, images, vector; delete each after its tests pass, core last | open | Not decided. The tag `python-freeze` marks the reference point either way. |
 | 13 | When the tween crate is built | After the Rust workspace exists | decided | It depends on `time` and `core` types, so it cannot be built before them. Parts 04 to 07 are its specification. |
 | 14 | Repository name and release tags | `anikit-svg-gif-skill`; lightweight `vX.Y.Z` tags, existing tags kept | decided | The GitHub repository was renamed from `animated-gif-skill`, which keeps redirects. Tags `v0.1.0`, `v0.1.1` and `python-freeze` remain. The installed skill folder stays `animated-gif` because the folder name must match `SKILL.md`. |
+| 15 | Alpine and musl build | Static `x86_64-unknown-linux-musl` binary; distribution Chromium for the vector route | decided | The text and images routes build as one static binary that runs on Alpine, glibc distributions and scratch containers. The vector route cannot use the Playwright browser there, because it is built against glibc; it uses the distribution `chromium` package instead. Alpine ships no fonts, so the text route needs a font package or an explicit path (row 11). |
 
 ## Notes
 
-- Rows 1 to 7, 13 and 14 are settled by the research in docs/research/ and by the direction already agreed for the port. They are recorded here so a later change has to reopen them explicitly.
+- Rows 1 to 7 and 13 to 15 are settled by the research in docs/research/ and by the direction already agreed for the port. They are recorded here so a later change has to reopen them explicitly.
 - Row 9 changes behaviour, so it needs the message text and the fixture at the same time.
 - Row 10 interacts with row 9: an animated source with alpha needs a policy for every frame, not only the first.

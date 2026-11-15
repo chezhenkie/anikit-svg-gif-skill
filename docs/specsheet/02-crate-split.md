@@ -47,3 +47,15 @@ One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer
 One binary, `anikit` (`anikit.exe` on Windows), because the three routes share the core and a second executable would duplicate the writer and the error contract. The route is selected by a subcommand that matches the current script name, so `anikit ascii`, `anikit images` and `anikit vector` replace `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`.
 
 The binary is produced by the `anikit-cli` package; the other packages are libraries and ship no executable. The skill's invocation table in README.md is updated in the same change that introduces the binary.
+
+## 2.5 Build targets
+
+| target | artifact | notes |
+|---|---|---|
+| x86_64-pc-windows-msvc | anikit.exe | the installed skill path on Windows |
+| x86_64-unknown-linux-gnu | anikit | glibc distributions |
+| x86_64-unknown-linux-musl | anikit | static, runs on Alpine and in scratch containers |
+| aarch64-unknown-linux-musl | anikit | optional, same rules as x86_64 musl |
+| aarch64-apple-darwin, x86_64-apple-darwin | anikit | macOS, no special flags |
+
+The text and images routes must build for every target with no system libraries beyond libc. The vector route depends on an installed Chromium, and on musl that is the distribution package, because the Playwright build is linked against glibc and will not start. Alpine ships no fonts, so the text route needs a font package or an explicit font path there (09, row 11).
