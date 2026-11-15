@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/anikit-core",
+    "crates/anikit-time",
+    "crates/anikit-tween",
+    "crates/anikit-render-text",
+    "crates/anikit-render-raster",
+    "crates/anikit-render-svg",
+    "crates/anikit-cli",
+]
+
+[workspace.package]
+edition = "2024"
+version = "0.0.0"
+license = "MIT"
+repository = "https://github.com/chezhenkie/anikit-svg-gif-skill"
+
+[workspace.dependencies]
+anikit-core = { path = "crates/anikit-core" }
+anikit-time = { path = "crates/anikit-time" }
+anikit-tween = { path = "crates/anikit-tween" }
+anikit-render-text = { path = "crates/anikit-render-text" }
+anikit-render-raster = { path = "crates/anikit-render-raster" }
+anikit-render-svg = { path = "crates/anikit-render-svg" }

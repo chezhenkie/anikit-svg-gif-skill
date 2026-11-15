@@ -1,0 +1,18 @@
+[package]
+name = "anikit-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Command line entry point for anikit"
+
+[[bin]]
+name = "anikit"
+path = "src/main.rs"
+
+[dependencies]
+anikit-core.workspace = true
+anikit-time.workspace = true
+anikit-tween.workspace = true
+anikit-render-text.workspace = true
+anikit-render-raster.workspace = true
+anikit-render-svg.workspace = true

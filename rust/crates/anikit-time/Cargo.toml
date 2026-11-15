@@ -1,0 +1,9 @@
+[package]
+name = "anikit-time"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Presentation times, the 10 ms grid and the frame plan"
+
+[dependencies]
+anikit-core.workspace = true

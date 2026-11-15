@@ -1,0 +1,11 @@
+[package]
+name = "anikit-render-text"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Glyph grids and ANSI colours for the text route"
+
+[dependencies]
+anikit-core.workspace = true
+anikit-time.workspace = true
+anikit-tween.workspace = true

@@ -1,0 +1,11 @@
+[package]
+name = "anikit-render-raster"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Image decoding, fit, Ken Burns, crossfade and pixel adjustments"
+
+[dependencies]
+anikit-core.workspace = true
+anikit-time.workspace = true
+anikit-tween.workspace = true

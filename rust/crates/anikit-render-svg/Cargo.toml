@@ -1,0 +1,11 @@
+[package]
+name = "anikit-render-svg"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Browser discovery, page construction, seek and capture"
+
+[dependencies]
+anikit-core.workspace = true
+anikit-time.workspace = true
+anikit-tween.workspace = true
