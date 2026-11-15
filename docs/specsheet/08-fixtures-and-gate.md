@@ -41,6 +41,8 @@ The Rust gate adds:
 - The hygiene checks ported from the Python gate: ASCII only, LF only, no secrets, no machine paths, and every README link resolving.
 - A memory check: a 1000-frame run stays within the stated multiple of a 100-frame run (part 03). The test is `tests/memory.rs` in `anikit-core` and reads the peak resident set from the operating system.
 
+The Rust gate runs in GitHub Actions on every push to `main` and every pull request (`.github/workflows/ci.yml`), on Linux and on Windows. A developer machine is a convenience, not the gate: a release asset is only ever produced by `.github/workflows/release.yml` on a tag (09, row 20).
+
 ## 8.4 Deletion order
 
 1. A route's Python file is deleted in the same change that makes its Rust route pass the fixture set and the structural checks.
