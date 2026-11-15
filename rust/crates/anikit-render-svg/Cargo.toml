@@ -9,3 +9,11 @@ description = "Browser discovery, page construction, seek and capture"
 anikit-core.workspace = true
 anikit-time.workspace = true
 anikit-tween.workspace = true
+# The screenshot arrives as a PNG and the protocol as JSON (09, row 19).
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde_json = "1"
+tungstenite = "0.30"
+
+[dev-dependencies]
+# Independent decoder for the captured frames; not part of the binary.
+gif = "0.14"

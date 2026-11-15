@@ -21,3 +21,4 @@ anikit-render-svg.workspace = true
 # Structural fixture comparison and an independent decoder for its output.
 anikit-core.workspace = true
 gif = "0.14"
+sha2 = "0.10"

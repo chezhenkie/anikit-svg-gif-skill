@@ -1,6 +1,6 @@
 # 03-frame-flow
 
-Status: the streaming sink is implemented and used by the images route. The delta rectangles of section 3.3 are not written yet, so frames go out whole with disposal 1.
+Status: the streaming sink is implemented and used by the images and vector routes. The delta rectangles of section 3.3 are not written yet, so frames go out whole with disposal 1, and the text route still uses `write_gif` with explicit delays.
 
 ## 3.1 Why two passes
 

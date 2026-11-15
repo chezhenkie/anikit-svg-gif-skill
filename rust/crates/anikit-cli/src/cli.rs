@@ -1,9 +1,10 @@
 //! Argument parsing, route dispatch and the text route.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anikit_core::{Dither, Error, MIN_DELAY_MS, Result, WriteOptions, write_gif};
 use anikit_render_raster::{Fit, Mode, Options as SlideshowOptions, write_slideshow};
+use anikit_render_svg::{Options as VectorOptions, Preset, write_animation};
 use anikit_render_text::{Face, TextRenderer, layout, load_frames};
 
 use crate::png;
@@ -14,7 +15,7 @@ usage: anikit <route> [options]
 routes:
   ascii    text frames from a file or a directory of .txt files
   images   a folder of images
-  vector   an SVG or HTML page (not implemented yet)
+  vector   an SVG or HTML page captured in a browser
 
 ascii options:
   -o, --out PATH      output GIF (default ascii.gif)
@@ -44,6 +45,22 @@ images options:
   --colors N          palette size, 2 to 255 (default 255)
   --dither MODE       none or floyd (default none)
   --loop N            play count, 0 loops forever (default 0)
+  --preview PATH      write the first frame as a PNG
+
+vector options:
+  -o, --out PATH      output GIF (default svg.gif)
+  --width N           viewport width, default from the drawing
+  --height N          viewport height, default from the drawing
+  --duration SEC      seconds per animation cycle (default 2)
+  --fps N             frames per second, 1 to 50 (default 15)
+  --animate PRESET    none, rotate, pulse or fade (default none)
+  --selector CSS      preset target, default the svg element
+  --background COLOUR page colour behind the drawing (default #ffffff)
+  --dpr N             device pixel ratio, 1 or 2 (default 1)
+  --browser PATH      Chromium based browser to drive
+  --colors N          palette size, 2 to 255 (default 255)
+  --dither MODE       none or floyd (default none)
+  --loop N            play count, 0 loops forever (default 0)
   --preview PATH      write the first frame as a PNG";
 
 /// Images route options, parsed from the same helpers as the text route.
@@ -65,6 +82,25 @@ struct Images {
     preview: Option<PathBuf>,
 }
 
+/// Vector route options.
+struct Vector {
+    input: PathBuf,
+    out: PathBuf,
+    width: Option<u32>,
+    height: Option<u32>,
+    duration: f64,
+    fps: u32,
+    animate: Preset,
+    selector: Option<String>,
+    background: [u8; 3],
+    dpr: u32,
+    browser: Option<PathBuf>,
+    colors: usize,
+    dither: Dither,
+    loop_count: u16,
+    preview: Option<PathBuf>,
+}
+
 /// Run one command line.
 pub fn run(args: &[String]) -> Result<()> {
     let Some(command) = args.first() else {
@@ -79,9 +115,7 @@ pub fn run(args: &[String]) -> Result<()> {
         }
         "ascii" => ascii(&args[1..]),
         "images" => images(&args[1..]),
-        "vector" => Err(Error::invalid(format!(
-            "route {command} is not implemented yet"
-        ))),
+        "vector" => vector(&args[1..]),
         other => Err(Error::invalid(format!(
             "unknown route {other}; expected ascii, images or vector"
         ))),
@@ -301,6 +335,133 @@ fn parse_images(args: &[String]) -> Result<Images> {
         i += 1;
     }
     parsed.folder = folder.ok_or_else(|| Error::invalid("missing folder"))?;
+    Ok(parsed)
+}
+
+fn vector(args: &[String]) -> Result<()> {
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        println!("{USAGE}");
+        return Ok(());
+    }
+    let args = parse_vector(args)?;
+    let options = VectorOptions {
+        width: args.width,
+        height: args.height,
+        duration: args.duration,
+        fps: args.fps,
+        animate: args.animate,
+        selector: args.selector,
+        background: args.background,
+        dpr: args.dpr,
+        browser: args.browser,
+        colors: args.colors,
+        dither: args.dither,
+        loop_count: args.loop_count,
+    };
+    let rendered = write_animation(&args.input, &args.out, &options)?;
+    if let Some(path) = &args.preview {
+        png::write_png(path, &rendered.first)?;
+        println!("{}  still frame", path.display());
+    }
+    println!(
+        "{}  {} frames, {:.2} s, {} x {}",
+        file_name(&args.out),
+        rendered.summary.frames,
+        rendered.summary.total_ms as f64 / 1000.0,
+        rendered.summary.width,
+        rendered.summary.height
+    );
+    Ok(())
+}
+
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.display().to_string())
+}
+
+fn parse_vector(args: &[String]) -> Result<Vector> {
+    let mut parsed = Vector {
+        input: PathBuf::new(),
+        out: PathBuf::from("svg.gif"),
+        width: None,
+        height: None,
+        duration: 2.0,
+        fps: 15,
+        animate: Preset::None,
+        selector: None,
+        background: [255, 255, 255],
+        dpr: 1,
+        browser: None,
+        colors: 255,
+        dither: Dither::None,
+        loop_count: 0,
+        preview: None,
+    };
+    let mut input: Option<PathBuf> = None;
+    let mut i = 0usize;
+    while i < args.len() {
+        let arg = args[i].as_str();
+        let (name, inline) = match arg.split_once('=') {
+            Some((name, value)) => (name, Some(value.to_string())),
+            None => (arg, None),
+        };
+        match name {
+            "-o" | "--out" => {
+                parsed.out = PathBuf::from(take(args, &mut i, inline, name)?);
+            }
+            "--width" => {
+                parsed.width = Some(number(&take(args, &mut i, inline, name)?, name)?);
+            }
+            "--height" => {
+                parsed.height = Some(number(&take(args, &mut i, inline, name)?, name)?);
+            }
+            "--duration" => {
+                parsed.duration = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--fps" => {
+                parsed.fps = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--animate" => {
+                parsed.animate = Preset::parse(&take(args, &mut i, inline, name)?)?;
+            }
+            "--selector" => {
+                parsed.selector = Some(take(args, &mut i, inline, name)?);
+            }
+            "--background" | "--bg" => {
+                parsed.background = parse_color(&take(args, &mut i, inline, name)?)?;
+            }
+            "--dpr" => {
+                parsed.dpr = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--browser" => {
+                parsed.browser = Some(PathBuf::from(take(args, &mut i, inline, name)?));
+            }
+            "--colors" => {
+                parsed.colors = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--dither" => {
+                parsed.dither = parse_dither(&take(args, &mut i, inline, name)?)?;
+            }
+            "--loop" => {
+                parsed.loop_count = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--preview" => {
+                parsed.preview = Some(PathBuf::from(take(args, &mut i, inline, name)?));
+            }
+            other if other.starts_with('-') => {
+                return Err(Error::invalid(format!("unknown option {other}")));
+            }
+            other => {
+                if input.is_some() {
+                    return Err(Error::invalid(format!("unexpected argument {other}")));
+                }
+                input = Some(PathBuf::from(other));
+            }
+        }
+        i += 1;
+    }
+    parsed.input = input.ok_or_else(|| Error::invalid("missing input"))?;
     Ok(parsed)
 }
 

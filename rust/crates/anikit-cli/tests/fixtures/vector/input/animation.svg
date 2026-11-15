@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80">
+  <style>
+    @keyframes slide { from { transform: translateX(0px); } to { transform: translateX(60px); } }
+    .mover { animation: slide 1s linear; }
+  </style>
+  <rect width="120" height="80" fill="#ffffff"/>
+  <rect class="mover" x="6" y="10" width="24" height="24" fill="#d02020"/>
+  <rect x="90" y="46" width="24" height="24" fill="#2040d0">
+    <animate attributeName="x" from="90" to="30" dur="1s" fill="freeze"/>
+  </rect>
+</svg>
