@@ -45,22 +45,20 @@ impl Palette {
             hi: [31, 31, 31],
         }];
         while boxes.len() < colors {
-            let mut pick = None;
-            let mut best = 0u32;
+            let mut best: Option<(usize, u32, Extent, Extent)> = None;
             for (i, ext) in boxes.iter().enumerate() {
-                if widest_axis(ext).is_none() {
+                let Some(axis) = widest_axis(ext) else {
                     continue;
-                }
+                };
+                let Some((left, right)) = split(&count, ext, axis) else {
+                    continue;
+                };
                 let n = count_in(&count, ext);
-                if n > best {
-                    best = n;
-                    pick = Some(i);
+                if n > 0 && best.is_none_or(|(_, most, _, _)| n > most) {
+                    best = Some((i, n, left, right));
                 }
             }
-            let Some(i) = pick else { break };
-            let ext = boxes[i];
-            let Some(axis) = widest_axis(&ext) else { break };
-            let Some((left, right)) = split(&count, &ext, axis) else {
+            let Some((i, _, left, right)) = best else {
                 break;
             };
             boxes[i] = left;
@@ -168,22 +166,25 @@ fn split(count: &[u32], ext: &Extent, axis: usize) -> Option<(Extent, Extent)> {
     if total < 2 {
         return None;
     }
+    // Cut at the boundary nearest half the mass, but never at one that leaves
+    // a side empty. A cut on the heavy bin itself would trap it with the
+    // colours below and never separate them.
     let mut seen = 0u32;
-    let mut cut = None;
-    for v in ext.lo[axis]..=ext.hi[axis] {
+    let mut best: Option<(u8, u64)> = None;
+    for v in ext.lo[axis]..ext.hi[axis] {
         let mut slice = *ext;
         slice.lo[axis] = v;
         slice.hi[axis] = v;
         seen += count_in(count, &slice);
-        if seen * 2 >= total {
-            cut = Some(v);
-            break;
+        if seen == 0 || seen == total {
+            continue;
+        }
+        let distance = (2 * seen as i64 - total as i64).unsigned_abs();
+        if best.is_none_or(|(_, closest)| distance < closest) {
+            best = Some((v, distance));
         }
     }
-    let cut = cut?;
-    if cut >= ext.hi[axis] {
-        return None;
-    }
+    let (cut, _) = best?;
     let mut left = *ext;
     left.hi[axis] = cut;
     let mut right = *ext;
@@ -220,6 +221,24 @@ mod tests {
         let frame = frame_of(&[[10, 10, 10], [200, 200, 200]], 4);
         let palette = Palette::from_frames(&[frame], 2).unwrap();
         assert_eq!(palette.len(), 2);
+    }
+
+    #[test]
+    fn a_dominant_background_does_not_blend_light_colours() {
+        let bg = [10, 13, 18];
+        let fg = [230, 237, 246];
+        let accent = [17, 168, 205];
+        let mut frame = Frame::new(64, 48).unwrap();
+        frame.fill(bg);
+        for x in 0..16 {
+            frame.set_pixel(x, 0, fg);
+            frame.set_pixel(x, 1, accent);
+        }
+        let palette = Palette::from_frames(&[frame], 255).unwrap();
+        let colors = palette.colors();
+        assert!(colors.contains(&bg), "{colors:?}");
+        assert!(colors.contains(&fg), "{colors:?}");
+        assert!(colors.contains(&accent), "{colors:?}");
     }
 
     #[test]

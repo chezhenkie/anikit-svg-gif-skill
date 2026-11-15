@@ -1,6 +1,6 @@
 # 08-fixtures-and-gate
 
-Status: specified, not implemented. The current gate runs against the Python implementation; the Rust gate replaces it route by route.
+Status: the text route has its fixture; the images and vector routes do not. The Python gate still covers every route, and the Rust gate covers core, time and the text route.
 
 ## 8.1 Fixtures
 

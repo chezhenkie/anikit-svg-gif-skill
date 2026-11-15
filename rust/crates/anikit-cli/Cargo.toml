@@ -16,3 +16,8 @@ anikit-tween.workspace = true
 anikit-render-text.workspace = true
 anikit-render-raster.workspace = true
 anikit-render-svg.workspace = true
+
+[dev-dependencies]
+# Structural fixture comparison and an independent decoder for its output.
+anikit-core.workspace = true
+gif = "0.14"

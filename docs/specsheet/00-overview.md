@@ -5,7 +5,7 @@
 - Title: animated-gif skill - GIF building from text frames, image folders and SVG animation, with a Rust port specified.
 - Purpose: the reference for the skill and its Rust replacement: the three routes, the shared GIF core, the frame flow, and the tween crate that carries keyframes and layers. Specsheet and code together describe the system.
 - Stakeholders: the person and the agent invoking the skill, users of the public repository, and the upstream projects it depends on: Pillow, Playwright and an installed Chromium based browser.
-- Status: 0.1.1 shipped in Python and installed. The Python implementation is frozen at tag python-freeze and is a reference for behaviour, not an authority. The Rust workspace is specified in this folder and not started. Parts 04 to 07 specify the tween crate, which is built after the workspace exists.
+- Status: 0.1.1 shipped in Python and installed. The Python implementation is frozen at tag python-freeze and is a reference for behaviour, not an authority. The Rust workspace carries core, time and the text route; the images and vector routes are stubs. Parts 04 to 07 specify the tween crate, which is built after the workspace exists.
 - Related documents: README.md (install and invocation), CHANGELOG.md (change list), docs/index.md (human manual), docs/research/ (evidence and analysis), LICENSE.
 - Evidence pin: behaviour claims cite files and functions under agent-skill/bin; measurements cite docs/research/. Cites name files, not commits.
 

@@ -1,0 +1,15 @@
+route=text
+input=frames.txt
+reference=reference.gif
+font=DejaVuSansMono.ttf
+font_version=2.37
+size_px=28
+frame_count=3
+total_ms=450
+width=480
+height=270
+colors_requested=255
+note=pixel hashes are the Python reference; the port rasterises the same face differently
+frame 0 delay_ms=100 hash=ab6856310774209302c8819f8d49a187646655cef881185f495ad216fed3131f
+frame 1 delay_ms=250 hash=3633dcd639e6a663531e39af11ed9c820eaf850eda44719ddf88f7cc0ac62bf0
+frame 2 delay_ms=100 hash=8a21abd416574a5f7db7299b8bdd5181de8828624a503a1e37ddba60aa191d4a

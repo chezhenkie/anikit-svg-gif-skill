@@ -12,6 +12,7 @@ dependencies = [
  "anikit-render-text",
  "anikit-time",
  "anikit-tween",
+ "gif",
 ]
 
 [[package]]
