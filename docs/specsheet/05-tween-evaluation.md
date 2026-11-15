@@ -14,6 +14,8 @@ Status: specified, not implemented. Evidence: docs/research/tween-math-easing.md
 
 A spring is accepted only with an explicit settle time, because the crate must know when the value stops changing to end the segment.
 
+Contact holds, weight cues, bounce decay and the motion defaults are in part 10; this part covers the arithmetic those rules are built on.
+
 ## 5.2 Bezier solving
 
 The solver follows WebKit's `UnitBezier`: Newton-Raphson from the current estimate, with a bisection fallback when the derivative is too small or the bracket collapses.

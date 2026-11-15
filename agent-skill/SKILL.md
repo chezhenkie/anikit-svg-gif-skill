@@ -34,11 +34,12 @@ Every tool prints one `FAIL ...` line on stderr and exits 1 when a dependency or
 
 ## Workflow
 
-1. Choose the route from the table. Read the matching section below.
+1. Choose the route from the table. Read the matching section below, and read [references/kinetic-motion.md](references/kinetic-motion.md) before setting fps, delay, easing or a preset.
 2. Run the tool with an explicit output path inside the project being worked on. Do not write to a system temp directory or the Desktop.
 3. Keep the printed summary: frame count, duration, pixel size. A printed path is a verified GIF.
 4. For visual work, open the GIF or write `--preview preview.png` and inspect that still before reporting.
 5. Report the absolute path plus settings that matter: fps, size, duration, mode.
+6. Run the motion checklist in `references/kinetic-motion.md` before reporting. A move with no held contact, a bounce that does not decay, or a spring still moving at the loop point is a defect, not a preference.
 
 ## ASCII route
 
@@ -146,5 +147,6 @@ See [references/animated-gif-considerations.md](references/animated-gif-consider
 - `bin/svg_gif.py` - SVG/HTML animation to GIF.
 - `bin/render_frames.cjs` - Playwright frame capture helper.
 - `references/animated-gif-considerations.md` - format notes.
+- `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, checklist.
 
 Repository checks and sample generation are in `tools/`, outside the installed skill payload.

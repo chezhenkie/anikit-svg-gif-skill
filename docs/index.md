@@ -18,7 +18,8 @@ The skill turns text frames, a folder of images, or an SVG animation into one lo
 2. [Behaviour baseline](specsheet/01-behaviour-baseline.md): what the shipped Python does, and what the port must match.
 3. [Crate split](specsheet/02-crate-split.md) and [frame flow](specsheet/03-frame-flow.md): how the Rust workspace is shaped.
 4. Parts 04 to 07: the tween crate, from time and keys to layers.
-5. [Decisions](specsheet/09-decisions.md): what is settled and what is still open.
+5. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical.
+6. [Decisions](specsheet/09-decisions.md): what is settled and what is still open.
 
 ## Research notes
 
@@ -29,6 +30,7 @@ The skill turns text frames, a folder of images, or an SVG animation into one lo
 | [tween-performance-memory](research/tween-performance-memory.md) | streaming against a palette pass, stage costs, memory, benchmarks |
 | [tween-property-types](research/tween-property-types.md) | paths, raster, ASCII grids, prepare against sample |
 | [tween-composition](research/tween-composition.md) | layers, weights, composite operations |
+| [kinetic-motion](research/kinetic-motion.md) | craft rules, gravity and weight, bounce decay, springs, defaults |
 | [keyframe-tween-animation-info](research/keyframe-tween-animation-info.md) | methods table and schema sketch that started the tween work |
 | [multi-conversion-formats-info](research/multi-conversion-formats-info.md) | format matrix and the conversion directions that follow the port |
 | [python-to-rust-refactor-pitfalls](research/python-to-rust-refactor-pitfalls.md) | porting pitfalls and the merge checklist |

@@ -28,6 +28,7 @@ The Rust port keeps the commands and the visible behaviour, streams frames inste
 | [07-tween-composition.md](07-tween-composition.md) | layers, weights, composite operations, per-type add rules, masks |
 | [08-fixtures-and-gate.md](08-fixtures-and-gate.md) | fixture export, structural checks, the gate, and the order Python files are deleted |
 | [09-decisions.md](09-decisions.md) | one row per open question, with the lean and the status |
+| [10-kinetic-motion.md](10-kinetic-motion.md) | motion that reads as physical: contact holds, weight cues, bounce decay, springs against beziers, defaults |
 
 ## Design rules
 
