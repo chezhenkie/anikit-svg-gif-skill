@@ -115,7 +115,9 @@ Each tool prints `<name>  N frames, X.XX s, W x H` after writing and verifying t
 | `agent-skill/references/animated-gif-considerations.md` | Format constraints and defaults |
 | `tools/check.py` | Route checks and repository hygiene |
 | `tools/make_docs.py` | Regenerates the sample GIFs |
-| `docs/` | README samples |
+| `docs/` | Samples, human index and the specsheet |
+| `docs/specsheet/` | Binding specification, starting at `00-overview.md` |
+| `docs/research/` | Research notes and measurements, not binding |
 | `CHANGELOG.md` | Version history |
 
 ## Check

@@ -213,4 +213,4 @@ Fixtures: 480x270 with a moving rectangle, a fading logo and a static background
 - `iai-callgrind/iai-callgrind` (Gungraun), `README.md`: one-shot Valgrind measurement, instruction counts, Linux only.
 - `nnethercote/dhat-rs`, `README.md`: heap profiling, allocation assertions.
 - `sharkdp/hyperfine`, `README.md`: `--shell=none`, warmup for sub-5 ms commands.
-- Repository: `agent-skill/bin/gifkit.py` (`write_gif`, `sample_palette`, `merge_runs`), `docs/keyframe-tween-animation-info.md` (Chromium capture cost, palette churn), `docs/python-to-rust-refactor-pitfalls.md` (per-iteration allocation, `BufWriter`, `with_capacity`).
+- Repository: `agent-skill/bin/gifkit.py` (`write_gif`, `sample_palette`, `merge_runs`), `docs/research/keyframe-tween-animation-info.md` (Chromium capture cost, palette churn), `docs/research/python-to-rust-refactor-pitfalls.md` (per-iteration allocation, `BufWriter`, `with_capacity`).

@@ -6,7 +6,7 @@ Research notes on the time semantics a Rust frame sampler needs before it can re
 
 The crate evaluates an animation at a time `t` and returns one value per track. This note covers the time and easing semantics of five notations, one model that contains them, and the tests that pin each rule. Rendering, path correspondence, colour spaces, compositing and encoding are outside it. Times are `f64` milliseconds, `t = 0` is the first frame, a segment covers `[key.t, next.t)`, and the last key is a point.
 
-`docs/keyframe-tween-animation-info.md` section 2 fixes absolute times and easing on the outgoing segment. This note adds what that sketch leaves open: tangent ownership, duplicate times, loop mapping and nested time.
+`docs/research/keyframe-tween-animation-info.md` section 2 fixes absolute times and easing on the outgoing segment. This note adds what that sketch leaves open: tangent ownership, duplicate times, loop mapping and nested time.
 
 ## Comparison table
 

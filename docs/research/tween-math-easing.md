@@ -2,7 +2,7 @@
 
 ## Scope
 
-The future `tween` crate takes a validated timeline and returns one value per animated property at a requested time. This note covers the arithmetic: bezier solvers as shipped, spring closed form versus integration, steps and `linear()`, interpolation per value domain, splines beyond two keys, and time precision. Method names are in `docs/keyframe-tween-animation-info.md`; costs are measured in Node unless marked est.
+The future `tween` crate takes a validated timeline and returns one value per animated property at a requested time. This note covers the arithmetic: bezier solvers as shipped, spring closed form versus integration, steps and `linear()`, interpolation per value domain, splines beyond two keys, and time precision. Method names are in `docs/research/keyframe-tween-animation-info.md`; costs are measured in Node unless marked est.
 
 ## Findings
 
