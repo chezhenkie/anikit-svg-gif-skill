@@ -117,7 +117,18 @@ fn write_and_verify(
         encoder.write_frame(&indices, run.delay_ms)?;
     }
     let summary = encoder.finish()?;
+    verify_and_rename(temp, path, width, height, &summary)?;
+    Ok(summary)
+}
 
+/// Check the file on disk against the summary, then move it into place.
+pub(crate) fn verify_and_rename(
+    temp: &Path,
+    path: &Path,
+    width: u32,
+    height: u32,
+    summary: &GifSummary,
+) -> Result<()> {
     let info = inspect_file(temp)?;
     if info.frames != summary.frames {
         return Err(Error::verify(format!(
@@ -138,7 +149,7 @@ fn write_and_verify(
         )));
     }
     std::fs::rename(temp, path)?;
-    Ok(summary)
+    Ok(())
 }
 
 fn sample_palette(frames: &[Frame], runs: &[Run], colors: usize, picks: usize) -> Result<Palette> {
@@ -156,7 +167,8 @@ fn sample_palette(frames: &[Frame], runs: &[Run], colors: usize, picks: usize) -
     Palette::from_frames(&chosen, colors)
 }
 
-fn temp_path(path: &Path) -> PathBuf {
+/// The temp file beside the target, e.g. `out.tmp.gif`.
+pub(crate) fn temp_path(path: &Path) -> PathBuf {
     let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("out");
     let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("gif");
     path.with_file_name(format!("{stem}.tmp.{extension}"))

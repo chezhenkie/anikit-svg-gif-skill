@@ -40,7 +40,7 @@ The same graph as a picture: docs/ascii-crate-flow.txt.
 - `time` owns the mapping from a duration and a frame rate to presentation times, including the 10 ms grid and the cumulative rounding rule. It holds no pixels and no property values.
 - `tween` owns values over time. It knows nothing about pixels, files or fonts, and it never allocates per sample.
 - `render-text` owns glyphs, font metrics and colour per cell. It does not quantise or write.
-- `render-raster` owns decoding, geometry and per-pixel adjustment. It does not choose a palette.
+- `render-raster` owns decoding, geometry and per-pixel adjustment. It does not choose a palette. It carries the `image` and `kamadak-exif` crates, so `core` and `time` keep no external dependencies (09, row 18).
 - `render-svg` owns the browser: finding it, driving it, and turning a time into an image. It does not compose frames.
 - `cli` is the composition root: it validates arguments, builds a plan, selects a renderer, and reports. No route rules live there.
 

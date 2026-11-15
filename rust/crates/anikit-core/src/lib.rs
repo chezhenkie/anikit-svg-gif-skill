@@ -15,6 +15,7 @@ mod inspect;
 mod merge;
 mod palette;
 mod quantize;
+mod stream;
 mod time;
 mod writer;
 
@@ -25,5 +26,6 @@ pub use inspect::{GifInfo, inspect, inspect_file};
 pub use merge::{Run, merge_runs};
 pub use palette::Palette;
 pub use quantize::{Dither, Quantizer};
-pub use time::{DELAY_UNIT_MS, MIN_DELAY_MS, snap_delay};
+pub use stream::{FrameSink, GifStream, StreamOptions, stream_gif};
+pub use time::{DELAY_UNIT_MS, MIN_DELAY_MS, snap_delay, snap_total};
 pub use writer::{WriteOptions, write_gif};

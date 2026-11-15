@@ -2,7 +2,7 @@
 //!
 //! Time only. This crate holds no pixels and no property values.
 
-use anikit_core::{DELAY_UNIT_MS, Error, MIN_DELAY_MS, Result};
+use anikit_core::{Error, MIN_DELAY_MS, Result, snap_total};
 
 /// The highest frame rate a GIF plays reliably.
 pub const MAX_FPS: f64 = 50.0;
@@ -135,13 +135,7 @@ impl FramePlan {
 
 /// Snap a delay onto the grid, at least one unit and never below the minimum.
 pub fn snap_ms(ms: u32) -> u32 {
-    let units = (ms + DELAY_UNIT_MS / 2) / DELAY_UNIT_MS;
-    (units * DELAY_UNIT_MS).max(MIN_DELAY_MS)
-}
-
-/// Snap a running total onto the grid without the minimum applied.
-fn snap_total(ms: u32) -> u32 {
-    ((ms + DELAY_UNIT_MS / 2) / DELAY_UNIT_MS) * DELAY_UNIT_MS
+    snap_total(ms).max(MIN_DELAY_MS)
 }
 
 #[cfg(test)]

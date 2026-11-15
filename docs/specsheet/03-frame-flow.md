@@ -1,6 +1,6 @@
 # 03-frame-flow
 
-Status: decided from the performance research, not implemented. The numbers below come from docs/research/tween-performance-memory.md and are marked where they are estimates.
+Status: the streaming sink is implemented and used by the images route. The delta rectangles of section 3.3 are not written yet, so frames go out whole with disposal 1.
 
 ## 3.1 Why two passes
 

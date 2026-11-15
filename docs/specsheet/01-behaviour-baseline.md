@@ -46,6 +46,6 @@ Must match: flag names, defaults and validation; the text frame format and SGR h
 
 May change: the implementation language, memory use (streaming replaces the frame list), font discovery internals, browser discovery internals, and the wording of messages as long as the contract holds.
 
-Known defect: an animated GIF or animated WebP source contributes only its first frame, with no message. The port's behaviour is open in 09, row 9.
+Known defect: an animated GIF or animated WebP source contributes only its first frame, with no message. The port's behaviour is decided in 09, row 9.
 
 Known defect: an explicit `--font` path that does not exist is ignored and the next candidate is used. The port fails instead, because a silently different face changes the grid and the frame size.

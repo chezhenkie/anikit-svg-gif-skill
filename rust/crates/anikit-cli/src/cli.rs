@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use anikit_core::{Dither, Error, MIN_DELAY_MS, Result, WriteOptions, write_gif};
+use anikit_render_raster::{Fit, Mode, Options as SlideshowOptions, write_slideshow};
 use anikit_render_text::{Face, TextRenderer, layout, load_frames};
 
 use crate::png;
@@ -12,7 +13,7 @@ usage: anikit <route> [options]
 
 routes:
   ascii    text frames from a file or a directory of .txt files
-  images   a folder of images (not implemented yet)
+  images   a folder of images
   vector   an SVG or HTML page (not implemented yet)
 
 ascii options:
@@ -27,7 +28,42 @@ ascii options:
   --colors N          palette size, 2 to 255 (default 255)
   --dither MODE       none or floyd (default none)
   --loop N            play count, 0 loops forever (default 0)
+  --preview PATH      write the first frame as a PNG
+
+images options:
+  -o, --out PATH      output GIF (default slideshow.gif)
+  --width N           canvas width (default 800)
+  --height N          canvas height (default from the first image)
+  --mode MODE         sequence, crossfade or kenburns (default crossfade)
+  --fps N             frames per second, 1 to 50 (default 12)
+  --hold SECONDS      time each image holds (default 1.2)
+  --transition SEC    crossfade length, 0 disables (default 0.5)
+  --zoom FACTOR       kenburns end zoom (default 1.10)
+  --fit MODE          cover or contain (default cover)
+  --bg COLOUR         pad colour for contain (default #000000)
+  --colors N          palette size, 2 to 255 (default 255)
+  --dither MODE       none or floyd (default none)
+  --loop N            play count, 0 loops forever (default 0)
   --preview PATH      write the first frame as a PNG";
+
+/// Images route options, parsed from the same helpers as the text route.
+struct Images {
+    folder: PathBuf,
+    out: PathBuf,
+    width: u32,
+    height: Option<u32>,
+    mode: Mode,
+    fps: u32,
+    hold: f64,
+    transition: f64,
+    zoom: f64,
+    fit: Fit,
+    bg: [u8; 3],
+    colors: usize,
+    dither: Dither,
+    loop_count: u16,
+    preview: Option<PathBuf>,
+}
 
 /// Run one command line.
 pub fn run(args: &[String]) -> Result<()> {
@@ -42,7 +78,8 @@ pub fn run(args: &[String]) -> Result<()> {
             Ok(())
         }
         "ascii" => ascii(&args[1..]),
-        "images" | "vector" => Err(Error::invalid(format!(
+        "images" => images(&args[1..]),
+        "vector" => Err(Error::invalid(format!(
             "route {command} is not implemented yet"
         ))),
         other => Err(Error::invalid(format!(
@@ -140,6 +177,164 @@ fn ascii(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+fn images(args: &[String]) -> Result<()> {
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        println!("{USAGE}");
+        return Ok(());
+    }
+    let args = parse_images(args)?;
+    let options = SlideshowOptions {
+        width: args.width,
+        height: args.height,
+        mode: args.mode,
+        fps: args.fps,
+        hold: args.hold,
+        transition: args.transition,
+        zoom: args.zoom,
+        fit: args.fit,
+        bg: args.bg,
+        colors: args.colors,
+        dither: args.dither,
+        loop_count: args.loop_count,
+    };
+    let rendered = write_slideshow(&args.folder, &args.out, &options)?;
+    if let Some(path) = &args.preview {
+        png::write_png(path, &rendered.first)?;
+        println!("{}  still frame", path.display());
+    }
+    let summary = rendered.summary;
+    let name = args
+        .out
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| args.out.display().to_string());
+    println!(
+        "{}  {} frames, {:.2} s, {} x {}",
+        name,
+        summary.frames,
+        summary.total_ms as f64 / 1000.0,
+        summary.width,
+        summary.height
+    );
+    Ok(())
+}
+
+fn parse_images(args: &[String]) -> Result<Images> {
+    let mut parsed = Images {
+        folder: PathBuf::new(),
+        out: PathBuf::from("slideshow.gif"),
+        width: 800,
+        height: None,
+        mode: Mode::Crossfade,
+        fps: 12,
+        hold: 1.2,
+        transition: 0.5,
+        zoom: 1.1,
+        fit: Fit::Cover,
+        bg: [0, 0, 0],
+        colors: 255,
+        dither: Dither::None,
+        loop_count: 0,
+        preview: None,
+    };
+    let mut folder: Option<PathBuf> = None;
+    let mut i = 0usize;
+    while i < args.len() {
+        let arg = args[i].as_str();
+        let (name, inline) = match arg.split_once('=') {
+            Some((name, value)) => (name, Some(value.to_string())),
+            None => (arg, None),
+        };
+        match name {
+            "-o" | "--out" => {
+                parsed.out = PathBuf::from(take(args, &mut i, inline, name)?);
+            }
+            "--width" => {
+                parsed.width = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--height" => {
+                parsed.height = Some(number(&take(args, &mut i, inline, name)?, name)?);
+            }
+            "--mode" => {
+                parsed.mode = parse_mode(&take(args, &mut i, inline, name)?)?;
+            }
+            "--fps" => {
+                parsed.fps = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--hold" => {
+                parsed.hold = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--transition" => {
+                parsed.transition = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--zoom" => {
+                parsed.zoom = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--fit" => {
+                parsed.fit = parse_fit(&take(args, &mut i, inline, name)?)?;
+            }
+            "--bg" => {
+                parsed.bg = parse_color(&take(args, &mut i, inline, name)?)?;
+            }
+            "--colors" => {
+                parsed.colors = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--dither" => {
+                parsed.dither = parse_dither(&take(args, &mut i, inline, name)?)?;
+            }
+            "--loop" => {
+                parsed.loop_count = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--preview" => {
+                parsed.preview = Some(PathBuf::from(take(args, &mut i, inline, name)?));
+            }
+            other if other.starts_with('-') => {
+                return Err(Error::invalid(format!("unknown option {other}")));
+            }
+            other => {
+                if folder.is_some() {
+                    return Err(Error::invalid(format!("unexpected argument {other}")));
+                }
+                folder = Some(PathBuf::from(other));
+            }
+        }
+        i += 1;
+    }
+    parsed.folder = folder.ok_or_else(|| Error::invalid("missing folder"))?;
+    Ok(parsed)
+}
+
+fn parse_mode(value: &str) -> Result<Mode> {
+    match value {
+        "sequence" => Ok(Mode::Sequence),
+        "crossfade" => Ok(Mode::Crossfade),
+        "kenburns" => Ok(Mode::KenBurns),
+        _ => Err(Error::invalid(format!(
+            "mode must be one of: crossfade, kenburns, sequence, got {value}"
+        ))),
+    }
+}
+
+fn parse_fit(value: &str) -> Result<Fit> {
+    match value {
+        "cover" => Ok(Fit::Cover),
+        "contain" => Ok(Fit::Contain),
+        _ => Err(Error::invalid(format!(
+            "fit must be one of: contain, cover, got {value}"
+        ))),
+    }
+}
+
+fn parse_dither(value: &str) -> Result<Dither> {
+    match value {
+        "none" => Ok(Dither::None),
+        "floyd" => Ok(Dither::Floyd),
+        _ => Err(Error::invalid(format!(
+            "dither must be one of: floyd, none, got {value}"
+        ))),
+    }
+}
+
 fn parse_ascii(args: &[String]) -> Result<Ascii> {
     let mut parsed = Ascii {
         input: PathBuf::new(),
@@ -193,16 +388,7 @@ fn parse_ascii(args: &[String]) -> Result<Ascii> {
                 parsed.colors = number::<usize>(&take(args, &mut i, inline, name)?, name)?;
             }
             "--dither" => {
-                let value = take(args, &mut i, inline, name)?;
-                parsed.dither = match value.as_str() {
-                    "none" => Dither::None,
-                    "floyd" => Dither::Floyd,
-                    _ => {
-                        return Err(Error::invalid(format!(
-                            "dither must be one of: floyd, none, got {value}"
-                        )));
-                    }
-                };
+                parsed.dither = parse_dither(&take(args, &mut i, inline, name)?)?;
             }
             "--loop" => {
                 parsed.loop_count = number(&take(args, &mut i, inline, name)?, name)?;
@@ -462,6 +648,79 @@ mod tests {
         assert!(parse_color("#12345").is_err());
         assert!(parse_color("1,2").is_err());
         assert!(parse_color("nope").is_err());
+    }
+
+    #[test]
+    fn images_route_writes_a_sequence_of_stills() {
+        let dir = scratch("images-sequence");
+        let folder = dir.join("frames");
+        std::fs::create_dir_all(&folder).unwrap();
+        let mut red = anikit_core::Frame::new(8, 8).unwrap();
+        red.fill([255, 0, 0]);
+        let mut blue = anikit_core::Frame::new(8, 8).unwrap();
+        blue.fill([0, 0, 255]);
+        png::write_png(&folder.join("1.png"), &red).unwrap();
+        png::write_png(&folder.join("2.png"), &blue).unwrap();
+
+        let out = dir.join("reel.gif");
+        run(&args(&[
+            "images",
+            folder.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--mode",
+            "sequence",
+            "--fps",
+            "10",
+            "--hold",
+            "0.3",
+            "--width",
+            "40",
+            "--height",
+            "20",
+        ]))
+        .unwrap();
+        let info = inspect_file(&out).unwrap();
+        assert_eq!(info.frames, 2);
+        assert_eq!(info.total_ms, 600);
+        assert_eq!((info.width, info.height), (40, 20));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn images_route_writes_a_preview() {
+        let dir = scratch("images-preview");
+        let folder = dir.join("frames");
+        std::fs::create_dir_all(&folder).unwrap();
+        let mut frame = anikit_core::Frame::new(8, 8).unwrap();
+        frame.fill([10, 20, 30]);
+        png::write_png(&folder.join("only.png"), &frame).unwrap();
+        let out = dir.join("reel.gif");
+        let preview = dir.join("still.png");
+        run(&args(&[
+            "images",
+            folder.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--width",
+            "40",
+            "--height",
+            "20",
+            "--preview",
+            preview.to_str().unwrap(),
+        ]))
+        .unwrap();
+        let png = std::fs::read(&preview).unwrap();
+        assert_eq!(&png[..8], &[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn images_route_needs_a_folder() {
+        let dir = scratch("images-missing");
+        let err = run(&args(&["images", dir.join("nothere").to_str().unwrap()])).unwrap_err();
+        assert!(err.to_string().contains("folder not found"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

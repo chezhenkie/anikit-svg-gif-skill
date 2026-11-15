@@ -9,3 +9,18 @@ description = "Image decoding, fit, Ken Burns, crossfade and pixel adjustments"
 anikit-core.workspace = true
 anikit-time.workspace = true
 anikit-tween.workspace = true
+# Decoders are a large correctness surface; these crates are pure Rust and
+# build into the static binary (09, row 18).
+image = { version = "0.25", default-features = false, features = [
+    "bmp",
+    "gif",
+    "jpeg",
+    "png",
+    "tiff",
+    "webp",
+] }
+kamadak-exif = "0.6"
+
+[dev-dependencies]
+# Independent decoder for the slideshow tests; not part of the binary.
+gif = "0.14"

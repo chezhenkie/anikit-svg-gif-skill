@@ -1,6 +1,6 @@
 # 08-fixtures-and-gate
 
-Status: the text route has its fixture; the images and vector routes do not. The Python gate still covers every route, and the Rust gate covers core, time and the text route.
+Status: the text and images routes have fixtures; the vector route does not. The Python gate still covers every route, and the Rust gate covers core, time and both ported routes.
 
 ## 8.1 Fixtures
 

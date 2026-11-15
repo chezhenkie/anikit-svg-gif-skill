@@ -47,10 +47,7 @@ impl Palette {
         while boxes.len() < colors {
             let mut best: Option<(usize, u32, Extent, Extent)> = None;
             for (i, ext) in boxes.iter().enumerate() {
-                let Some(axis) = widest_axis(ext) else {
-                    continue;
-                };
-                let Some((left, right)) = split(&count, ext, axis) else {
+                let Some((left, right)) = split(&count, ext) else {
                     continue;
                 };
                 let n = count_in(&count, ext);
@@ -123,19 +120,6 @@ fn bin_index(r: u8, g: u8, b: u8) -> usize {
     ((r as usize >> SHIFT) << 10) | ((g as usize >> SHIFT) << 5) | (b as usize >> SHIFT)
 }
 
-fn widest_axis(ext: &Extent) -> Option<usize> {
-    let mut axis = None;
-    let mut widest = 0u8;
-    for a in 0..3 {
-        let width = ext.hi[a] - ext.lo[a];
-        if width > widest {
-            widest = width;
-            axis = Some(a);
-        }
-    }
-    axis
-}
-
 fn bins(ext: &Extent) -> impl Iterator<Item = usize> + '_ {
     (ext.lo[0]..=ext.hi[0]).flat_map(move |r| {
         (ext.lo[1]..=ext.hi[1]).flat_map(move |g| {
@@ -161,7 +145,20 @@ fn stats(count: &[u32], sums: &[[u64; 3]], ext: &Extent) -> (u32, [u64; 3]) {
     (n, sum)
 }
 
-fn split(count: &[u32], ext: &Extent, axis: usize) -> Option<(Extent, Extent)> {
+fn split(count: &[u32], ext: &Extent) -> Option<(Extent, Extent)> {
+    // Try the widest axis first, but fall back to the others: an extent can be
+    // wide on an axis where every pixel shares one bin, which cannot be cut.
+    let mut axes = [0usize, 1, 2];
+    axes.sort_by_key(|axis| std::cmp::Reverse(ext.hi[*axis] - ext.lo[*axis]));
+    for axis in axes {
+        if let Some(parts) = split_axis(count, ext, axis) {
+            return Some(parts);
+        }
+    }
+    None
+}
+
+fn split_axis(count: &[u32], ext: &Extent, axis: usize) -> Option<(Extent, Extent)> {
     let total = count_in(count, ext);
     if total < 2 {
         return None;
@@ -239,6 +236,17 @@ mod tests {
         assert!(colors.contains(&bg), "{colors:?}");
         assert!(colors.contains(&fg), "{colors:?}");
         assert!(colors.contains(&accent), "{colors:?}");
+    }
+
+    #[test]
+    fn a_flat_green_axis_does_not_stop_the_split() {
+        let colours = [[255, 0, 0], [170, 0, 85], [85, 0, 170], [0, 0, 255]];
+        let frame = frame_of(&colours, 200);
+        let palette = Palette::from_frames(&[frame], 16).unwrap();
+        let kept = palette.colors();
+        for colour in colours {
+            assert!(kept.contains(&colour), "{colour:?} missing from {kept:?}");
+        }
     }
 
     #[test]
