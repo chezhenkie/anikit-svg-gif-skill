@@ -20,13 +20,15 @@ All routes share `bin/gifkit.py`: one palette across the loop, 10 ms timing grid
 
 ## Dependencies
 
-Pillow is required. SVG and HTML need Node with Playwright and a Chromium headless shell.
+Pillow is required. SVG and HTML need Node with Playwright and a Chromium based browser. An installed browser is used when one is found; the Playwright download is the fallback.
 
 ```powershell
 python -c "import PIL; print(PIL.__version__)"
 node -e "require('playwright')"
-npx playwright install chromium --only-shell
+npx playwright install chromium --only-shell   # only when no browser is installed
 ```
+
+`GIFKIT_BROWSER` or `--browser PATH` names the browser explicitly. Without either, Chromium, Google Chrome and Edge are searched in their usual install locations, then a Linux or macOS binary on PATH.
 
 Every tool prints one `FAIL ...` line on stderr and exits 1 when a dependency or input is missing. Do not retry with the same arguments.
 
@@ -82,6 +84,7 @@ python bin/svg_gif.py page.html -o project/page.gif --width 960 --height 540 --d
 - Presets: `rotate`, `pulse`, `fade`, applied to the svg root or to `--selector`.
 - `--width` and `--height` default to the SVG `width`/`height` or `viewBox`.
 - `--dpr 2` captures at twice the viewport, for sharper text; the GIF is then twice the pixel size.
+- `--browser PATH` selects the browser binary; `GIFKIT_BROWSER` does the same through the environment.
 - JS-driven canvas or WebGL pages are not driven by this tool. Use a page that exposes a frame hook, or pre-render frames and assemble them with gifkit.
 
 ## Shared options

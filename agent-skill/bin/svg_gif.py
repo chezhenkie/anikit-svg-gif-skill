@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Animate an SVG or HTML page into a GIF.
 
-Frame capture runs through Playwright Chromium (bin/render_frames.mjs). CSS
+Frame capture runs through Playwright with an installed Chromium based browser
+(bin/render_frames.cjs); a browser downloaded by Playwright is the fallback. CSS
 animations and SMIL are paused and seeked to explicit times, so frames do not
 depend on wall-clock timing. Presets rotate, pulse and fade can be applied to
 the whole drawing or to one CSS selector.
@@ -27,6 +28,20 @@ import gifkit
 
 MAX_FPS = 50
 PRESETS = ("none", "rotate", "pulse", "fade")
+WINDOWS_BROWSERS = (
+    r"%LOCALAPPDATA%\Chromium\Application\chrome.exe",
+    r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe",
+    r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe",
+    r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe",
+    r"%PROGRAMFILES(X86)%\Microsoft\Edge\Application\msedge.exe",
+)
+MAC_BROWSERS = (
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+)
+LINUX_BROWSERS = ("ungoogled-chromium", "chromium", "chromium-browser",
+                  "google-chrome", "google-chrome-stable")
 
 
 def svg_size(text):
@@ -81,6 +96,35 @@ def resolve_size(input_path, width, height):
     return 800, 600
 
 
+def find_browser():
+    """Installed Chromium based browser, or None.
+
+    The Playwright download is only needed when no system browser is found.
+    GIFKIT_BROWSER overrides the search and must point at an existing file.
+    """
+    custom = os.environ.get("GIFKIT_BROWSER")
+    if custom:
+        path = pathlib.Path(os.path.expandvars(custom)).expanduser()
+        if path.is_file():
+            return path
+        raise gifkit.GifError("GIFKIT_BROWSER does not exist: %s" % path)
+    if sys.platform == "win32":
+        candidates = WINDOWS_BROWSERS
+    elif sys.platform == "darwin":
+        candidates = MAC_BROWSERS
+    else:
+        candidates = ()
+    for candidate in candidates:
+        path = pathlib.Path(os.path.expandvars(candidate)).expanduser()
+        if path.is_file():
+            return path
+    for name in LINUX_BROWSERS:
+        found = shutil.which(name)
+        if found:
+            return pathlib.Path(found)
+    return None
+
+
 def node_env():
     """Environment with the global npm module root on NODE_PATH."""
     env = os.environ.copy()
@@ -108,8 +152,7 @@ def check_playwright(node, env):
         raise gifkit.GifError("playwright probe failed: %s" % exc)
     if probe.returncode != 0:
         raise gifkit.GifError(
-            "playwright is not reachable from node; run: "
-            "npm install -g playwright && npx playwright install chromium")
+            "playwright is not reachable from node; run: npm install -g playwright")
 
 
 def main(argv=None):
@@ -131,6 +174,8 @@ def main(argv=None):
     p.add_argument("--dither", default="none", choices=sorted(gifkit.DITHERS))
     p.add_argument("--loop", type=int, default=0, help="0 loops forever")
     p.add_argument("--preview", help="optional PNG of the first frame")
+    p.add_argument("--browser",
+                   help="path to a Chromium based browser; default is an installed one")
     args = p.parse_args(argv)
 
     try:
@@ -156,6 +201,12 @@ def main(argv=None):
             raise gifkit.GifError("node not found; Playwright needs Node.js")
         env = node_env()
         check_playwright(node, env)
+        if args.browser:
+            browser = pathlib.Path(args.browser).expanduser()
+            if not browser.is_file():
+                raise gifkit.GifError("browser not found: %s" % browser)
+        else:
+            browser = find_browser()
 
         count = max(2, round(args.duration * args.fps))
         out = pathlib.Path(args.out)
@@ -179,6 +230,7 @@ def main(argv=None):
                 "selector": args.selector,
                 "animate": args.animate,
                 "duration": args.duration,
+                "executablePath": str(browser) if browser else None,
                 "frames": frames,
             }
             plan_path = work / "plan.json"

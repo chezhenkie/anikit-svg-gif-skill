@@ -39,10 +39,12 @@ function presetCss(animate, duration) {
 async function main() {
   const plan = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
   const { chromium } = loadPlaywright();
-  const browser = await chromium.launch({
+  const launchOptions = {
     headless: true,
     args: ["--force-color-profile=srgb", "--hide-scrollbars"]
-  });
+  };
+  if (plan.executablePath) launchOptions.executablePath = plan.executablePath;
+  const browser = await chromium.launch(launchOptions);
   try {
     const context = await browser.newContext({
       viewport: { width: plan.width, height: plan.height },
