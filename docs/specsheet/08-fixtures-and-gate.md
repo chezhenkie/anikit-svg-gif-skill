@@ -1,10 +1,10 @@
 # 08-fixtures-and-gate
 
-Status: all three routes have fixtures. The Python gate still covers every route, and the Rust gate covers the workspace: core, time, the text and images routes, and the vector route where a browser is installed.
+Status: all three routes have fixtures. The Rust gate is the only gate and covers the workspace: core, time, all three routes, and the vector route where a browser is installed.
 
 ## 8.1 Fixtures
 
-The frozen Python exports one fixture set per route before its file is deleted. Each set holds the smallest input that exercises the route and the GIF it produced.
+The frozen Python exported one fixture set per route before its file was deleted. Each set holds the smallest input that exercises the route and the GIF it produced.
 
 | route | fixture input | what the manifest records |
 |---|---|---|
@@ -29,7 +29,7 @@ Every route is checked for the same facts, in both languages:
 
 ## 8.3 The gate
 
-The Python gate is `python tools/check.py --strict`: three routes plus the error contract plus repository hygiene. It runs before every commit that changes behaviour and must pass 5 of 5.
+The Python gate was `python tools/check.py --strict`: three routes, the error contract and repository hygiene, 5 of 5. It was deleted with the payload (8.4) and the Rust gate replaced it.
 
 The porting checklist that gates each route merge is docs/research/python-to-rust-refactor-pitfalls.md. A route is not merged until that checklist passes for it, because the list records the behaviours that break silently in a port.
 
@@ -38,7 +38,7 @@ The Rust gate adds:
 - `cargo test` for the workspace, including the fixture comparisons.
 - `cargo clippy -- -D warnings` and `cargo fmt --check`.
 - A musl build of the text and images routes, since those two must work with no system libraries (part 02).
-- The hygiene checks ported from the Python gate: ASCII only, LF only, no secrets, no machine paths, and every README link resolving.
+- The hygiene checks ported from the Python gate: ASCII only, LF only, no secrets, no machine paths, and every markdown link resolving. They live in `rust/crates/anikit-cli/tests/repo_hygiene.rs`.
 - A memory check: a 1000-frame run stays within the stated multiple of a 100-frame run (part 03). The test is `tests/memory.rs` in `anikit-core` and reads the peak resident set from the operating system.
 
 The Rust gate runs in GitHub Actions on every push to `main` and every pull request (`.github/workflows/ci.yml`), on Linux and on Windows. A developer machine is a convenience, not the gate: a release asset is only ever produced by `.github/workflows/release.yml` on a tag (09, row 20).
@@ -50,5 +50,7 @@ The Rust gate runs in GitHub Actions on every push to `main` and every pull requ
 3. `render_frames.cjs` and the Playwright dependency go with the vector route, since nothing else uses them.
 4. `tools/check.py` is replaced by the Rust gate, not kept beside it.
 5. The skill's install instructions, version and changelog change in the same release.
+
+All five steps are done at 0.2.0.
 
 The order in which the three routes are ported is decided in 09, row 12.

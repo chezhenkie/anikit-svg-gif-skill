@@ -28,21 +28,32 @@ jobs:
         run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
       - name: build
         run: cargo build --manifest-path rust/Cargo.toml --release --target ${{ matrix.target }} -p anikit-cli
+      - name: stage
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "${{ matrix.binary }}" "dist/${{ matrix.asset }}"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}
-          path: ${{ matrix.binary }}
+          path: dist/${{ matrix.asset }}
           if-no-files-found: error
 
   publish:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          path: assets
+          path: dist
           merge-multiple: true
       - name: release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" assets/* --verify-tag --generate-notes
+        run: |
+          ls -l dist
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --verify-tag \
+            --title "anikit $GITHUB_REF_NAME" \
+            --notes "One binary replaces the Python payload. Download the asset for the platform and install it as bin/anikit (bin/anikit.exe on Windows). See CHANGELOG.md for the change list."

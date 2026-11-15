@@ -15,7 +15,7 @@ The skill turns text frames, a folder of images, or an SVG animation into one lo
 ## Reading order
 
 1. [Specsheet overview](specsheet/00-overview.md): the rules, and the list of parts.
-2. [Behaviour baseline](specsheet/01-behaviour-baseline.md): what the shipped Python does, and what the port must match.
+2. [Behaviour baseline](specsheet/01-behaviour-baseline.md): what the frozen Python did, and what the binary reproduces.
 3. [Crate split](specsheet/02-crate-split.md) and [frame flow](specsheet/03-frame-flow.md): how the Rust workspace is shaped.
 4. Parts 04 to 07: the tween crate, from time and keys to layers.
 5. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical.
@@ -37,6 +37,6 @@ The skill turns text frames, a folder of images, or an SVG animation into one lo
 
 ## Checks
 
-`python tools/check.py --strict` runs the three routes, the error contract and repository hygiene, and must pass before a behaviour change is committed. The Rust gate is specified in [08-fixtures-and-gate](specsheet/08-fixtures-and-gate.md).
+The gate is the Rust test suite in `rust/`: `cargo test --workspace`, clippy and fmt, run on Linux and Windows in CI. The gate is specified in [08-fixtures-and-gate](specsheet/08-fixtures-and-gate.md).
 
 The crate dependencies are drawn in [ascii-crate-flow.txt](ascii-crate-flow.txt).

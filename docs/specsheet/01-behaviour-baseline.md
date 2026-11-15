@@ -1,6 +1,6 @@
 # 01-behaviour-baseline
 
-Status: the frozen Python at tag python-freeze, main 08fd195. This part records what the Rust port must reproduce. A rule marked as a defect is not a decision and the port may correct it, but the correction is stated in 09 first.
+Status: the frozen Python at tag python-freeze, main 08fd195, deleted from main at 0.2.0. This part records what the Rust binary reproduces. A rule marked as a defect is not a decision and the port may correct it, but the correction is stated in 09 first.
 
 ## 1.1 Routes and flags
 
@@ -8,9 +8,9 @@ Three routes, one shared core, one output type.
 
 | route | input | entry point |
 |---|---|---|
-| text | a text file with frames, or a folder of .txt files | ascii_gif.py |
-| images | a folder of images, sorted by name | pics_gif.py |
-| vector | an .svg or .html file, captured in a browser | svg_gif.py |
+| text | a text file with frames, or a folder of .txt files | ascii_gif.py / anikit ascii |
+| images | a folder of images, sorted by name | pics_gif.py / anikit images |
+| vector | an .svg or .html file, captured in a browser | svg_gif.py / anikit vector |
 
 Text route flags: `--font`, `--size` (default 28), `--fg` (default `#e6edf6`), `--bg` (default `#0a0d12`), `--delay` (default 100 ms), `--width` and `--height` for a fixed canvas with the grid centred. The port draws with an embedded face, so `--font` is an override rather than the only way to get stable metrics (09, row 11).
 

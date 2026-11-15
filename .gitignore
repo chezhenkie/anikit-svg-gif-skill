@@ -2,6 +2,9 @@
 scratch/
 # Rust build output
 rust/target/
+# Release binaries are copied in at install time, see agent-skill/bin/README.md
+agent-skill/bin/anikit
+agent-skill/bin/anikit.exe
 # Python bytecode
 __pycache__/
 *.pyc

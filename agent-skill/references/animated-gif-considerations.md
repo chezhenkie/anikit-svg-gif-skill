@@ -65,7 +65,7 @@ def scaled_durations(runs, speed):
 
 ## SVG and HTML
 
-- SVG needs a rasterizer. This skill uses Chromium through Playwright because it handles CSS, SMIL, filters, text and web fonts consistently.
+- SVG needs a rasterizer. The binary drives an installed Chromium based browser directly over the DevTools protocol, which handles CSS, SMIL, filters, text and web fonts consistently.
 - Pause animations, then seek each frame to an explicit time. Web Animations exposes `currentTime`; SMIL exposes `setCurrentTime`. Screenshots taken against real time are not deterministic.
 - Match the viewport to the drawing, or set it explicitly. The page wrapper fits the SVG to the viewport and keeps its aspect ratio.
 - Relative images, fonts and CSS in an SVG resolve against its own directory through a base URL.
