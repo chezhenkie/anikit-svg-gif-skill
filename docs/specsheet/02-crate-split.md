@@ -32,7 +32,7 @@ core          -> none
 
 One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer depends on another renderer. A renderer that needs a rule from a sibling has found a rule that belongs in `core` or `tween`.
 
-The same graph as a picture: docs/crate-flow.txt.
+The same graph as a picture: docs/ascii-crate-flow.txt.
 
 ## 2.3 What each boundary owns
 
