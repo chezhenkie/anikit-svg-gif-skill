@@ -6,3 +6,7 @@ license.workspace = true
 description = "Frames, palette, GIF writer and verification for anikit"
 
 [dependencies]
+
+[dev-dependencies]
+# Independent decoder for round-trip tests; not part of the binary.
+gif = "0.14"
