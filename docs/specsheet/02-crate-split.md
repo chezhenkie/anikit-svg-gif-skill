@@ -64,4 +64,6 @@ The text and images routes must build for every target with no system libraries 
 
 ## 2.6 Delivery
 
-Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). The skill installs one binary and calls it; nothing is downloaded, unpacked or built while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector route uses it.
+Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector route uses it.
+
+The workflow builds x86_64 Windows and x86_64 static musl today. The Apple and aarch64 assets are added when the tween crate completes the Rust conversion; a host that needs one before then is reported as unsupported.

@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt --target x86_64-unknown-linux-musl
+      - name: format
+        run: cargo fmt --manifest-path rust/Cargo.toml --check
+      - name: lint
+        run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
+      - name: test
+        run: cargo test --manifest-path rust/Cargo.toml --workspace
+      - name: musl build
+        run: cargo build --manifest-path rust/Cargo.toml --release --target x86_64-unknown-linux-musl -p anikit-cli
+      - name: musl routes
+        run: |
+          set -eu
+          cd rust
+          bin=./target/x86_64-unknown-linux-musl/release/anikit
+          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.gif" --size 28 --width 480 --height 270
+          $bin images crates/anikit-cli/tests/fixtures/images/input -o "$RUNNER_TEMP/images.gif" --width 320 --height 180 --mode crossfade --fps 12 --hold 0.5 --transition 0.25
+          test -s "$RUNNER_TEMP/text.gif"
+          test -s "$RUNNER_TEMP/images.gif"
+      - name: static link
+        run: file rust/target/x86_64-unknown-linux-musl/release/anikit | grep -q "statically linked"
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy
+      - name: lint
+        run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
+      - name: test
+        run: cargo test --manifest-path rust/Cargo.toml --workspace
+      - name: release build
+        run: cargo build --manifest-path rust/Cargo.toml --release -p anikit-cli
