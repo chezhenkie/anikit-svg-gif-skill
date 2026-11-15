@@ -12,7 +12,7 @@ Three routes, one shared core, one output type.
 | images | a folder of images, sorted by name | pics_gif.py |
 | vector | an .svg or .html file, captured in a browser | svg_gif.py |
 
-Text route flags: `--font`, `--size` (default 28), `--fg` (default `#e6edf6`), `--bg` (default `#0a0d12`), `--delay` (default 100 ms), `--width` and `--height` for a fixed canvas with the grid centred.
+Text route flags: `--font`, `--size` (default 28), `--fg` (default `#e6edf6`), `--bg` (default `#0a0d12`), `--delay` (default 100 ms), `--width` and `--height` for a fixed canvas with the grid centred. The port draws with an embedded face, so `--font` is an override rather than the only way to get stable metrics (09, row 11).
 
 Text input format: frames separated by a line containing only `---`, optionally with a delay in milliseconds (`--- 250`). A directory contributes one frame per .txt file, sorted by name. ANSI SGR sequences for 16 colours, 256 colours and truecolor set the glyph colour per cell; other CSI sequences are stripped. Tabs expand to four spaces.
 

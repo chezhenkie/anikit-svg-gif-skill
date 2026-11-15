@@ -11,7 +11,7 @@ Seven crates, one binary. Every package carries the `anikit-` prefix; this part 
 | anikit-core | lib | frame buffer and pixel format, palette rules, quantisation interface, GIF writer, readback verification, the error type |
 | anikit-time | lib | presentation times, the 10 ms grid, cumulative rounding, the frame plan, loop modes |
 | anikit-tween | lib | timeline, tracks, keys, easing, property values, layers and composition |
-| anikit-render-text | lib | glyph grid, ANSI SGR parsing, font discovery and metrics |
+| anikit-render-text | lib | glyph grid, ANSI SGR parsing, glyph loading and metrics |
 | anikit-render-raster | lib | image decoding, EXIF rotation, fit, Ken Burns, crossfade, pixel adjustments |
 | anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation |
 | anikit-cli | bin | argument parsing, route dispatch, messages, exit codes, preview output |
@@ -60,4 +60,4 @@ The binary is produced by the `anikit-cli` package; the other packages are libra
 | aarch64-unknown-linux-musl | anikit | optional, same rules as x86_64 musl |
 | aarch64-apple-darwin, x86_64-apple-darwin | anikit | macOS, no special flags |
 
-The text and images routes must build for every target with no system libraries beyond libc. The vector route depends on an installed Chromium, and on musl that is the distribution package, because the Playwright build is linked against glibc and will not start. Alpine ships no fonts, so the text route needs a font package or an explicit font path there (09, row 11).
+The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector route depends on an installed Chromium, and on musl that is the distribution package, because the Playwright build is linked against glibc and will not start.
