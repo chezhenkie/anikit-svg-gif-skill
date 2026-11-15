@@ -99,3 +99,39 @@ Rules: `kind` selects the renderer; `src` uses `file.svg#elementId`; missing att
 - ASCII sub-cell motion is impossible on a fixed monospace grid; only glyph and color change. Cell crossfade buys smoothness at the cost of legibility mid-tween.
 - Loop seams: verify frame `n-1` to `0` velocity, not just position; easing at the seam must be continuous or the loop visibly hitches.
 - Prototype order: numeric/transform tween, then ASCII grid, then single-path morph, then multi-SVG correspondence, then optional flow. Measure per-frame render time and output KB at each step.
+
+## 6. Composition
+
+Layers exist so one effect can be reused over several animations: a shake, a pulse, a drift, a camera move. A layer is a named set of bindings, one binding per property, plus a weight track, an optional time window and an optional spatial mask. The stack is per property, which is the unit Web Animations composites, not per element and not per document.
+
+Three rules make layering safe:
+
+- Weight applies to the result, not to the value: `v = mix(v, combine(v, x), w)`. Then `w = 0` is an exact identity and `w = 1` is an exact combine for every operation, including multiply and transform concatenation, where scaling the value would not scale the effect. At `w = 1` the mix is skipped, so endpoints stay exact. The weight is itself a track, so a fade in or out is two keys.
+- Order is an explicit integer, sorted on, with duplicates rejected at prepare. Neither array position nor id order may decide the output, because a rewritten array or a renamed element would then change the animation.
+- Clamp once, after the whole stack, and reject an add that the type cannot express instead of silently replacing.
+
+| Type | Replace | Add | Multiply | Note |
+|---|---|---|---|---|
+| number | default | sum | product | clamp only where the property declares a range |
+| opacity | default | sum, then clamp to 0..1 | product | add saturates; independent overlays need multiply |
+| transform | default | list concatenation | matrix product | append keeps the layer in the base axes, prepend in screen space; add with scale or perspective is rejected |
+| colour | default | RGB sum, premultiplied | premultiplied product | CSS says colour is not additive, so add needs explicit permission |
+| path | default | rejected | rejected | a shift belongs in the transform; weight is a dissolve, not a composition |
+| raster | default, weight crossfades | rejected | rejected | composition is renderer side |
+| ASCII grid | default | per-cell density sum, clamped to the ramp | density scale | the glyph is chosen after composition, glyph identity is not addable |
+
+A binding may own part of a property. A transform layer may supply translation only, and a colour layer may supply alpha only. Append puts the translation on the base's rotated and scaled axes, which is what a shake wants; prepend keeps it in screen space, which a camera move wants and CSS cannot express.
+
+Prepare resolves the stack into either a single prepared track or one contiguous range of prepared layers, so the common one-layer case runs the current path with no per-frame cost. A closed time window is one integer compare, a zero weight skips the value sample, and only a weight strictly between 0 and 1 pays for the mix.
+
+Known failure modes: accumulation is order dependent, so order must be serialised; weights outside 0..1 are rejected unless a binding declares overshoot; a binding to a missing element must fail at prepare, not render a frame; and a round trip through a format with no layer concept (GIF, Lottie) bakes the stack and cannot recover it, so the source timeline stays the only editable copy.
+
+The full treatment, including the borrowed semantics, tool prior art, Rust types, cost and tests, is in `docs/research/tween-composition.md`.
+
+## 7. Research notes
+
+- `docs/research/tween-math-easing.md`: bezier solvers as WebKit and Chromium write them, springs by closed form, splines, matrix and colour interpolation, precision, libm.
+- `docs/research/tween-timeline-model.md`: easing ownership, duplicate times, loop and play count outside `sample(t)`, one data model that covers Lottie, CSS, WAAPI, SMIL and GSAP.
+- `docs/research/tween-performance-memory.md`: streaming frames against a palette pass, sink and disposal constraints, stage costs, memory at 480p, 1080p and 4K, benchmark plan.
+- `docs/research/tween-property-types.md`: path morph algorithms and their cost, raster cost, ASCII grids, and the prepare versus sample split.
+- `docs/research/tween-composition.md`: layers, weights, composite operations and per-type add rules.
