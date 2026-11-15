@@ -36,3 +36,5 @@ The skill turns text frames, a folder of images, or an SVG animation into one lo
 ## Checks
 
 `python tools/check.py --strict` runs the three routes, the error contract and repository hygiene, and must pass before a behaviour change is committed. The Rust gate is specified in [08-fixtures-and-gate](specsheet/08-fixtures-and-gate.md).
+
+The crate dependencies are drawn in [crate-flow.txt](crate-flow.txt).

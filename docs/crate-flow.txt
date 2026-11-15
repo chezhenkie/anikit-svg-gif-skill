@@ -1,0 +1,40 @@
+Crate flow, seven packages and one binary.
+
+                        +-------------+
+                        |  anikit-cli |   binary: anikit
+                        +------+------+
+                               |
+        +----------------------+----------------------+
+        |                      |                      |
+ +------+------+        +------+-------+       +------+------+
+ | render-text |        | render-raster|       | render-svg  |
+ +------+------+        +------+-------+       +------+------+
+        |                      |                      |
+        +----------------------+----------------------+
+                               |
+                        +------+------+
+                        | anikit-tween|
+                        +------+------+
+                               |
+                 +-------------+-------------+
+                 |                           |
+          +------+------+             +------+------+
+          | anikit-time |------------>| anikit-core |
+          +-------------+             +-------------+
+
+Edges, in full:
+
+  anikit-cli           -> anikit-render-text, anikit-render-raster, anikit-render-svg,
+                          anikit-tween, anikit-time, anikit-core
+  anikit-render-text   -> anikit-tween, anikit-time, anikit-core
+  anikit-render-raster -> anikit-tween, anikit-time, anikit-core
+  anikit-render-svg    -> anikit-tween, anikit-time, anikit-core
+  anikit-tween         -> anikit-time, anikit-core
+  anikit-time          -> anikit-core
+  anikit-core          -> none
+
+The picture shows the shortest path through the renderers so it stays readable; the edge
+list is the complete graph. The rule is one-way only: nothing depends on anikit-cli, no
+renderer depends on another renderer, and anikit-core depends on nothing.
+
+Binding text: docs/specsheet/02-crate-split.md.

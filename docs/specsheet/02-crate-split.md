@@ -32,6 +32,8 @@ core          -> none
 
 One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer depends on another renderer. A renderer that needs a rule from a sibling has found a rule that belongs in `core` or `tween`.
 
+The same graph as a picture: docs/crate-flow.txt.
+
 ## 2.3 What each boundary owns
 
 - `core` owns bytes and files: the frame buffer type, palette construction and application, the writer, and verification. It knows nothing about fonts, SVG, decoding or animation.
