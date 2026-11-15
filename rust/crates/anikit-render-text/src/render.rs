@@ -261,7 +261,8 @@ mod tests {
         let mut renderer = TextRenderer::new(Face::embedded(), 28).unwrap();
         let first = renderer.draw(&frames[0], &layout, [0, 0, 0]).unwrap();
         let second = renderer.draw(&frames[0], &layout, [0, 0, 0]).unwrap();
-        assert!(first.same_as(&second));
+        assert_eq!(first.size(), second.size());
+        assert_eq!(first.data(), second.data());
     }
 
     #[test]

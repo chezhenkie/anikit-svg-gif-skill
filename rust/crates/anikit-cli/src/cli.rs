@@ -2,7 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use anikit_core::{Dither, Error, MIN_DELAY_MS, Result, WriteOptions, write_gif};
+use anikit_core::{
+    Dither, Error, FrameSink, MIN_DELAY_MS, Result, StreamOptions, snap_delay, stream_gif,
+};
 use anikit_render_raster::{Fit, Mode, Options as SlideshowOptions, write_slideshow};
 use anikit_render_svg::{Options as VectorOptions, Preset, write_animation};
 use anikit_render_text::{Face, TextRenderer, layout, load_frames};
@@ -176,22 +178,43 @@ fn ascii(args: &[String]) -> Result<()> {
     let frames = load_frames(&args.input, args.delay.max(MIN_DELAY_MS), args.fg)?;
     let mut renderer = TextRenderer::new(face, args.size)?;
     let grid = layout(&frames, renderer.metrics(), canvas)?;
-    let mut images = Vec::with_capacity(frames.len());
-    for frame in &frames {
-        images.push(renderer.draw(frame, &grid, args.bg)?);
+
+    // Palette pass: up to twelve frames spread across the loop.
+    let picks: Vec<usize> = if frames.len() <= 12 {
+        (0..frames.len()).collect()
+    } else {
+        (0..12).map(|i| i * (frames.len() - 1) / 11).collect()
+    };
+    let mut samples = Vec::with_capacity(picks.len());
+    for index in &picks {
+        samples.push(renderer.draw(&frames[*index], &grid, args.bg)?);
     }
 
-    let delays: Vec<u32> = frames.iter().map(|frame| frame.delay_ms).collect();
-    let options = WriteOptions {
+    // Presentation times from the per-frame delays, on the cumulative grid.
+    // A frame is pushed at the moment it appears, so its delay is the gap to
+    // the next push and the loop length closes the last one.
+    let mut times: Vec<u64> = Vec::with_capacity(frames.len());
+    let mut total_ms = 0u32;
+    for frame in &frames {
+        times.push(total_ms as u64 * 1000);
+        total_ms += snap_delay(frame.delay_ms);
+    }
+
+    let options = StreamOptions {
         loop_count: args.loop_count,
         colors: args.colors,
-        palette_samples: 12,
         dither: args.dither,
+        total_ms,
     };
-    let summary = write_gif(&images, &delays, &args.out, &options)?;
+    let mut stream = stream_gif(&args.out, &samples, options)?;
+    for (index, frame) in frames.iter().enumerate() {
+        let image = renderer.draw(frame, &grid, args.bg)?;
+        stream.push(index as u32, times[index], &image)?;
+    }
+    let summary = stream.finish()?;
 
     if let Some(path) = &args.preview {
-        png::write_png(path, &images[0])?;
+        png::write_png(path, &samples[0])?;
         println!("{}  still frame", path.display());
     }
 

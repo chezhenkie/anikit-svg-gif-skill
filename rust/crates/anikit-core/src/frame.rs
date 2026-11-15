@@ -87,11 +87,6 @@ impl Frame {
             *pixel = rgb;
         }
     }
-
-    /// True when both frames have the same size and identical bytes.
-    pub fn same_as(&self, other: &Frame) -> bool {
-        self.width == other.width && self.height == other.height && self.data == other.data
-    }
 }
 
 impl std::fmt::Debug for Frame {

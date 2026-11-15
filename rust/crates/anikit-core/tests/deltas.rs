@@ -8,7 +8,7 @@
 use std::fs::File;
 use std::path::PathBuf;
 
-use anikit_core::{Frame, GifEncoder, Palette, WriteOptions, write_gif};
+use anikit_core::{Dither, Frame, FrameSink, GifEncoder, Palette, StreamOptions, stream_gif};
 
 #[path = "../../../testsupport/decode.rs"]
 mod decode;
@@ -114,9 +114,9 @@ fn each_frame_draws_only_what_changed() {
 }
 
 #[test]
-fn the_writer_route_writes_deltas_too() {
-    let dir = scratch("deltas-writer");
-    let path = dir.join("writer.gif");
+fn the_stream_route_writes_deltas_too() {
+    let dir = scratch("deltas-stream");
+    let path = dir.join("stream.gif");
     let frames: Vec<Frame> = frames()
         .iter()
         .map(|indices| {
@@ -136,16 +136,22 @@ fn the_writer_route_writes_deltas_too() {
             frame
         })
         .collect();
-    write_gif(
-        &frames,
-        &[100, 100, 100, 100],
-        &path,
-        &WriteOptions::default(),
-    )
-    .unwrap();
+    let options = StreamOptions {
+        loop_count: 0,
+        colors: 255,
+        dither: Dither::None,
+        total_ms: 400,
+    };
+    let mut stream = stream_gif(&path, &frames, options).unwrap();
+    for (index, frame) in frames.iter().enumerate() {
+        stream
+            .push(index as u32, index as u64 * 100_000, frame)
+            .unwrap();
+    }
+    stream.finish().unwrap();
 
     let (_, _, patches) = decode::patches(&path);
-    assert!(patches.len() == 4, "frame count");
+    assert_eq!(patches.len(), frames.len(), "frame count");
     let small = patches
         .iter()
         .any(|patch| patch.width < WIDTH as u16 || patch.height < HEIGHT as u16);

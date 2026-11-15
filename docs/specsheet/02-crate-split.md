@@ -61,3 +61,7 @@ The binary is produced by the `anikit-cli` package; the other packages are libra
 | aarch64-apple-darwin, x86_64-apple-darwin | anikit | macOS, no special flags |
 
 The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector route depends on an installed Chromium, and on musl that is the distribution package, because the Playwright build is linked against glibc and will not start.
+
+## 2.6 Delivery
+
+Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). The skill installs one binary and calls it; nothing is downloaded, unpacked or built while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector route uses it.

@@ -1,6 +1,6 @@
 # 03-frame-flow
 
-Status: the streaming sink is implemented and used by the images and vector routes. Every frame after the first is written as the rectangle that changed, in both the sink and `write_gif`, so a frame is a patch over the canvas the previous one left. The text route still uses `write_gif` with explicit delays.
+Status: every route streams through the sink. The text route renders up to twelve palette samples, then each frame at its cumulative presentation time; the images and vector routes already worked that way. `stream_gif` is the only writer, so the merge and rounding rules exist once.
 
 ## 3.1 Why two passes
 
@@ -22,6 +22,8 @@ pub trait FrameSink {
 - `push` takes a presentation time, not a duration. The writer derives the delay from the difference between consecutive `pts_us`, so cumulative rounding stays in one place and a dropped frame cannot corrupt the grid.
 - `index` is the frame's position in the plan. It lets the writer skip a frame that repeats the previous one and add its delay to the run, which is the merge rule.
 - Held frames are detected in the plan and never rendered. A hold of one second at 12 fps is one frame with a 1000 ms delay, not twelve identical frames.
+
+The sink is the only writer. A route that already holds its frames, such as the text route, renders twelve palette samples, starts the stream, then draws each frame, pushes it at its cumulative presentation time and drops it. There is no second path with its own merge or rounding rule.
 
 ## 3.3 Disposal and deltas
 

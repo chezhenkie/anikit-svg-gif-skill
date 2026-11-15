@@ -3,9 +3,9 @@
 //! The writer's own readback verifies structure; this test proves the bytes are
 //! a GIF that another implementation can decode back to the same pixels.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use anikit_core::{Frame, WriteOptions, write_gif};
+use anikit_core::{Dither, Frame, FrameSink, StreamOptions, stream_gif};
 
 fn scratch(name: &str) -> PathBuf {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(name);
@@ -20,12 +20,30 @@ fn solid(rgb: [u8; 3]) -> Frame {
     frame
 }
 
+/// Stream the frames at even spacing across a loop of `total_ms`.
+fn write(path: &Path, frames: &[Frame], colors: usize, dither: Dither, total_ms: u32) {
+    let options = StreamOptions {
+        loop_count: 0,
+        colors,
+        dither,
+        total_ms,
+    };
+    let mut stream = stream_gif(path, frames, options).unwrap();
+    let step = total_ms as u64 * 1000 / frames.len() as u64;
+    for (index, frame) in frames.iter().enumerate() {
+        stream
+            .push(index as u32, index as u64 * step, frame)
+            .unwrap();
+    }
+    stream.finish().unwrap();
+}
+
 #[test]
 fn written_gif_decodes_to_the_same_pixels() {
     let dir = scratch("roundtrip");
     let path = dir.join("two.gif");
     let frames = vec![solid([255, 0, 0]), solid([0, 0, 255])];
-    write_gif(&frames, &[100, 100], &path, &WriteOptions::default()).unwrap();
+    write(&path, &frames, 255, Dither::None, 200);
 
     let bytes = std::fs::read(&path).unwrap();
     let mut options = gif::DecodeOptions::new();
@@ -60,12 +78,7 @@ fn dithered_gradient_still_decodes() {
             frame.set_pixel(x, y, [v, v, v]);
         }
     }
-    let options = WriteOptions {
-        colors: 8,
-        dither: anikit_core::Dither::Floyd,
-        ..Default::default()
-    };
-    write_gif(&[frame], &[100], &path, &options).unwrap();
+    write(&path, &[frame], 8, Dither::Floyd, 100);
 
     let bytes = std::fs::read(&path).unwrap();
     let mut decode = gif::DecodeOptions::new();
