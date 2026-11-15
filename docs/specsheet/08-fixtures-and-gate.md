@@ -12,7 +12,7 @@ The frozen Python exports one fixture set per route before its file is deleted. 
 | images | three images at different sizes, one with EXIF rotation | frame count, total duration, size, mode, fit |
 | vector | an SVG with a CSS animation and one SMIL animation | frame count, total duration, size, preset, browser name |
 
-The manifest is a plain text file beside the fixture, one `key=value` per line, plus a line per frame with its delay and a hash of its pixels. Hashes are of decoded RGB, not of the file, because the encoder may change bytes without changing the picture.
+The manifest is a plain text file beside the fixture, one `key=value` per line, plus a line per frame with its delay and a hash of its pixels. Hashes are of the composited canvas, not of the file or of one patch: the encoder writes deltas, so a frame's picture only exists after every frame up to it has been drawn.
 
 A fixture is compared structurally, never byte for byte against the Python output: frame count, delays, size, and per-frame pixel hashes. The Rust encoder is allowed to differ in compression as long as the decoded frames match.
 
@@ -39,7 +39,7 @@ The Rust gate adds:
 - `cargo clippy -- -D warnings` and `cargo fmt --check`.
 - A musl build of the text and images routes, since those two must work with no system libraries (part 02).
 - The hygiene checks ported from the Python gate: ASCII only, LF only, no secrets, no machine paths, and every README link resolving.
-- A memory check: a 1000-frame run stays within the stated multiple of a 100-frame run (part 03).
+- A memory check: a 1000-frame run stays within the stated multiple of a 100-frame run (part 03). The test is `tests/memory.rs` in `anikit-core` and reads the peak resident set from the operating system.
 
 ## 8.4 Deletion order
 

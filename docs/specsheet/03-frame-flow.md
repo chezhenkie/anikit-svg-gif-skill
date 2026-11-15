@@ -1,6 +1,6 @@
 # 03-frame-flow
 
-Status: the streaming sink is implemented and used by the images and vector routes. The delta rectangles of section 3.3 are not written yet, so frames go out whole with disposal 1, and the text route still uses `write_gif` with explicit delays.
+Status: the streaming sink is implemented and used by the images and vector routes. Every frame after the first is written as the rectangle that changed, in both the sink and `write_gif`, so a frame is a patch over the canvas the previous one left. The text route still uses `write_gif` with explicit delays.
 
 ## 3.1 Why two passes
 
@@ -27,6 +27,8 @@ pub trait FrameSink {
 
 Every GIF frame after the first is a delta against the canvas left by the previous one, with disposal method 1 (leave in place). The writer therefore needs the previous canvas after disposal, and frames cannot be evaluated fully independently: the sink is ordered and synchronous.
 
+A frame that repeats the previous one has nothing to draw, and the merge rule removes it before the encoder. A duplicate that still reaches the encoder is written as a single pixel, so its delay is counted and the picture is unchanged.
+
 A two-slot pipeline is the limit of what is safe. The renderer borrows a buffer, the writer encodes it, and the buffer returns to the pool. More slots buy nothing, because the writer cannot proceed past a frame it has not received.
 
 ## 3.4 Memory budget
@@ -38,6 +40,8 @@ A two-slot pipeline is the limit of what is safe. The renderer borrows a buffer,
 | 3840x2160 | 33 MB | 3.3 GB | 33 GB |
 
 Holding the loop is what the Python implementation does and what the port must not do. With a two-slot pipeline the working set is two frames plus the palette and the encoder state. Measured for the realistic case, 480x270 with 100 frames: peak working set 2.1 MiB and peak process memory about 5 MB, flat when the frame count rises to 1000.
+
+The encoder also holds one index canvas, one byte per pixel, to measure each delta against. That is a quarter of an RGBA8 frame and is part of the encoder state above: at 480x270 it is 130 KB, and the peak measured in `tests/memory.rs` is 5.2 MiB at both 100 and 1000 frames.
 
 ## 3.5 Determinism
 
@@ -52,4 +56,5 @@ Holding the loop is what the Python implementation does and what the port must n
 - The palette pass and the render pass agree on frame count and loop duration.
 - A 1000-frame run keeps peak memory within a stated multiple of a 100-frame run.
 - A hold produces one frame with the summed delay, not repeated frames.
+- Every frame composited from its delta rectangles equals the frame that was pushed, compared as pixels by an independent decoder.
 - A failed write leaves no output file and no temp file.

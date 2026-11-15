@@ -1,7 +1,9 @@
 //! GIF89a writer: header, one global palette, per-frame delay, LZW data.
 //!
 //! The encoder streams. Each frame is quantised by the caller and handed over
-//! as indices, so a long animation never exists as a list of frames.
+//! as indices, so a long animation never exists as a list of frames. Every
+//! frame after the first is written as the rectangle that changed, drawn over
+//! the canvas the previous frame left (disposal 1, part 03.3).
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -17,6 +19,15 @@ pub struct GifSummary {
     pub height: u32,
 }
 
+/// The part of the canvas that differs from the previous frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Rect {
+    left: usize,
+    top: usize,
+    width: usize,
+    height: usize,
+}
+
 /// A GIF being written to any sink.
 pub struct GifEncoder<W: Write> {
     out: W,
@@ -25,6 +36,8 @@ pub struct GifEncoder<W: Write> {
     bits: u8,
     frames: u32,
     total_ms: u32,
+    /// Palette indices of the canvas as the decoder will hold it.
+    previous: Vec<u8>,
 }
 
 impl<W: Write> GifEncoder<W> {
@@ -72,13 +85,16 @@ impl<W: Write> GifEncoder<W> {
             bits,
             frames: 0,
             total_ms: 0,
+            previous: vec![0; width as usize * height as usize],
         })
     }
 
     /// Append one frame. `delay_ms` must be a multiple of 10, which is the grid
     /// the time crate guarantees.
     pub fn write_frame(&mut self, indices: &[u8], delay_ms: u32) -> Result<()> {
-        let want = self.width as usize * self.height as usize;
+        let width = self.width as usize;
+        let height = self.height as usize;
+        let want = width * height;
         if indices.len() != want {
             return Err(Error::invalid(format!(
                 "frame has {} indices, expected {want}",
@@ -96,30 +112,70 @@ impl<W: Write> GifEncoder<W> {
             )));
         }
 
+        let rect = if self.frames == 0 {
+            Rect {
+                left: 0,
+                top: 0,
+                width,
+                height,
+            }
+        } else {
+            // The merge rule upstream absorbs a repeat, so a duplicate that
+            // arrives here is written as one pixel and costs nothing.
+            changed_rect(&self.previous, indices, width, height).unwrap_or(Rect {
+                left: 0,
+                top: 0,
+                width: 1,
+                height: 1,
+            })
+        };
+
         // Graphic control extension: disposal 1, no transparency.
         self.out.write_all(&[0x21, 0xF9, 0x04, 0x04])?;
         self.out
             .write_all(&((delay_ms / 10) as u16).to_le_bytes())?;
         self.out.write_all(&[0x00, 0x00])?;
 
-        // Image descriptor: full frame, no local palette, not interlaced.
-        self.out.write_all(&[0x2C, 0x00, 0x00, 0x00, 0x00])?;
-        self.out.write_all(&self.width.to_le_bytes())?;
-        self.out.write_all(&self.height.to_le_bytes())?;
+        // Image descriptor: the changed rectangle, no local palette.
+        self.out.write_all(&[0x2C])?;
+        self.out.write_all(&(rect.left as u16).to_le_bytes())?;
+        self.out.write_all(&(rect.top as u16).to_le_bytes())?;
+        self.out.write_all(&(rect.width as u16).to_le_bytes())?;
+        self.out.write_all(&(rect.height as u16).to_le_bytes())?;
         self.out.write_all(&[0x00])?;
 
         let min_code_size = self.bits.max(2);
         self.out.write_all(&[min_code_size])?;
-        let packed = lzw_encode(indices, min_code_size);
+        let packed = lzw_encode(
+            rect_pixels(indices, width, rect),
+            min_code_size,
+            rect.width * rect.height / 2 + 16,
+        );
         for chunk in packed.chunks(255) {
             self.out.write_all(&[chunk.len() as u8])?;
             self.out.write_all(chunk)?;
         }
         self.out.write_all(&[0x00])?;
 
+        self.remember(indices, rect);
         self.frames += 1;
         self.total_ms += delay_ms;
         Ok(())
+    }
+
+    /// Keep the canvas the decoder will hold after this frame.
+    fn remember(&mut self, indices: &[u8], rect: Rect) {
+        let width = self.width as usize;
+        let full = rect.left == 0 && rect.width == width && rect.top == 0;
+        if full && rect.height == self.height as usize {
+            self.previous.copy_from_slice(indices);
+            return;
+        }
+        for y in 0..rect.height {
+            let start = (rect.top + y) * width + rect.left;
+            self.previous[start..start + rect.width]
+                .copy_from_slice(&indices[start..start + rect.width]);
+        }
     }
 
     /// Write the trailer and report what was written.
@@ -141,6 +197,56 @@ fn bits_for(colours: usize) -> u8 {
         bits += 1;
     }
     bits
+}
+
+/// The bounding box of the pixels that differ, or `None` when all agree.
+///
+/// Rows that match byte for byte are skipped without a per-pixel compare,
+/// which keeps a frame with a small change cheap to measure.
+fn changed_rect(previous: &[u8], current: &[u8], width: usize, height: usize) -> Option<Rect> {
+    let mut left = width;
+    let mut right = 0;
+    let mut top = height;
+    let mut bottom = 0;
+    for y in 0..height {
+        let start = y * width;
+        let before = &previous[start..start + width];
+        let after = &current[start..start + width];
+        if before == after {
+            continue;
+        }
+        let first = before
+            .iter()
+            .zip(after)
+            .position(|(a, b)| a != b)
+            .unwrap_or(0);
+        let last = before
+            .iter()
+            .zip(after)
+            .rposition(|(a, b)| a != b)
+            .unwrap_or(width - 1);
+        left = left.min(first);
+        right = right.max(last);
+        top = top.min(y);
+        bottom = y;
+    }
+    if top > bottom {
+        return None;
+    }
+    Some(Rect {
+        left,
+        top,
+        width: right - left + 1,
+        height: bottom - top + 1,
+    })
+}
+
+/// The pixels of one rectangle in row order, ready for LZW.
+fn rect_pixels(indices: &[u8], width: usize, rect: Rect) -> impl Iterator<Item = u8> + '_ {
+    (0..rect.height).flat_map(move |row| {
+        let start = (rect.top + row) * width + rect.left;
+        indices[start..start + rect.width].iter().copied()
+    })
 }
 
 struct BitWriter {
@@ -177,17 +283,25 @@ impl BitWriter {
 }
 
 /// GIF variable-length LZW. Codes are packed least significant bit first.
-fn lzw_encode(indices: &[u8], min_code_size: u8) -> Vec<u8> {
+fn lzw_encode<I>(indices: I, min_code_size: u8, capacity: usize) -> Vec<u8>
+where
+    I: IntoIterator<Item = u8>,
+{
     let clear = 1u16 << min_code_size;
     let eoi = clear + 1;
-    let mut writer = BitWriter::new(indices.len() / 2 + 16);
+    let mut writer = BitWriter::new(capacity);
     let mut dict: HashMap<u32, u16> = HashMap::with_capacity(4096);
     let mut code_size = min_code_size + 1;
     let mut next = eoi + 1;
 
     writer.push(clear, code_size);
-    let mut prefix = indices[0] as u16;
-    for &pixel in &indices[1..] {
+    let mut pixels = indices.into_iter();
+    let Some(first) = pixels.next() else {
+        writer.push(eoi, code_size);
+        return writer.finish();
+    };
+    let mut prefix = first as u16;
+    for pixel in pixels {
         let key = ((prefix as u32) << 8) | pixel as u32;
         if let Some(&code) = dict.get(&key) {
             prefix = code;
@@ -225,8 +339,45 @@ mod tests {
 
     #[test]
     fn lzw_output_is_not_empty() {
-        let data = lzw_encode(&[0, 1, 0, 1, 0, 1, 1, 1], 2);
+        let data = lzw_encode([0, 1, 0, 1, 0, 1, 1, 1], 2, 8);
         assert!(!data.is_empty());
+    }
+
+    #[test]
+    fn the_changed_rectangle_covers_the_difference() {
+        // 5 wide, 3 tall, one pixel moved at (1, 1) and (3, 2).
+        let before = [0u8; 15];
+        let mut after = before;
+        after[6] = 1;
+        after[13] = 1;
+        let rect = changed_rect(&before, &after, 5, 3).unwrap();
+        assert_eq!(
+            rect,
+            Rect {
+                left: 1,
+                top: 1,
+                width: 3,
+                height: 2
+            }
+        );
+    }
+
+    #[test]
+    fn an_unchanged_frame_has_no_rectangle() {
+        let frame = [1u8, 2, 3, 4, 5, 6];
+        assert_eq!(changed_rect(&frame, &frame, 3, 2), None);
+    }
+
+    #[test]
+    fn a_repeated_frame_is_accepted_without_a_rectangle() {
+        let palette = Palette::from_colors(vec![[0, 0, 0], [255, 255, 255]]).unwrap();
+        let mut out = Vec::new();
+        let mut enc = GifEncoder::new(&mut out, 2, 2, &palette, 0).unwrap();
+        enc.write_frame(&[0, 1, 1, 0], 100).unwrap();
+        enc.write_frame(&[0, 1, 1, 0], 100).unwrap();
+        let summary = enc.finish().unwrap();
+        assert_eq!(summary.frames, 2);
+        assert_eq!(summary.total_ms, 200);
     }
 
     #[test]

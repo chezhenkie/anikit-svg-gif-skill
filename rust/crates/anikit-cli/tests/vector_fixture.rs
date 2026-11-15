@@ -13,6 +13,9 @@ use std::process::{Command, Output};
 use anikit_core::inspect_file;
 use sha2::{Digest, Sha256};
 
+#[path = "../../../testsupport/decode.rs"]
+mod decode;
+
 const BIN: &str = env!("CARGO_BIN_EXE_anikit");
 const WIDTH: u32 = 120;
 
@@ -77,14 +80,7 @@ fn run(args: &[&str]) -> Output {
 }
 
 fn decoded(path: &Path) -> Vec<(Vec<u8>, u32)> {
-    let bytes = std::fs::read(path).unwrap();
-    let mut options = gif::DecodeOptions::new();
-    options.set_color_output(gif::ColorOutput::RGBA);
-    let mut decoder = options.read_info(&bytes[..]).unwrap();
-    let mut frames = Vec::new();
-    while let Some(frame) = decoder.read_next_frame().unwrap() {
-        frames.push((frame.buffer.to_vec(), frame.delay as u32 * 10));
-    }
+    let (_, _, frames) = decode::canvases(path);
     frames
 }
 

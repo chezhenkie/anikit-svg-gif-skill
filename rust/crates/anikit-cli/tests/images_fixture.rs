@@ -10,6 +10,9 @@ use std::process::{Command, Output};
 
 use anikit_core::inspect_file;
 
+#[path = "../../../testsupport/decode.rs"]
+mod decode;
+
 const BIN: &str = env!("CARGO_BIN_EXE_anikit");
 
 fn fixture() -> PathBuf {
@@ -92,24 +95,12 @@ fn images_fixture_matches_the_recorded_structure() {
     assert_eq!(info.width.to_string(), keys["width"]);
     assert_eq!(info.height.to_string(), keys["height"]);
 
-    let bytes = std::fs::read(&out).unwrap();
-    let mut options = gif::DecodeOptions::new();
-    options.set_color_output(gif::ColorOutput::RGBA);
-    let mut decoder = options.read_info(&bytes[..]).unwrap();
-    let mut decoded = Vec::new();
-    while let Some(frame) = decoder.read_next_frame().unwrap() {
-        decoded.push((
-            frame.buffer.to_vec(),
-            frame.delay,
-            frame.width,
-            frame.height,
-        ));
-    }
+    let (width, height, decoded) = decode::canvases(&out);
+    assert_eq!((width as u32, height as u32), (320, 180), "canvas");
     assert_eq!(decoded.len(), frames.len());
-    for (index, (buffer, delay, width, height)) in decoded.iter().enumerate() {
-        assert_eq!(*delay as u32 * 10, frames[index].0, "frame {index} delay");
+    for (index, (buffer, delay)) in decoded.iter().enumerate() {
+        assert_eq!(*delay, frames[index].0, "frame {index} delay");
         assert!(!buffer.is_empty());
-        assert_eq!((*width, *height), (320, 180), "frame {index} size");
     }
     assert_ne!(decoded[0].0, decoded[1].0, "frames must differ");
     assert!(!dir.join("out.tmp.gif").exists());
