@@ -134,6 +134,11 @@ impl Browser {
                 "--disable-extensions",
                 "--mute-audio",
                 "--allow-file-access-from-files",
+                // The Python route ran under Playwright, which disables the
+                // Chromium sandbox by default. CI kernels also restrict
+                // unprivileged user namespaces, and the browser aborts before
+                // it opens a debugging port when the sandbox cannot start.
+                "--no-sandbox",
                 "--remote-debugging-port=0",
             ])
             .arg(format!("--user-data-dir={}", profile.display()))
