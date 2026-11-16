@@ -4,8 +4,9 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anikit_tween::{
-    Binding, Color, Ease, Key, Layer, LayerId, LoopMode, Op, Plan, PropId, Property, Timeline,
-    Timing, Track, Transform, Value,
+    Binding, Color, Command, Ease, Grid, GridKey, GridTrack, Key, Layer, LayerId, LoopMode, Op,
+    Path, PathKey, PathTrack, Plan, Point, PropId, Property, Timeline, Timing, Track, Transform,
+    Value,
 };
 
 static ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
@@ -97,8 +98,12 @@ fn build_plan() -> Plan {
         .unwrap()
 }
 
+fn line(from: Point, to: Point) -> Path {
+    Path::from_commands(&[Command::MoveTo(from), Command::LineTo(to)]).unwrap()
+}
+
 #[test]
-fn sampling_a_plan_allocates_nothing() {
+fn sampling_allocates_nothing_after_warmup() {
     let plan = build_plan();
     let mut out = vec![Value::Number(0.0); plan.len()];
     plan.sample_into(0, &mut out);
@@ -107,5 +112,55 @@ fn sampling_a_plan_allocates_nothing() {
         plan.sample_into(frame * 1000, &mut out);
     }
     let after = ALLOCATIONS.load(Ordering::Relaxed);
-    assert_eq!(after, before, "sampling allocated {} times", after - before);
+    assert_eq!(
+        after,
+        before,
+        "plan sampling allocated {} times",
+        after - before
+    );
+
+    let a = line(Point::new(0.0, 0.0), Point::new(100.0, 0.0));
+    let b = line(Point::new(0.0, 100.0), Point::new(100.0, 100.0));
+    let curve = PathTrack::new(vec![PathKey::new(0, a.clone()), PathKey::new(1_000_000, b)])
+        .prepare("path")
+        .unwrap();
+    let mut path_out = Path::empty_like(&a);
+    curve.sample_into(500_000, &mut path_out);
+    let before = ALLOCATIONS.load(Ordering::Relaxed);
+    for frame in 0..1000u64 {
+        curve.sample_into(frame * 1000, &mut path_out);
+    }
+    let after = ALLOCATIONS.load(Ordering::Relaxed);
+    assert_eq!(
+        after,
+        before,
+        "path sampling allocated {} times",
+        after - before
+    );
+
+    let cell = anikit_tween::Cell {
+        density: 0.0,
+        color: Color::TRANSPARENT,
+    };
+    let a = Grid::new(16, 16, cell);
+    let mut b = a.clone();
+    for slot in &mut b.cells {
+        slot.density = 1.0;
+    }
+    let curve = GridTrack::new(vec![GridKey::new(0, a.clone()), GridKey::new(1_000_000, b)])
+        .prepare("grid")
+        .unwrap();
+    let mut grid_out = Grid::empty_like(&a);
+    curve.sample_into(500_000, &mut grid_out);
+    let before = ALLOCATIONS.load(Ordering::Relaxed);
+    for frame in 0..1000u64 {
+        curve.sample_into(frame * 1000, &mut grid_out);
+    }
+    let after = ALLOCATIONS.load(Ordering::Relaxed);
+    assert_eq!(
+        after,
+        before,
+        "grid sampling allocated {} times",
+        after - before
+    );
 }

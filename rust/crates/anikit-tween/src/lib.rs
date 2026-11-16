@@ -8,14 +8,20 @@
 //! `sample` is total and allocation free.
 
 mod ease;
+mod grid;
 mod layer;
+mod path;
+mod raster;
 mod time;
 mod timeline;
 mod track;
 mod value;
 
 pub use ease::{Ease, EasePlan, Spring, SpringRest, StepAt};
+pub use grid::{Cell, Grid, GridCurve, GridKey, GridTrack};
 pub use layer::{AddMode, Binding, Layer, LayerId, Mask, Op, PropId, Window};
+pub use path::{Command, Cubic, Path, PathCurve, PathKey, PathTrack, Point, Subpath};
+pub use raster::{Blend, FitMode, RasterKey, RasterPlan, RasterRef, RasterStep, RasterTrack, Rect};
 pub use time::{LoopMode, Timing};
 pub use timeline::{Plan, PreparedProperty, Property, Timeline};
 pub use track::{Ballistic, Curve, Key, Lerp, Motion, Smooth, Track};
