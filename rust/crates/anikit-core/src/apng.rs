@@ -38,6 +38,31 @@ pub struct ApngStream {
     committed: bool,
 }
 
+/// Removes the temp file when a setup step fails before a stream owns it.
+struct TempGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl TempGuard {
+    fn new(path: PathBuf) -> TempGuard {
+        TempGuard { path, armed: true }
+    }
+
+    /// Hand the file to the stream that will remove it on its own failure.
+    fn keep(mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for TempGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
 /// Start an APNG. The size is known before the first frame because there is no
 /// palette to sample.
 pub fn stream_apng(
@@ -60,6 +85,7 @@ pub fn stream_apng(
     }
     let temp = temp_path(path);
     let file = File::create(&temp)?;
+    let guard = TempGuard::new(temp.clone());
     let mut out = BufWriter::new(file);
 
     out.write_all(&SIGNATURE)?;
@@ -77,6 +103,7 @@ pub fn stream_apng(
     write_chunk(&mut out, b"acTL", &control)?;
 
     let pending = Frame::new(width, height)?;
+    guard.keep();
     Ok(ApngStream {
         path: path.to_path_buf(),
         temp,
@@ -265,6 +292,42 @@ fn write_chunk<W: Write>(out: &mut W, kind: &[u8; 4], data: &[u8]) -> Result<()>
     out.write_all(data)?;
     out.write_all(&crc32_parts(&[kind, data]).to_be_bytes())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod guard_tests {
+    use super::*;
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/test-tmp")
+            .join(name);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_failed_setup_removes_its_temp_file() {
+        let dir = scratch("apng-guard");
+        let temp = dir.join("out.tmp.png");
+        std::fs::write(&temp, b"half a file").unwrap();
+        {
+            let _guard = TempGuard::new(temp.clone());
+        }
+        assert!(!temp.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_stream_keeps_the_temp_file_it_owns() {
+        let dir = scratch("apng-guard-kept");
+        let temp = dir.join("out.tmp.png");
+        std::fs::write(&temp, b"half a file").unwrap();
+        TempGuard::new(temp.clone()).keep();
+        assert!(temp.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
 
 /// Compress one RGB8 frame into a standalone PNG, through the png crate.
