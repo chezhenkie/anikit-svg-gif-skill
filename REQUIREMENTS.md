@@ -31,7 +31,7 @@ Images are read from PNG, JPEG, GIF, WebP, BMP and TIFF, with EXIF orientation a
 
 ## Browser
 
-The vector route, the tween route when it writes GIF or APNG, and the import route start a Chromium based browser once per run. Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`; `--browser PATH` or `GIFKIT_BROWSER` names one explicitly. The browser runs headless, so no display server is needed, and it is started with `--no-sandbox`, so an unprivileged user namespace is not required. A writable temporary directory is needed for the browser profile, which is removed when the run ends or fails.
+The vector route, the tween route when it writes GIF or APNG, and the import route start a Chromium based browser once per run. Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`; `--browser PATH` or `GIFKIT_BROWSER` names one explicitly. The browser runs headless, so no display server is needed. It starts with its own sandbox, and only a process that exits before opening its debugging port is started again with `--no-sandbox`, so a host that restricts unprivileged user namespaces still runs the routes. The page has no access to local files beyond the ones it loads itself: a script cannot read a further file through `fetch` or `XMLHttpRequest`. Scripts inside the drawing do run and can reach the network, so the artwork is trusted input until a script policy exists. A writable temporary directory is needed for the browser profile, which is removed when the run ends or fails.
 
 The route has been tested with Chromium 146, ungoogled-chromium 156 and the Chrome on the GitHub Actions runners. No minimum version is enforced.
 

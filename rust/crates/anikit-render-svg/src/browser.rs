@@ -107,6 +107,37 @@ fn installed() -> Vec<PathBuf> {
     found
 }
 
+/// Why one launch attempt produced no browser.
+enum Launch {
+    /// The process ended before it opened its port. A kernel that refuses the
+    /// sandbox reports itself this way.
+    Exited(Error),
+    /// A spawn error, a timeout or an unreadable child.
+    Failed(Error),
+}
+
+/// The flags for one attempt, other than the profile path.
+///
+/// The page never gets `--allow-file-access-from-files`: a file page could
+/// otherwise read any local file its script names.
+fn arguments(sandbox: bool) -> Vec<&'static str> {
+    let mut args = vec![
+        "--headless=new",
+        "--disable-gpu",
+        "--hide-scrollbars",
+        "--force-color-profile=srgb",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-extensions",
+        "--mute-audio",
+        "--remote-debugging-port=0",
+    ];
+    if !sandbox {
+        args.push("--no-sandbox");
+    }
+    args
+}
+
 /// A running browser with an open debugging port.
 pub struct Browser {
     child: Child,
@@ -118,50 +149,40 @@ pub struct Browser {
 impl Browser {
     /// Start the browser headless and wait for its debugging port.
     ///
-    /// A launch can lose the race for resources when several browsers start at
-    /// once; a second attempt with a fresh profile covers that. A browser that
-    /// cannot run at all fails both times.
+    /// The first attempt keeps Chromium's sandbox. A kernel that restricts
+    /// unprivileged user namespaces makes the browser exit before it opens the
+    /// port, and only then is the attempt repeated without the sandbox. Any
+    /// other failure is a race for resources, which a second attempt with a
+    /// fresh profile covers, as before.
     pub fn launch(exe: &Path) -> Result<Browser> {
-        match Self::start(exe) {
+        match Self::start(exe, true) {
             Ok(browser) => Ok(browser),
-            Err(first) => {
+            Err(Launch::Exited(first)) => Self::start(exe, false).map_err(|_| first),
+            Err(Launch::Failed(first)) => {
                 std::thread::sleep(Duration::from_millis(500));
-                Self::start(exe).map_err(|_| first)
+                Self::start(exe, true).map_err(|_| first)
             }
         }
     }
 
-    fn start(exe: &Path) -> Result<Browser> {
+    fn start(exe: &Path, sandbox: bool) -> std::result::Result<Browser, Launch> {
         let profile = unique("profile");
         let log = unique("browser.log");
         let _ = std::fs::remove_dir_all(&profile);
-        let stderr = File::create(&log)
-            .map_err(|err| Error::io(format!("cannot write {}: {err}", log.display())))?;
+        let stderr = File::create(&log).map_err(|err| {
+            Launch::Failed(Error::io(format!("cannot write {}: {err}", log.display())))
+        })?;
         let child = Command::new(exe)
-            .args([
-                "--headless=new",
-                "--disable-gpu",
-                "--hide-scrollbars",
-                "--force-color-profile=srgb",
-                "--no-first-run",
-                "--no-default-browser-check",
-                "--disable-extensions",
-                "--mute-audio",
-                "--allow-file-access-from-files",
-                // The Python route ran under Playwright, which disables the
-                // Chromium sandbox by default. CI kernels also restrict
-                // unprivileged user namespaces, and the browser aborts before
-                // it opens a debugging port when the sandbox cannot start.
-                "--no-sandbox",
-                "--remote-debugging-port=0",
-            ])
+            .args(arguments(sandbox))
             .arg(format!("--user-data-dir={}", profile.display()))
             .arg("about:blank")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::from(stderr))
             .spawn()
-            .map_err(|err| Error::io(format!("cannot start {}: {err}", exe.display())))?;
+            .map_err(|err| {
+                Launch::Failed(Error::io(format!("cannot start {}: {err}", exe.display())))
+            })?;
 
         let mut browser = Browser {
             child,
@@ -173,7 +194,7 @@ impl Browser {
         Ok(browser)
     }
 
-    fn wait_for_port(&mut self) -> Result<u16> {
+    fn wait_for_port(&mut self) -> std::result::Result<u16, Launch> {
         let active = self.profile.join("DevToolsActivePort");
         let deadline = Instant::now() + START_TIMEOUT;
         loop {
@@ -185,16 +206,20 @@ impl Browser {
             {
                 return Ok(port);
             }
-            if let Some(status) = self.child.try_wait()? {
-                return Err(Error::io(format!(
-                    "browser exited with {status} before opening a debugging port{}",
-                    log_note(&self.log)
-                )));
+            match self.child.try_wait() {
+                Ok(Some(status)) => {
+                    return Err(Launch::Exited(Error::io(format!(
+                        "browser exited with {status} before opening a debugging port{}",
+                        log_note(&self.log)
+                    ))));
+                }
+                Ok(None) => {}
+                Err(err) => return Err(Launch::Failed(err.into())),
             }
             if Instant::now() > deadline {
-                return Err(Error::io(
+                return Err(Launch::Failed(Error::io(
                     "browser did not open a debugging port within 20 s",
-                ));
+                )));
             }
             std::thread::sleep(POLL);
         }
@@ -328,5 +353,15 @@ mod tests {
     #[test]
     fn temp_names_are_unique() {
         assert_ne!(unique("profile"), unique("profile"));
+    }
+
+    #[test]
+    fn the_sandbox_is_dropped_only_on_the_fallback() {
+        let guarded = arguments(true);
+        assert!(!guarded.contains(&"--no-sandbox"));
+        assert!(arguments(false).contains(&"--no-sandbox"));
+        for args in [guarded, arguments(false)] {
+            assert!(!args.contains(&"--allow-file-access-from-files"));
+        }
     }
 }

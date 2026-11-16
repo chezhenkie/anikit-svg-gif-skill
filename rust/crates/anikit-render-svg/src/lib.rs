@@ -592,6 +592,32 @@ mod tests {
     }
 
     #[test]
+    fn a_page_cannot_read_a_local_file() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
+        let Ok(exe) = discover(None) else {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        };
+        let dir = scratch("file-access");
+        std::fs::write(dir.join("secret.txt"), "TOPSECRET").unwrap();
+        let page_file = dir.join("probe.html");
+        std::fs::write(&page_file, "<!doctype html><title>probe</title>").unwrap();
+        let target = page::file_url(&page_file).unwrap();
+        let secret = page::file_url(&dir.join("secret.txt")).unwrap();
+        let mut page = Page::open(&exe, 40, 20, 1, &target, [255, 255, 255]).unwrap();
+        let script = format!(
+            "fetch('{secret}').then((reply) => reply.text()).then((text) => 'read:' + text).catch((err) => 'blocked:' + err.name)"
+        );
+        let reply = page.evaluate(&script, true).unwrap();
+        let text = reply
+            .pointer("/result/value")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert_eq!(text, "blocked:TypeError", "the page read a local file");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn a_captured_loop_moves_the_drawing() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
         if discover(None).is_err() {
