@@ -340,8 +340,9 @@ pub fn js_setup(
     script.push_str(
         "if (document.fonts && document.fonts.ready) { await document.fonts.ready; }\
          await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));\
-         document.getAnimations().forEach((a) => a.pause());\
+         document.getAnimations().forEach((a) => { a.currentTime = 0; a.pause(); });\
          const svg = document.querySelector('svg');\
+         if (svg && svg.setCurrentTime) { svg.setCurrentTime(0); }\
          if (svg && svg.pauseAnimations) { svg.pauseAnimations(); }\
          return true; })()",
     );
@@ -520,6 +521,9 @@ mod tests {
         assert!(script.contains("\"#logo\""));
         assert!(script.contains("selector not found: #logo"));
         assert!(script.contains("pauseAnimations"));
+        assert!(script.contains("a.currentTime = 0; a.pause()"));
+        assert!(script.contains("svg.setCurrentTime(0)"));
+        assert!(script.find("a.currentTime = 0").unwrap() < script.find("a.pause()").unwrap());
         assert!(script.contains("#010203"));
         assert!(script.starts_with("(async () => {"));
     }

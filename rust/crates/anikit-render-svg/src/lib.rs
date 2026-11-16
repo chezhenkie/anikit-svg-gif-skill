@@ -542,6 +542,39 @@ mod tests {
     }
 
     #[test]
+    fn the_setup_pauses_every_clock_at_zero() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
+        let Ok(exe) = discover(None) else {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        };
+        let dir = scratch("clocks");
+        let input = dir.join("art.svg");
+        std::fs::write(
+            &input,
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"><style>@keyframes slide{from{transform:translateX(0)}to{transform:translateX(40px)}}rect{animation:slide 1s linear infinite}</style><rect width="10" height="10" fill="#ff0000"/></svg>"##,
+        )
+        .unwrap();
+        let page_svg = std::fs::read_to_string(&input).unwrap();
+        let temp = write_page(&input, &page_svg, 80, 40, [255, 255, 255]).unwrap();
+        let target = page::file_url(&temp.path).unwrap();
+        let mut page = Page::open(&exe, 80, 40, 1, &target, [255, 255, 255]).unwrap();
+        page.evaluate(
+            &page::js_setup(false, Preset::None, None, 0.0, [255, 255, 255]),
+            true,
+        )
+        .unwrap();
+        let probe = "document.getAnimations().map((a) => a.currentTime + '/' + a.playState).join(',') + '#' + document.querySelector('svg').getCurrentTime()";
+        let reply = page.evaluate(probe, false).unwrap();
+        let text = reply
+            .pointer("/result/value")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert_eq!(text, "0/paused#0");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn a_captured_loop_moves_the_drawing() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
         if discover(None).is_err() {
