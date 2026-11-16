@@ -117,6 +117,17 @@ fn stylesheet(
                 style.push_str(&percent(pts, total_ms));
                 style.push_str(&declaration(targets[*index].slot, value)?);
             }
+            // The last sample needs an explicit 100 percent key, or the
+            // animation interpolates back to the authored value over the last
+            // interval and the loop seam reverses.
+            let last = frames
+                .presentation_us(frames.len() - 1)
+                .ok_or_else(|| Error::invalid("frame is outside the plan"))?;
+            let value = plan
+                .property_value(*index, last)
+                .ok_or_else(|| Error::invalid("property is outside the plan"))?;
+            style.push_str("100%");
+            style.push_str(&declaration(targets[*index].slot, value)?);
             style.push_str("}\n");
         }
     }
@@ -269,7 +280,9 @@ mod tests {
         assert!(text.contains(
             "75%{transform:matrix(1.000000,0.000000,0.000000,1.000000,45.000000,0.000000)}"
         ));
-        assert!(!text.contains("100%"));
+        assert!(text.contains(
+            "75%{transform:matrix(1.000000,0.000000,0.000000,1.000000,45.000000,0.000000)}100%{transform:matrix(1.000000,0.000000,0.000000,1.000000,45.000000,0.000000)}"
+        ));
         assert!(text.contains("animation:anikit-0 1000ms linear infinite"));
         assert!(!dir.join("out.tmp.svg").exists());
         let _ = std::fs::remove_dir_all(&dir);

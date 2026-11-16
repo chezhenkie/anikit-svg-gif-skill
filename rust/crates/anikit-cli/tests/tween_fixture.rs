@@ -314,6 +314,49 @@ fn an_svg_export_needs_no_browser_and_plays() {
         last > first + 40.0,
         "the exported drawing should move: {first} then {last}"
     );
+
+    // The 100 percent key holds the last sample: 0.95 s and 1.0 s must show
+    // the same pose. The first run ends on 0.95 s, the second on 1.0 s.
+    let late = dir.join("late.gif");
+    let output = run(&[
+        "vector",
+        out.to_str().unwrap(),
+        "-o",
+        late.to_str().unwrap(),
+        "--duration",
+        "1",
+        "--fps",
+        "20",
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let end = dir.join("end.gif");
+    let output = run(&[
+        "vector",
+        out.to_str().unwrap(),
+        "-o",
+        end.to_str().unwrap(),
+        "--duration",
+        "1.1",
+        "--fps",
+        "10",
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let late_frames = decoded(&late);
+    let end_frames = decoded(&end);
+    let at_095 = box_centre(&late_frames.last().expect("late frame").0);
+    let at_100 = box_centre(&end_frames.last().expect("end frame").0);
+    assert!(
+        (at_095 - at_100).abs() < 2.0,
+        "the last sample must hold: {at_095} then {at_100}"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
 
