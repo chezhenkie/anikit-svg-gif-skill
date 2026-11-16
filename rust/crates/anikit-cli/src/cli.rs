@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use anikit_core::{
-    Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, Result, StreamOptions, snap_delay,
+    Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, Result, StreamOptions,
     stream_output,
 };
 use anikit_render_raster::{
@@ -15,7 +15,7 @@ use anikit_render_svg::{
     write_tween,
 };
 use anikit_render_text::{Face, TextRenderer, layout, load_frames};
-use anikit_time::LoopMode;
+use anikit_time::{FramePlan, LoopMode};
 
 use crate::png;
 
@@ -267,15 +267,10 @@ fn ascii(args: &[String]) -> Result<()> {
         }
     }
 
-    // Presentation times from the per-frame delays, on the cumulative grid.
-    // A frame is pushed at the moment it appears, so its delay is the gap to
-    // the next push and the loop length closes the last one.
-    let mut times: Vec<u64> = Vec::with_capacity(frames.len());
-    let mut total_ms = 0u32;
-    for frame in &frames {
-        times.push(total_ms as u64 * 1000);
-        total_ms += snap_delay(frame.delay_ms);
-    }
+    // Frame starts on the cumulative grid. A frame is pushed when it appears,
+    // its delay is the gap to the next push, and the last gap closes the loop.
+    let delays: Vec<u32> = frames.iter().map(|frame| frame.delay_ms).collect();
+    let plan = FramePlan::cumulative(&delays);
 
     let options = StreamOptions {
         format,
@@ -284,7 +279,7 @@ fn ascii(args: &[String]) -> Result<()> {
         loop_count: args.loop_count,
         colors: args.colors,
         dither: args.dither,
-        total_ms,
+        total_ms: plan.total_ms(),
     };
     let mut stream = stream_output(&args.out, &samples, options)?;
     let mut first: Option<Frame> = samples.first().cloned();
@@ -293,7 +288,10 @@ fn ascii(args: &[String]) -> Result<()> {
         if first.is_none() {
             first = Some(image.clone());
         }
-        stream.push(index as u32, times[index], &image)?;
+        let pts = plan
+            .presentation_us(index)
+            .ok_or_else(|| Error::invalid(format!("frame {index} is outside the plan")))?;
+        stream.push(index as u32, pts, &image)?;
     }
     let summary = stream.finish()?;
 

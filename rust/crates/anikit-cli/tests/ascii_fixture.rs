@@ -99,6 +99,38 @@ fn text_fixture_matches_the_recorded_structure() {
 }
 
 #[test]
+fn an_off_grid_delay_totals_on_the_grid() {
+    let dir = scratch("text-cumulative");
+    let input = dir.join("frames.txt");
+    std::fs::write(&input, "a\n---\nb\n---\nc\n").unwrap();
+    let out = dir.join("out.gif");
+    let output = run(&[
+        "ascii",
+        input.to_str().unwrap(),
+        "-o",
+        out.to_str().unwrap(),
+        "--size",
+        "28",
+        "--delay",
+        "33",
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("0.10 s"),
+        "stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let info = inspect_file(&out).unwrap();
+    assert_eq!(info.total_ms, 100);
+    assert_eq!(info.frames, 3);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn a_failed_run_reports_fail_and_writes_nothing() {
     let dir = scratch("text-failure");
     let out = dir.join("nope.gif");

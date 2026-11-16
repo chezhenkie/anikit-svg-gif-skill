@@ -124,7 +124,7 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
             } else {
                 (pick as f64 * (count - 1) as f64 / (picks - 1) as f64).round() as usize
             };
-            samples.push(page.frame(time_of(index, fps))?);
+            samples.push(page.frame(presentation_seconds(&plan, index)?)?);
         }
     }
 
@@ -147,7 +147,7 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
         let pts = plan
             .presentation_us(index)
             .ok_or_else(|| Error::invalid(format!("frame {index} is outside the plan")))?;
-        let frame = page.frame(time_of(index, fps))?;
+        let frame = page.frame(pts as f64 / 1_000_000.0)?;
         if first.is_none() {
             first = Some(frame.clone());
         }
@@ -196,9 +196,12 @@ fn validate(options: &Options) -> Result<()> {
     Ok(())
 }
 
-/// The time one frame is seeked to, in seconds.
-fn time_of(index: usize, fps: f64) -> f64 {
-    index as f64 / fps
+/// The time one frame is seeked to, in seconds, taken from the plan.
+fn presentation_seconds(plan: &FramePlan, index: usize) -> Result<f64> {
+    let us = plan
+        .presentation_us(index)
+        .ok_or_else(|| Error::invalid(format!("frame {index} is outside the plan")))?;
+    Ok(us as f64 / 1_000_000.0)
 }
 
 /// A page file that removes itself.

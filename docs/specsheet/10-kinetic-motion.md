@@ -81,7 +81,7 @@ Gravity is a scene setting, not a per-object one. A scene uses 1400 px/s^2 for a
 ## 10.6 Frame rate and small motion
 
 - 12 fps reads as drawn because each pose is held long enough to see; 25 fps reads as smooth. 24 fps is not on the 10 ms grid and alternates 40 and 50 ms, so it is not a target.
-- At 12 fps a frame is 83 ms, so use fewer links in a chain rather than longer delays.
+- At 12 fps the delay alternates 80 and 90 ms, 83 on average, and the frame count closes the loop on the grid; use fewer links in a chain rather than longer delays.
 - Positions stay sub-pixel through the tween and are snapped only at render, for text and strokes. Snapping inside the tween turns a 0.4 px per frame move into four 1 px jumps.
 - A smear belongs at 25 fps, where it lasts 40 to 80 ms. At 12 fps it reads as a deliberate multiple.
 

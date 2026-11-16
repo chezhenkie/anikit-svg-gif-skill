@@ -4,7 +4,7 @@ Mandatory before choosing fps, delay, easing or a preset. Motion that reads as p
 
 ## Rules
 
-1. Give every move a frame count as well as a duration. At 25 fps a frame is 40 ms; at 12 fps it is 83 ms.
+1. Give every move a frame count as well as a duration. At 25 fps a frame is 40 ms; at 12 fps the delay alternates 80 and 90 ms.
 2. Spacing is timing: the first and last gap between frames must be at most 30 percent of the middle gap. A 100 px move over 10 frames has a middle gap near 20 px and end gaps of 1 to 3 px.
 3. Every contact is a held frame: one frame at 25 fps, two for a heavy object, one or two at 12 fps. A contact of zero frames reads as a bounce off nothing.
 4. Bounce heights fall by restitution squared and the intervals fall by restitution. A height ratio of 0.35 to 0.55 reads natural. A GIF rarely has room, so cut to two bounces and a settle.
