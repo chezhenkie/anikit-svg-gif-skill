@@ -12,7 +12,7 @@ Status: implemented, including the fixed-input test that pins the arithmetic on 
 | hold | no interpolation | same as a duplicate key time |
 | spring | mass, stiffness, damping, initial velocity | closed form only |
 
-A spring is accepted only with an explicit settle time, because the crate must know when the value stops changing to end the segment.
+A spring is accepted only with a settle time, because the crate must know when the value stops changing to end the segment. The route defaults the field to 400 ms when it is absent and refuses zero.
 
 Contact holds, weight cues, bounce decay and the motion defaults are in part 10; this part covers the arithmetic those rules are built on.
 
@@ -30,7 +30,7 @@ The solver follows WebKit's `UnitBezier`: Newton-Raphson from the current estima
 Springs are evaluated in closed form from the damped oscillator equation, not integrated step by step.
 
 - Semi-implicit Euler is not usable for seeking: at 60 fps it is off by about 7 percent of travel at a natural frequency of 10, and it diverges at 100. Both were measured.
-- Settle time is authored on the spring and checked at prepare: it must be greater than zero and no longer than the segment, and the spring must be within `rest_delta` and `rest_speed` there. A spring that is still moving fails the prepare.
+- Settle time is authored on the spring and checked at prepare: it must be greater than zero, and a settle longer than 1.5 times its segment is capped at that length rather than refused. The spring must be within `rest_delta` and `rest_speed` at its settle time, or the prepare fails.
 - Initial velocity is part of the key, so a spring can start with a flick.
 - Baked `linear()` output is an export concern only; the crate never bakes to evaluate.
 
