@@ -12,6 +12,8 @@ An animation maker with a keyframe engine at its centre: text frames, image fold
 |---|---|---|---|
 | [<img src="demo-ascii.gif" width="190" alt="Animated ASCII loading bar">](demo-ascii.gif) | [<img src="demo-pics.gif" width="190" alt="Crossfade between three image cards">](demo-pics.gif) | [<img src="demo-svg.gif" width="190" alt="Rotating group from an SVG">](demo-svg.gif) | [<img src="demo-tween.gif" width="190" alt="Three dots bobbing on springs">](demo-tween.gif) |
 
+The keyframe sample is also written as [APNG](demo-tween.apng) and as an [animated SVG](demo-tween.svg); the SVG plays in a browser without a script.
+
 ## Reading order
 
 1. [Specsheet overview](specsheet/00-overview.md): the rules, and the list of parts.
@@ -19,8 +21,9 @@ An animation maker with a keyframe engine at its centre: text frames, image fold
 3. [Crate split](specsheet/02-crate-split.md) and [frame flow](specsheet/03-frame-flow.md): how the Rust workspace is shaped.
 4. Parts 04 to 07: the tween crate, from time and keys to layers.
 5. [Tween route](specsheet/11-tween-route.md): how a JSON timeline becomes the fourth route.
-6. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical.
-7. [Decisions](specsheet/09-decisions.md): what is settled and what is still open.
+6. [Output formats](specsheet/12-output-formats.md): GIF, APNG and the SVG export.
+7. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical.
+8. [Decisions](specsheet/09-decisions.md): what is settled and what is still open.
 
 ## Research notes
 

@@ -1,10 +1,10 @@
 # 01-behaviour-baseline
 
-Status: the frozen Python at tag python-freeze, main 08fd195, deleted from main at 0.2.0. This part records what the Rust binary reproduces. A rule marked as a defect is not a decision and the port may correct it, but the correction is stated in 09 first.
+Status: the frozen Python at tag python-freeze, main 08fd195, deleted from main at 0.2.0. This part records what the Rust binary reproduces. A rule marked as a defect is not a decision and the port may correct it, but the correction is stated in 09 first. The tween route and the APNG and SVG outputs are additions to this baseline, specified in parts 11 and 12.
 
 ## 1.1 Routes and flags
 
-Three routes, one shared core, one output type.
+Three routes in the baseline, one shared core, one output type (GIF). The Rust binary adds the tween route and APNG and SVG output.
 
 | route | input | entry point |
 |---|---|---|
@@ -24,7 +24,7 @@ Vector route flags: `--width`, `--height` (default from the drawing), `--duratio
 
 Vector input: an .svg is wrapped in a page at the requested viewport; an .html page is opened as is. CSS animations, WAAPI animations and SMIL are paused and seeked to explicit times, so frames do not depend on wall clock. A JavaScript canvas page needs its own frame hook and is not driven by the tool.
 
-Flags on all routes: `-o` or `--out`, `--colors` 2 to 255 (default 255), `--dither none|floyd` (default none), `--loop` (0 means forever), `--preview` for a PNG of the first frame.
+Flags on all routes: `-o` or `--out`, `--colors` 2 to 255 (default 255), `--dither none|floyd` (default none), `--loop` (0 means forever), `--preview` for a PNG of the first frame. The output extension chooses GIF, APNG or, on the tween route, SVG (part 12).
 
 ## 1.2 GIF core rules
 

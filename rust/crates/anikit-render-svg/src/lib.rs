@@ -6,13 +6,17 @@
 
 mod browser;
 pub(crate) mod cdp;
+mod export;
 pub(crate) mod page;
 mod timeline;
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use anikit_core::{Dither, Error, Frame, FrameSink, GifSummary, Result, StreamOptions, stream_gif};
+use anikit_core::{
+    Dither, Error, Frame, FrameSink, OutputFormat, OutputSummary, Result, StreamOptions,
+    stream_output,
+};
 use anikit_time::FramePlan;
 use serde_json::{Value, json};
 
@@ -21,7 +25,7 @@ use cdp::Session;
 
 pub use browser::discover;
 pub use page::{Preset, SvgSize, resolve_size, svg_size};
-pub use timeline::{TweenOptions, write_tween};
+pub use timeline::{TweenOptions, TweenRendered, write_tween};
 
 /// How many frames feed the palette when the loop is longer than that.
 const SAMPLES: usize = 12;
@@ -54,12 +58,14 @@ pub struct Options {
 /// What the route wrote, plus the first frame for an optional preview.
 #[derive(Debug)]
 pub struct Rendered {
-    pub summary: GifSummary,
+    pub summary: OutputSummary,
     pub first: Frame,
 }
 
-/// Capture one SVG or HTML animation into a GIF.
+/// Capture one SVG or HTML animation into a GIF or an APNG.
 pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Rendered> {
+    let format = OutputFormat::from_path(out)?;
+    format.require_frames()?;
     let kind = Kind::of(input)?;
     validate(options)?;
     let svg = match kind {
@@ -109,19 +115,24 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
 
     let picks = SAMPLES.min(count);
     let mut samples = Vec::with_capacity(picks);
-    for pick in 0..picks {
-        let index = if count <= picks {
-            pick
-        } else {
-            (pick as f64 * (count - 1) as f64 / (picks - 1) as f64).round() as usize
-        };
-        samples.push(page.frame(time_of(index, fps))?);
+    if format == OutputFormat::Gif {
+        for pick in 0..picks {
+            let index = if count <= picks {
+                pick
+            } else {
+                (pick as f64 * (count - 1) as f64 / (picks - 1) as f64).round() as usize
+            };
+            samples.push(page.frame(time_of(index, fps))?);
+        }
     }
 
-    let mut stream = stream_gif(
+    let mut stream = stream_output(
         out,
         &samples,
         StreamOptions {
+            format,
+            width,
+            height,
             loop_count: options.loop_count,
             colors: options.colors,
             dither: options.dither,

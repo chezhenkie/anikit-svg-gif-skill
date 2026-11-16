@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anikit_core::{Dither, Frame, FrameSink, StreamOptions, stream_gif};
+use anikit_core::{Dither, Frame, FrameSink, OutputFormat, StreamOptions, stream_output};
 
 fn scratch(name: &str) -> PathBuf {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(name);
@@ -22,13 +22,17 @@ fn solid(rgb: [u8; 3]) -> Frame {
 
 /// Stream the frames at even spacing across a loop of `total_ms`.
 fn write(path: &Path, frames: &[Frame], colors: usize, dither: Dither, total_ms: u32) {
+    let (width, height) = frames[0].size();
     let options = StreamOptions {
+        format: OutputFormat::Gif,
+        width,
+        height,
         loop_count: 0,
         colors,
         dither,
         total_ms,
     };
-    let mut stream = stream_gif(path, frames, options).unwrap();
+    let mut stream = stream_output(path, frames, options).unwrap();
     let step = total_ms as u64 * 1000 / frames.len() as u64;
     for (index, frame) in frames.iter().enumerate() {
         stream

@@ -1,6 +1,6 @@
 # 03-frame-flow
 
-Status: every route streams through the sink. The text route renders up to twelve palette samples, then each frame at its cumulative presentation time; the images and vector routes already worked that way, and the tween route samples its prepared plan at each presentation time. `stream_gif` is the only writer, so the merge and rounding rules exist once.
+Status: every route streams through the sink. The text route renders up to twelve palette samples, then each frame at its cumulative presentation time; the images and vector routes already worked that way, and the tween route samples its prepared plan at each presentation time. `stream_output` dispatches to the GIF and APNG writers, so the merge and rounding rules exist once. SVG export is not a frame stream and is specified in part 12.
 
 ## 3.1 Why two passes
 
@@ -8,14 +8,16 @@ A GIF needs one palette for the whole loop, and the palette must exist before th
 
 The sampling pass takes up to 12 frames spread evenly across the loop, which is the rule the frozen Python already follows (section 1.2). It must be cheap enough to run before anything is written, so `tween` sampling is a pure function of time with no allocation, and a renderer's frame build for this pass may render at reduced size or reduced quality when the route allows it.
 
+APNG needs no palette, so a route that writes one skips the sampling pass entirely and renders each frame once. The format is chosen from the output path before either pass; part 12 fixes the choice.
+
 ## 3.2 The sink
 
 The writer owns the palette, the previous canvas and the disposal state. The renderer pushes frames into it.
 
 ```rust
 pub trait FrameSink {
-    fn push(&mut self, index: u32, pts_us: u64, frame: &Frame) -> Result<(), Error>;
-    fn finish(self) -> Result<GifResult, Error>;
+    fn push(&mut self, index: u32, pts_us: u64, frame: &Frame) -> Result<()>;
+    fn finish(self) -> Result<OutputSummary>;
 }
 ```
 
@@ -23,13 +25,13 @@ pub trait FrameSink {
 - `index` is the frame's position in the plan. It lets the writer skip a frame that repeats the previous one and add its delay to the run, which is the merge rule.
 - Held frames are detected in the plan and never rendered. A hold of one second at 12 fps is one frame with a 1000 ms delay, not twelve identical frames.
 
-The sink is the only writer. A route that already holds its frames, such as the text route, renders twelve palette samples, starts the stream, then draws each frame, pushes it at its cumulative presentation time and drops it. There is no second path with its own merge or rounding rule.
+The sink is the only writer. A route that already holds its frames, such as the text route, renders twelve palette samples, starts the stream, then draws each frame, pushes it at its cumulative presentation time and drops it. There is no second path with its own merge or rounding rule. `stream_output` returns either writer; a route never calls the GIF encoder or the APNG encoder directly.
 
 ## 3.3 Disposal and deltas
 
 Every GIF frame after the first is a delta against the canvas left by the previous one, with disposal method 1 (leave in place). The writer therefore needs the previous canvas after disposal, and frames cannot be evaluated fully independently: the sink is ordered and synchronous.
 
-A frame that repeats the previous one has nothing to draw, and the merge rule removes it before the encoder. A duplicate that still reaches the encoder is written as a single pixel, so its delay is counted and the picture is unchanged.
+A frame that repeats the previous one has nothing to draw, and the merge rule removes it before the encoder. A duplicate that still reaches the encoder is written as a single pixel, so its delay is counted and the picture is unchanged. APNG has no delta rectangles: a repeated frame is merged before the writer, and every remaining frame is the full canvas.
 
 A two-slot pipeline is the limit of what is safe. The renderer borrows a buffer, the writer encodes it, and the buffer returns to the pool. More slots buy nothing, because the writer cannot proceed past a frame it has not received.
 
@@ -59,4 +61,5 @@ The encoder also holds one index canvas, one byte per pixel, to measure each del
 - A 1000-frame run keeps peak memory within a stated multiple of a 100-frame run.
 - A hold produces one frame with the summed delay, not repeated frames.
 - Every frame composited from its delta rectangles equals the frame that was pushed, compared as pixels by an independent decoder.
+- An APNG decodes in the png crate with the same frame count, size and delay sum, and a corrupted chunk is refused.
 - A failed write leaves no output file and no temp file.

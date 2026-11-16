@@ -252,6 +252,65 @@ fn two_runs_are_byte_identical() {
 }
 
 #[test]
+fn an_svg_export_needs_no_browser_and_plays() {
+    let dir = scratch("tween-svg");
+    let out = dir.join("out.svg");
+    let input = fixture().join("input/scene.json");
+    let output = run(&[
+        "tween",
+        input.to_str().unwrap(),
+        "-o",
+        out.to_str().unwrap(),
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("samples"), "stdout: {stdout}");
+
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(text.contains("<style id=\"anikit\">"));
+    assert!(text.contains("[id=\"box\"]"));
+    assert!(text.contains("@keyframes anikit-0{"));
+    assert!(text.contains("transform:matrix("));
+    assert!(text.contains("animation:anikit-0 1000ms linear forwards"));
+    assert!(!text.contains("<script"));
+    assert!(!dir.join("out.tmp.svg").exists());
+
+    if anikit_render_svg::discover(None).is_err() {
+        eprintln!("skipping playback: no Chromium based browser installed");
+        return;
+    }
+    let gif = dir.join("played.gif");
+    let played = run(&[
+        "vector",
+        out.to_str().unwrap(),
+        "-o",
+        gif.to_str().unwrap(),
+        "--duration",
+        "1",
+        "--fps",
+        "5",
+    ]);
+    assert!(
+        played.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&played.stderr)
+    );
+    let captured = decoded(&gif);
+    assert_eq!(captured.len(), 5, "the exported CSS must be seekable");
+    let first = box_centre(&captured[0].0);
+    let last = box_centre(&captured[4].0);
+    assert!(
+        last > first + 40.0,
+        "the exported drawing should move: {first} then {last}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn a_missing_element_reports_its_id_and_writes_nothing() {
     if anikit_render_svg::discover(None).is_err() {
         eprintln!("skipping: no Chromium based browser installed");

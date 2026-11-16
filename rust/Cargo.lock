@@ -27,6 +27,7 @@ name = "anikit-core"
 version = "0.0.0"
 dependencies = [
  "gif",
+ "png",
 ]
 
 [[package]]

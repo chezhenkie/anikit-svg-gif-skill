@@ -1,6 +1,7 @@
-"""Generate the sample GIFs used by the README.
+"""Generate the sample animations used by the README.
 
-Creates fixtures under scratch/docs and writes the four demo GIFs into docs/.
+Creates fixtures under scratch/docs and writes the four demo animations into
+docs/, plus the keyframe sample as APNG and as an animated SVG.
 Run from the repository root, after building the binary:
 
     python tools/make_docs.py
@@ -21,7 +22,14 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 WORK = ROOT / "scratch" / "docs"
 ESC = chr(27)
-SAMPLES = ("demo-ascii.gif", "demo-pics.gif", "demo-svg.gif", "demo-tween.gif")
+SAMPLES = (
+    "demo-ascii.gif",
+    "demo-pics.gif",
+    "demo-svg.gif",
+    "demo-tween.gif",
+    "demo-tween.apng",
+    "demo-tween.svg",
+)
 
 
 def binary():
@@ -168,6 +176,8 @@ def tween_sample():
     scene_path = WORK / "dots.json"
     scene_path.write_text(json.dumps(scene, indent=2) + "\n", encoding="ascii")
     run("tween", scene_path, "-o", DOCS / "demo-tween.gif")
+    run("tween", scene_path, "-o", DOCS / "demo-tween.apng")
+    run("tween", scene_path, "-o", DOCS / "demo-tween.svg")
 
 
 def main():

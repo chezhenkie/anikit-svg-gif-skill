@@ -3,29 +3,34 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::encode::GifSummary;
-use crate::inspect::inspect_file;
+use crate::inspect::{inspect_apng_file, inspect_file};
+use crate::output::{OutputFormat, OutputSummary};
 use crate::{Error, Result};
 
 /// Check the file on disk against the summary, then move it into place.
 pub(crate) fn verify_and_rename(
     temp: &Path,
     path: &Path,
-    width: u32,
-    height: u32,
-    summary: &GifSummary,
+    summary: &OutputSummary,
+    format: OutputFormat,
 ) -> Result<()> {
-    let info = inspect_file(temp)?;
+    let info = match format {
+        OutputFormat::Gif => inspect_file(temp)?,
+        OutputFormat::Apng => inspect_apng_file(temp)?,
+        OutputFormat::Svg => {
+            return Err(Error::verify("SVG files are written by the tween route"));
+        }
+    };
     if info.frames != summary.frames {
         return Err(Error::verify(format!(
             "frame count {} does not match {}",
             info.frames, summary.frames
         )));
     }
-    if info.width != width || info.height != height {
+    if info.width != summary.width || info.height != summary.height {
         return Err(Error::verify(format!(
-            "size {}x{} does not match {width}x{height}",
-            info.width, info.height
+            "size {}x{} does not match {}x{}",
+            info.width, info.height, summary.width, summary.height
         )));
     }
     if info.total_ms.abs_diff(summary.total_ms) > 10 {
@@ -39,7 +44,7 @@ pub(crate) fn verify_and_rename(
 }
 
 /// The temp file beside the target, e.g. `out.tmp.gif`.
-pub(crate) fn temp_path(path: &Path) -> PathBuf {
+pub fn temp_path(path: &Path) -> PathBuf {
     let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("out");
     let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("gif");
     path.with_file_name(format!("{stem}.tmp.{extension}"))
@@ -71,15 +76,15 @@ mod tests {
         encoder.write_frame(&[0, 1, 1, 0], 100).unwrap();
         let summary = encoder.finish().unwrap();
 
-        let wrong = GifSummary {
+        let wrong = OutputSummary {
             frames: summary.frames + 1,
             ..summary
         };
-        assert!(verify_and_rename(&temp, &target, 2, 2, &wrong).is_err());
+        assert!(verify_and_rename(&temp, &target, &wrong, OutputFormat::Gif).is_err());
         assert!(!target.exists());
         assert!(temp.exists(), "a refused check keeps the temp file");
 
-        verify_and_rename(&temp, &target, 2, 2, &summary).unwrap();
+        verify_and_rename(&temp, &target, &summary, OutputFormat::Gif).unwrap();
         assert!(target.exists());
         assert!(!temp.exists());
         let _ = std::fs::remove_dir_all(&dir);

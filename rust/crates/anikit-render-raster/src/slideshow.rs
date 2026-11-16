@@ -6,7 +6,8 @@
 use std::path::Path;
 
 use anikit_core::{
-    Dither, Error, Frame, FrameSink, GifStream, GifSummary, Result, StreamOptions, stream_gif,
+    Dither, Error, Frame, FrameSink, OutputFormat, OutputStream, OutputSummary, Result,
+    StreamOptions, stream_output,
 };
 use anikit_time::FramePlan;
 
@@ -41,13 +42,15 @@ pub struct Options {
 /// What the route wrote, plus the first frame for an optional preview.
 #[derive(Debug)]
 pub struct Rendered {
-    pub summary: GifSummary,
+    pub summary: OutputSummary,
     pub first: Frame,
 }
 
-/// Build one GIF from a folder of images.
+/// Build one animation from a folder of images.
 pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<Rendered> {
     validate(options)?;
+    let format = OutputFormat::from_path(out)?;
+    format.require_frames()?;
     let files = decode::scan_folder(folder, out)?;
     let mut stills = Vec::new();
     for file in &files {
@@ -76,22 +79,29 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
         hold_count,
     };
 
-    let picks = 12u32.min(count);
-    let samples: Vec<Frame> = (0..picks)
-        .map(|i| {
-            let index = if count <= 12 {
-                i
-            } else {
-                (i as f64 * (count - 1) as f64 / (picks - 1) as f64).round() as u32
-            };
-            frame_at(&scene, &stills, index, per_image, transitions)
-        })
-        .collect::<Result<Vec<_>>>()?;
+    // The palette pass is GIF only; APNG stores truecolor frames (part 12).
+    let mut samples = Vec::new();
+    if format == OutputFormat::Gif {
+        let picks = 12u32.min(count);
+        samples = (0..picks)
+            .map(|i| {
+                let index = if count <= 12 {
+                    i
+                } else {
+                    (i as f64 * (count - 1) as f64 / (picks - 1) as f64).round() as u32
+                };
+                frame_at(&scene, &stills, index, per_image, transitions)
+            })
+            .collect::<Result<Vec<_>>>()?;
+    }
 
-    let mut stream = stream_gif(
+    let mut stream = stream_output(
         out,
         &samples,
         StreamOptions {
+            format,
+            width: size.0,
+            height: size.1,
             loop_count: options.loop_count,
             colors: options.colors,
             dither: options.dither,
@@ -100,7 +110,7 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
     )?;
 
     let mut first: Option<Frame> = None;
-    let mut push = |stream: &mut GifStream, index: u32, frame: &Frame| -> Result<()> {
+    let mut push = |stream: &mut OutputStream, index: u32, frame: &Frame| -> Result<()> {
         if first.is_none() {
             first = Some(frame.clone());
         }

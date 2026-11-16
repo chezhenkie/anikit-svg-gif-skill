@@ -7,7 +7,7 @@
 
 use std::path::Path;
 
-use anikit_core::{Dither, Frame, FrameSink, StreamOptions, stream_gif};
+use anikit_core::{Dither, Frame, FrameSink, OutputFormat, StreamOptions, stream_output};
 
 const WIDTH: u32 = 480;
 const HEIGHT: u32 = 270;
@@ -40,12 +40,15 @@ fn peak_memory_does_not_grow_with_frame_count() {
 fn write_run(dir: &Path, name: &str, count: u32) {
     let samples: Vec<Frame> = (0..4).map(|i| frame_at(i * count / 4)).collect();
     let options = StreamOptions {
+        format: OutputFormat::Gif,
+        width: WIDTH,
+        height: HEIGHT,
         loop_count: 0,
         colors: 255,
         dither: Dither::None,
         total_ms: count * 40,
     };
-    let mut stream = stream_gif(&dir.join(name), &samples, options).expect("open stream");
+    let mut stream = stream_output(&dir.join(name), &samples, options).expect("open stream");
     for index in 0..count {
         let frame = frame_at(index);
         stream

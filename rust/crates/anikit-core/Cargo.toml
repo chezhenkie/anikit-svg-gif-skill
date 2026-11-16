@@ -3,10 +3,12 @@ name = "anikit-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Frames, palette, GIF writer and verification for anikit"
+description = "Frames, GIF and APNG writers, and verification for anikit"
 
 [dependencies]
+# APNG frame compression; the only dependency core carries (09, row 22).
+png = "0.18.1"
 
 [dev-dependencies]
-# Independent decoder for round-trip tests; not part of the binary.
+# Independent decoder for GIF round-trip tests; not part of the binary.
 gif = "0.14"

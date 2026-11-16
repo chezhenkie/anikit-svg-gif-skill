@@ -1,6 +1,6 @@
 # 02-crate-split
 
-Status: implemented. Package naming is settled in 09, row 7, and the browser libraries in row 19; the boundaries below are the ones the workspace uses.
+Status: implemented. Package naming is settled in 09, row 7, the browser libraries in row 19, and the png crate in row 22; the boundaries below are the ones the workspace uses.
 
 ## 2.1 Crates
 
@@ -8,12 +8,12 @@ Seven crates, one binary. Every package carries the `anikit-` prefix; this part 
 
 | package | kind | owns |
 |---|---|---|
-| anikit-core | lib | frame buffer and pixel format, palette rules, quantisation interface, GIF writer, readback verification, the error type |
+| anikit-core | lib | frame buffer and pixel format, palette rules, quantisation interface, GIF and APNG writers, readback verification, the error type |
 | anikit-time | lib | presentation times, the 10 ms grid, cumulative rounding, the frame plan, loop modes |
 | anikit-tween | lib | timeline, tracks, keys, easing, property values, layers and composition |
 | anikit-render-text | lib | glyph grid, ANSI SGR parsing, glyph loading and metrics |
 | anikit-render-raster | lib | image decoding, EXIF rotation, fit, Ken Burns, crossfade, pixel adjustments |
-| anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation, timeline-driven element state |
+| anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation, timeline-driven element state, SVG export |
 | anikit-cli | bin | argument parsing, route dispatch, messages, exit codes, preview output |
 
 There is no render-web crate. HTML and JavaScript pages are out of scope for the port, so the vector route handles SVG plus pages whose animation is CSS, WAAPI or SMIL. The tween route accepts an SVG drawing only, because its `src` names elements.
@@ -30,18 +30,18 @@ time          -> core
 core          -> none
 ```
 
-One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer depends on another renderer. A renderer that needs a rule from a sibling has found a rule that belongs in `core` or `tween`.
+One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer depends on another renderer. A renderer that needs a rule from a sibling has found a rule that belongs in `core` or `tween`. `core` carries one external crate, `png`, for APNG frame compression (09, row 22); `time` carries none.
 
 The same graph as a picture: docs/ascii-crate-flow.txt.
 
 ## 2.3 What each boundary owns
 
-- `core` owns bytes and files: the frame buffer type, palette construction and application, the writer, and verification. It knows nothing about fonts, SVG, decoding or animation.
+- `core` owns bytes and files: the frame buffer type, palette construction and application, the two frame writers, and verification. It knows nothing about fonts, SVG, decoding or animation. It carries `png` so APNG frames can be deflated, and no other dependency.
 - `time` owns the mapping from a duration and a frame rate to presentation times, including the 10 ms grid and the cumulative rounding rule. It holds no pixels and no property values.
 - `tween` owns values over time. It knows nothing about pixels, files or fonts, and it never allocates per sample.
 - `render-text` owns glyphs, font metrics and colour per cell. It does not quantise or write.
-- `render-raster` owns decoding, geometry and per-pixel adjustment. It does not choose a palette. It carries the `image` and `kamadak-exif` crates, so `core` and `time` keep no external dependencies (09, row 18).
-- `render-svg` owns the browser: finding it, driving it, and turning a time into an image. It does not compose frames.
+- `render-raster` owns decoding, geometry and per-pixel adjustment. It does not choose a palette. It carries the `image` and `kamadak-exif` crates, so `time` and the text route keep no image dependencies (09, row 18).
+- `render-svg` owns the browser: finding it, driving it, and turning a time into an image. It also writes the SVG export of a prepared timeline, because it owns the plan and the drawing. It does not compose frames or choose a palette.
 - `cli` is the composition root: it validates arguments, builds a plan, selects a renderer, and reports. No route rules live there.
 
 ## 2.4 Binary and subcommands

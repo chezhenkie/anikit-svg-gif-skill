@@ -8,16 +8,8 @@
 use std::collections::HashMap;
 use std::io::Write;
 
+use crate::output::OutputSummary;
 use crate::{Error, Palette, Result};
-
-/// What the encoder produced, for the caller's summary line.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GifSummary {
-    pub frames: u32,
-    pub total_ms: u32,
-    pub width: u32,
-    pub height: u32,
-}
 
 /// The part of the canvas that differs from the previous frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -179,10 +171,10 @@ impl<W: Write> GifEncoder<W> {
     }
 
     /// Write the trailer and report what was written.
-    pub fn finish(mut self) -> Result<GifSummary> {
+    pub fn finish(mut self) -> Result<OutputSummary> {
         self.out.write_all(&[0x3B])?;
         self.out.flush()?;
-        Ok(GifSummary {
+        Ok(OutputSummary {
             frames: self.frames,
             total_ms: self.total_ms,
             width: self.width as u32,

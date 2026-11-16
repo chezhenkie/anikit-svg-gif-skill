@@ -1,12 +1,14 @@
 # 11-tween-route
 
-Status: implemented. The fourth route renders a static SVG drawing through a JSON timeline that the tween crate compiles. The model is parts 04 to 07; this part fixes the file grammar, what the route draws and how it fails.
+Status: implemented. The fourth route renders a static SVG drawing through a JSON timeline that the tween crate compiles, and exports the same prepared plan as an animated SVG. The model is parts 04 to 07; this part fixes the file grammar, what the route draws and how it fails. The output formats are part 12.
 
 ## 11.1 What the route adds
 
 The three earlier routes animate input that already moves, or a sequence that already exists. This route animates a drawing that does not move at all, from a timeline the author writes: position, opacity, fill, stroke and stroke width over time, with layers, easing, springs, arcs and ballistic motion. It is the first consumer of the tween crate.
 
 The route opens one drawing in one browser page, writes the sampled state of every target element, and captures the canvas once per frame. It needs the same browser as the vector route; part 02 and 09, row 21 record it.
+
+The output extension chooses the format. `.gif` and `.png`/`.apng` take the browser path; `.svg` samples the prepared plan and writes CSS keyframes without starting a browser, as part 12 fixes. A frame output follows part 03, and an SVG export is not a frame stream.
 
 Path, raster and grid tracks are not accepted. Their layer composition is still open (parts 06 and 07), and the route does not need them.
 
@@ -143,9 +145,9 @@ The duration is the largest key time over base tracks, binding tracks and weight
 The route follows part 03 like the other three.
 
 - `count = max(2, ceil(duration_s * fps))`, then `FramePlan::uniform(count, fps)` gives the 10 ms grid and the presentation times. The vector route rounds the count; this route rounds up so the last key is reached.
-- The palette pass captures up to 12 frames spread across the plan, then the stream starts.
+- The palette pass captures up to 12 frames spread across the plan for GIF only; APNG renders each frame once. The stream then starts.
 - Each frame samples every property into one reused buffer at the frame's presentation time, which the plan maps through loop mode and rate. The result is written into the page, captured as a PNG, matted onto `bg` and pushed at that same presentation time.
-- `--colors`, `--dither`, `--loop` and `--preview` behave as on the other routes. `--preview` writes the first captured frame.
+- `--colors`, `--dither` and `--loop` behave as on the other routes for GIF; `--colors` and `--dither` have no effect on APNG, and `--loop` sets the APNG play count. `--preview` writes the first captured frame and is refused for an SVG export (part 12).
 - Nothing is sampled or written before the scene has parsed and prepared, so a bad timeline leaves no file and no temp file.
 
 ## 11.4 The page
@@ -162,7 +164,7 @@ The element is looked up by id after the page loads. A missing id, an id that na
 
 ## 11.5 Visible behaviour and errors
 
-The summary line is the one the other routes print: `<name>  N frames, X.XX s, W x H`.
+The summary line is the one the other routes print: `<name>  N frames, X.XX s, W x H`. An SVG export reports `N samples` instead, because it writes keyframes rather than captured frames; part 12 has the details.
 
 A failed run prints one `FAIL` line, exits 1 and writes nothing. The route reports, naming the place in the file where it can:
 
@@ -182,6 +184,7 @@ The browser and its temporary profile are removed on success and on failure. The
 - `anikit-cli/tests/tween_fixture.rs` runs a scene with three base tracks and a windowed add layer over a 120x80 drawing, compares frame count, delays, size and per-frame pixel hashes, checks that the box moved and faded, and runs the scene twice for byte equality. A second scene checks that `svg.stroke` and `svg.stroke-width` reach the page: a border changes from thin black to thick red.
 - The fixture has no frozen Python reference; the first Rust run is recorded in its manifest, because this route did not exist before the port.
 - A scene that names a missing element fails with the id in stderr, exits 1 and leaves no output. The test is skipped when no browser is installed, like the vector fixture.
+- An SVG export of the fixture needs no browser, contains its keyframes and no script, and plays through the vector route with the box moving across the captured frames.
 
 ## 11.7 Limits
 
@@ -189,4 +192,5 @@ The browser and its temporary profile are removed on success and on failure. The
 - The root `svg` cannot be a target, because the route wraps targets in a `g`.
 - The drawing should be static. Its own animation is paused; a JavaScript canvas or WebGL drawing is out of scope, as on the vector route.
 - No path, raster or grid kinds, no spatial masks and no alpha-only colour. Those are the open rows named by parts 06, 07 and 09; a route that needs one closes it with a test in its own part first.
-- The browser is required, so the tween route is unsupported where the vector route is unsupported (02.5, 09 row 20).
+- The browser is required for GIF and APNG, so those outputs are unsupported where the vector route is unsupported (02.5, 09 row 20). The SVG export needs no browser.
+- SVG export covers the five property kinds and replaces any authored transform or CSS animation on those properties of a target element. Part 12.

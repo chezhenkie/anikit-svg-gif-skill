@@ -1,6 +1,6 @@
 # 08-fixtures-and-gate
 
-Status: all four routes have fixtures. The Rust gate is the only gate and covers the workspace: core, time, all four routes, and the browser routes where a browser is installed.
+Status: all four routes have fixtures. The Rust gate is the only gate and covers the workspace: core, time, all four routes, the two frame writers and the SVG export, and the browser routes where a browser is installed.
 
 ## 8.1 Fixtures
 
@@ -15,6 +15,8 @@ The frozen Python exported one fixture set per route before its file was deleted
 
 The manifest is a plain text file beside the fixture, one `key=value` per line, plus a line per frame with its delay and a hash of its pixels. Hashes are of the composited canvas, not of the file or of one patch: the encoder writes deltas, so a frame's picture only exists after every frame up to it has been drawn.
 
+The tween fixture is also exported to `.svg` and fed back through the vector route: the export is checked for its keyframes and its lack of script, and the playback must move the box across the captured frames. APNG output is checked against the same recorded structure where a route already has a fixture, and by the png crate's decoder in `anikit-core/tests/apng.rs`.
+
 A fixture is compared structurally, never byte for byte against the Python output: frame count, delays, size, and per-frame pixel hashes. The Rust encoder is allowed to differ in compression as long as the decoded frames match.
 
 ## 8.2 Structural checks
@@ -27,6 +29,7 @@ Every route is checked for the same facts, in both languages:
 - A hold produces one frame with the summed delay.
 - A failed run prints one line beginning with `FAIL`, exits 1, writes no output and leaves no temp file.
 - The written file opens with an independent decoder.
+- An APNG opens in the png crate with the same frame count, size and delay sum, and a corrupted chunk is refused.
 
 ## 8.3 The gate
 

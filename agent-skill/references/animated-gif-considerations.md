@@ -1,6 +1,6 @@
 # Animated GIF considerations
 
-Format constraints and the defaults the tools in this skill are built on. Numbers are specifics of GIF89a and common viewers, not preferences.
+Format constraints and the defaults the tools in this skill are built on. Numbers are specifics of GIF89a and common viewers, not preferences. GIF is the default output; APNG uses truecolor frames and the same timing and merge rules, so the palette and dither notes below do not apply to it.
 
 ## Format constraints
 
@@ -42,7 +42,7 @@ def scaled_durations(runs, speed):
 ## Frames and determinism
 
 - Render every frame the same way, with the same font, viewport and background. Two runs over the same input must produce identical files.
-- Write to a temp file, read it back, verify frame count, duration sum and pixel size, then rename. A printed path should always point to a complete GIF.
+- Write to a temp file, read it back, verify frame count, duration sum and pixel size, then rename. A printed path should always point to a complete file.
 - Save a still preview of one frame. Palette problems and layout errors are visible without playing the animation.
 
 ## ASCII

@@ -3,7 +3,8 @@
 use std::path::{Path, PathBuf};
 
 use anikit_core::{
-    Dither, Error, FrameSink, MIN_DELAY_MS, Result, StreamOptions, snap_delay, stream_gif,
+    Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, Result, StreamOptions, snap_delay,
+    stream_output,
 };
 use anikit_render_raster::{Fit, Mode, Options as SlideshowOptions, write_slideshow};
 use anikit_render_svg::{
@@ -23,7 +24,7 @@ routes:
   tween    an SVG drawing moved by a JSON timeline
 
 ascii options:
-  -o, --out PATH      output GIF (default ascii.gif)
+  -o, --out PATH      output .gif or .png/.apng (default ascii.gif)
   --font PATH         monospace TrueType face to use instead of the bundled one
   --size N            font size in pixels (default 28)
   --width N           fixed canvas width, centres the grid
@@ -37,7 +38,7 @@ ascii options:
   --preview PATH      write the first frame as a PNG
 
 images options:
-  -o, --out PATH      output GIF (default slideshow.gif)
+  -o, --out PATH      output .gif or .png/.apng (default slideshow.gif)
   --width N           canvas width (default 800)
   --height N          canvas height (default from the first image)
   --mode MODE         sequence, crossfade or kenburns (default crossfade)
@@ -53,7 +54,7 @@ images options:
   --preview PATH      write the first frame as a PNG
 
 vector options:
-  -o, --out PATH      output GIF (default svg.gif)
+  -o, --out PATH      output .gif or .png/.apng (default svg.gif)
   --width N           viewport width, default from the drawing
   --height N          viewport height, default from the drawing
   --duration SEC      seconds per animation cycle (default 2)
@@ -69,7 +70,7 @@ vector options:
   --preview PATH      write the first frame as a PNG
 
 tween options:
-  -o, --out PATH      output GIF (default tween.gif)
+  -o, --out PATH      output .gif, .png/.apng or .svg (default tween.gif)
   --browser PATH      Chromium based browser to drive
   --colors N          palette size, 2 to 255 (default 255)
   --dither MODE       none or floyd (default none)
@@ -201,16 +202,20 @@ fn ascii(args: &[String]) -> Result<()> {
     let frames = load_frames(&args.input, args.delay.max(MIN_DELAY_MS), args.fg)?;
     let mut renderer = TextRenderer::new(face, args.size)?;
     let grid = layout(&frames, renderer.metrics(), canvas)?;
+    let format = OutputFormat::from_path(&args.out)?;
+    format.require_frames()?;
 
-    // Palette pass: up to twelve frames spread across the loop.
-    let picks: Vec<usize> = if frames.len() <= 12 {
-        (0..frames.len()).collect()
-    } else {
-        (0..12).map(|i| i * (frames.len() - 1) / 11).collect()
-    };
-    let mut samples = Vec::with_capacity(picks.len());
-    for index in &picks {
-        samples.push(renderer.draw(&frames[*index], &grid, args.bg)?);
+    // Palette pass: up to twelve frames spread across the loop, GIF only.
+    let mut samples = Vec::new();
+    if format == OutputFormat::Gif {
+        let picks: Vec<usize> = if frames.len() <= 12 {
+            (0..frames.len()).collect()
+        } else {
+            (0..12).map(|i| i * (frames.len() - 1) / 11).collect()
+        };
+        for index in &picks {
+            samples.push(renderer.draw(&frames[*index], &grid, args.bg)?);
+        }
     }
 
     // Presentation times from the per-frame delays, on the cumulative grid.
@@ -224,20 +229,28 @@ fn ascii(args: &[String]) -> Result<()> {
     }
 
     let options = StreamOptions {
+        format,
+        width: grid.width,
+        height: grid.height,
         loop_count: args.loop_count,
         colors: args.colors,
         dither: args.dither,
         total_ms,
     };
-    let mut stream = stream_gif(&args.out, &samples, options)?;
+    let mut stream = stream_output(&args.out, &samples, options)?;
+    let mut first: Option<Frame> = samples.first().cloned();
     for (index, frame) in frames.iter().enumerate() {
         let image = renderer.draw(frame, &grid, args.bg)?;
+        if first.is_none() {
+            first = Some(image.clone());
+        }
         stream.push(index as u32, times[index], &image)?;
     }
     let summary = stream.finish()?;
 
     if let Some(path) = &args.preview {
-        png::write_png(path, &samples[0])?;
+        let first = first.ok_or_else(|| Error::invalid("no frames to preview"))?;
+        png::write_png(path, &first)?;
         println!("{}  still frame", path.display());
     }
 
@@ -426,6 +439,10 @@ fn tween(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_tween(args)?;
+    let format = OutputFormat::from_path(&args.out)?;
+    if format == OutputFormat::Svg && args.preview.is_some() {
+        return Err(Error::invalid("--preview needs a frame-based output"));
+    }
     let options = TweenOptions {
         colors: args.colors,
         dither: args.dither,
@@ -434,13 +451,23 @@ fn tween(args: &[String]) -> Result<()> {
     };
     let rendered = write_tween(&args.input, &args.out, &options)?;
     if let Some(path) = &args.preview {
-        png::write_png(path, &rendered.first)?;
+        let first = rendered
+            .first
+            .as_ref()
+            .ok_or_else(|| Error::invalid("no frames to preview"))?;
+        png::write_png(path, first)?;
         println!("{}  still frame", path.display());
     }
+    let unit = if format == OutputFormat::Svg {
+        "samples"
+    } else {
+        "frames"
+    };
     println!(
-        "{}  {} frames, {:.2} s, {} x {}",
+        "{}  {} {}, {:.2} s, {} x {}",
         file_name(&args.out),
         rendered.summary.frames,
+        unit,
         rendered.summary.total_ms as f64 / 1000.0,
         rendered.summary.width,
         rendered.summary.height
@@ -1008,6 +1035,87 @@ mod tests {
         let dir = scratch("images-missing");
         let err = run(&args(&["images", dir.join("nothere").to_str().unwrap()])).unwrap_err();
         assert!(err.to_string().contains("folder not found"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ascii_route_writes_an_apng() {
+        let dir = scratch("ascii-apng");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "aa\n--- 250\nbb\n").unwrap();
+        let out = dir.join("out.png");
+        run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--size",
+            "28",
+        ]))
+        .unwrap();
+        let info = anikit_core::inspect_apng_file(&out).unwrap();
+        assert_eq!(info.frames, 2);
+        assert_eq!(info.total_ms, 350);
+        assert_eq!((info.width, info.height), (34, 33));
+        assert!(!dir.join("out.tmp.png").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn vector_route_writes_an_apng() {
+        if anikit_render_svg::discover(None).is_err() {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        }
+        let dir = scratch("vector-apng");
+        let input = dir.join("page.html");
+        std::fs::write(
+            &input,
+            "<!doctype html><html><head><style>html,body{margin:0;background:#fff}#box{width:20px;height:20px;background:#c02020}</style></head><body><div id=\"box\"></div></body></html>",
+        )
+        .unwrap();
+        let out = dir.join("out.apng");
+        run(&args(&[
+            "vector",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--width",
+            "40",
+            "--height",
+            "20",
+            "--duration",
+            "1",
+            "--fps",
+            "2",
+            "--animate",
+            "pulse",
+            "--selector",
+            "#box",
+        ]))
+        .unwrap();
+        let info = anikit_core::inspect_apng_file(&out).unwrap();
+        assert_eq!(info.frames, 2);
+        assert_eq!(info.total_ms, 1000);
+        assert_eq!((info.width, info.height), (40, 20));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_unknown_output_extension_is_refused() {
+        let dir = scratch("bad-extension");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "x\n").unwrap();
+        let out = dir.join("out.webp");
+        let err = run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+        ]))
+        .unwrap_err();
+        assert!(err.to_string().contains(".gif, .png, .apng or .svg"));
+        assert!(!out.exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

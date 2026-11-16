@@ -9,7 +9,10 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use anikit_core::{Dither, Error, Frame, FrameSink, Result, StreamOptions, stream_gif};
+use anikit_core::{
+    Dither, Error, Frame, FrameSink, OutputFormat, OutputSummary, Result, StreamOptions,
+    stream_output,
+};
 use anikit_time::FramePlan;
 use anikit_tween::{
     Ballistic, Binding, Color, Decomposed, Ease, Key, Layer, LayerId, LoopMode, Motion, Op, Plan,
@@ -17,8 +20,9 @@ use anikit_tween::{
 };
 use serde_json::Value as Json;
 
+use crate::export::{self, TargetRef};
 use crate::page::{self, Preset};
-use crate::{Page, Rendered, discover, write_page};
+use crate::{Page, discover, write_page};
 
 /// How many frames feed the palette, as on every other route.
 const SAMPLES: usize = 12;
@@ -32,8 +36,16 @@ pub struct TweenOptions {
     pub browser: Option<PathBuf>,
 }
 
-/// Render one canonical timeline into a GIF.
-pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Result<Rendered> {
+/// What the tween route wrote. An SVG export has no captured first frame.
+pub struct TweenRendered {
+    pub summary: OutputSummary,
+    pub first: Option<Frame>,
+    pub format: OutputFormat,
+}
+
+/// Render one canonical timeline into a GIF, an APNG or an SVG.
+pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Result<TweenRendered> {
+    let format = OutputFormat::from_path(out)?;
     let name = timeline
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -54,6 +66,32 @@ pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Resul
             scene.drawing.display()
         ))
     })?;
+
+    // An SVG export is evaluated here; it needs no browser and no capture.
+    if format == OutputFormat::Svg {
+        let targets: Vec<TargetRef<'_>> = scene
+            .targets
+            .iter()
+            .map(|target| TargetRef {
+                element: &target.element,
+                slot: target.slot,
+            })
+            .collect();
+        let summary = export::write_svg(
+            &svg,
+            out,
+            &scene.plan,
+            &plan,
+            &targets,
+            scene.width,
+            scene.height,
+        )?;
+        return Ok(TweenRendered {
+            summary,
+            first: None,
+            format,
+        });
+    }
 
     let exe = discover(options.browser.as_deref())?;
     let temp = write_page(
@@ -80,19 +118,24 @@ pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Resul
     let mut values = vec![Value::Number(0.0); scene.plan.len()];
     let picks = SAMPLES.min(plan.len());
     let mut samples = Vec::with_capacity(picks);
-    for pick in 0..picks {
-        let index = if plan.len() <= picks {
-            pick
-        } else {
-            (pick as f64 * (plan.len() - 1) as f64 / (picks - 1) as f64).round() as usize
-        };
-        samples.push(capture_frame(&mut page, &scene, &plan, index, &mut values)?);
+    if format == OutputFormat::Gif {
+        for pick in 0..picks {
+            let index = if plan.len() <= picks {
+                pick
+            } else {
+                (pick as f64 * (plan.len() - 1) as f64 / (picks - 1) as f64).round() as usize
+            };
+            samples.push(capture_frame(&mut page, &scene, &plan, index, &mut values)?);
+        }
     }
 
-    let mut stream = stream_gif(
+    let mut stream = stream_output(
         out,
         &samples,
         StreamOptions {
+            format,
+            width: scene.width,
+            height: scene.height,
             loop_count: options.loop_count,
             colors: options.colors,
             dither: options.dither,
@@ -114,7 +157,11 @@ pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Resul
     drop(page);
     let summary = stream.finish()?;
     let first = first.ok_or_else(|| Error::invalid("no frames were captured"))?;
-    Ok(Rendered { summary, first })
+    Ok(TweenRendered {
+        summary,
+        first: Some(first),
+        format,
+    })
 }
 
 /// The frame count: the duration rounded up, never fewer than two.

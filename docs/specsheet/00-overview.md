@@ -2,18 +2,18 @@
 
 ## Header
 
-- Title: animated-gif skill - GIF building from text frames, image folders, SVG animation and a JSON tween timeline in one Rust binary.
-- Purpose: the reference for the skill and its binary: the four routes, the shared GIF core, the frame flow, and the tween crate that carries keyframes and layers. Specsheet and code together describe the system.
+- Title: animated-gif skill - animation output from text frames, image folders, SVG pages and a JSON tween timeline, in one Rust binary.
+- Purpose: the reference for the skill and its binary: the four routes, the shared frame writer for GIF and APNG, the SVG export, the frame flow, and the tween crate that carries keyframes and layers. Specsheet and code together describe the system.
 - Stakeholders: the person and the agent invoking the skill, users of the public repository, and the runtime the vector and tween routes need: an installed Chromium based browser.
-- Status: one Rust binary ships four routes. The Python payload is deleted; it stays at tag python-freeze as a reference for behaviour, not an authority. The Rust workspace carries core, time, all four routes and the tween crate; the tween crate implements parts 04 to 07 for number, opacity, transform and colour, and carries the path, raster and grid plans of part 06. The tween route is the crate's first consumer and renders an SVG drawing from the canonical JSON timeline.
+- Status: one Rust binary ships four routes and three output formats. The Python payload is deleted; it stays at tag python-freeze as a reference for behaviour, not an authority. The Rust workspace carries core, time, all four routes and the tween crate; the tween crate implements parts 04 to 07 for number, opacity, transform and colour, and carries the path, raster and grid plans of part 06. The tween route is the crate's first consumer and renders an SVG drawing from the canonical JSON timeline; it also exports that timeline as an animated SVG.
 - Related documents: README.md (install and invocation), CHANGELOG.md (change list), docs/index.md (human manual), docs/research/ (evidence and analysis), LICENSE.
 - Evidence pin: behaviour claims cite the frozen payload at tag python-freeze (files under agent-skill/bin) and the Rust sources under rust/; measurements cite docs/research/. Cites name files, not commits.
 
 ## Short description
 
-The skill is an animation maker with a keyframe engine at its centre. Four kinds of input - text frames, an image folder, an SVG or HTML page, a static drawing with a JSON timeline - run through one pipeline: one palette sampled across the loop, delays on the 10 ms grid, identical frames merged, the file written under a temp name and verified before it replaces the target. GIF is the output that ships; the JSON timeline and the tween crate are the part the other directions build on.
+The skill is an animation maker with a keyframe engine at its centre. Four kinds of input - text frames, an image folder, an SVG or HTML page, a static drawing with a JSON timeline - run through one pipeline: delays on the 10 ms grid, identical frames merged, the file written under a temp name and verified before it replaces the target. GIF and APNG are written from frames; the tween route also exports an animated SVG. The JSON timeline and the tween crate are the part the other directions build on.
 
-The Rust binary keeps the commands and the visible behaviour, streams frames instead of holding them, and adds a tween crate so keyframes, easing and layered animation can be evaluated without a browser. The tween route is the first consumer: it evaluates the timeline and draws the result into an SVG page. Multi-format conversion between animated GIF, SVG animation and image folders follows the tween crate; it is not specified here beyond the rules it must obey.
+The Rust binary keeps the commands and the visible behaviour, streams frames instead of holding them, and adds a tween crate so keyframes, easing and layered animation can be evaluated without a browser. The tween route is the first consumer: it evaluates the timeline and draws the result into an SVG page, or writes the same samples as CSS keyframes. Multi-format conversion between animated GIF, APNG, SVG animation and image folders follows the tween crate; it is not specified here beyond the rules it must obey.
 
 ## Table of contents
 
@@ -30,13 +30,14 @@ The Rust binary keeps the commands and the visible behaviour, streams frames ins
 | [09-decisions.md](09-decisions.md) | one row per open question, with the lean and the status |
 | [10-kinetic-motion.md](10-kinetic-motion.md) | motion that reads as physical: contact holds, weight cues, bounce decay, springs against beziers, defaults |
 | [11-tween-route.md](11-tween-route.md) | the tween route: JSON grammar, element state, frame count, errors and tests |
+| [12-output-formats.md](12-output-formats.md) | output choice by extension, the APNG writer, the SVG export, errors and tests |
 
 ## Design rules
 
-1. One palette per loop, sampled from frames spread across it. A palette per frame is rejected because colours flicker between frames.
+1. GIF uses one palette per loop, sampled from frames spread across it. A palette per frame is rejected because colours flicker between frames. APNG is truecolor and builds no palette.
 2. Delays are multiples of 10 ms and at least 20 ms, rounded on cumulative time so the error does not accumulate around the loop.
-3. Identical consecutive frames merge into one frame with the summed delay.
-4. A GIF is written under a temp name, read back, checked for frame count, duration and size, then renamed. A printed path is always a complete file.
+3. Identical consecutive frames merge into one frame with the summed delay, in GIF and APNG alike.
+4. Every output is written under a temp name, read back, checked for frame count, duration and size, then renamed. A printed path is always a complete file; an exported SVG is compared byte for byte before the rename.
 5. No ffmpeg. The video route was removed and stays removed.
 6. Frames stream. The animation is never held as a list of finished frames.
 7. Tween is a crate of its own. Renderers may depend on it, it depends on no renderer, and no renderer depends on another.

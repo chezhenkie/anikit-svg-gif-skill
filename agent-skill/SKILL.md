@@ -1,6 +1,6 @@
 ---
 name: animated-gif
-description: "Build animated GIFs from ASCII text frames, a folder of images, an SVG or HTML animation, or a JSON timeline over a static SVG drawing, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, animate ASCII art, turn photos into a slideshow GIF, animate an SVG, or keyframe an SVG drawing."
+description: "Build animated GIFs and APNGs from ASCII text frames, a folder of images, an SVG or HTML animation, or a JSON timeline over a static SVG drawing, and export a timeline as an animated SVG, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, produce an APNG, animate ASCII art, turn photos into a slideshow GIF, animate an SVG, or keyframe an SVG drawing."
 license: MIT
 metadata:
   version: "0.3.0"
@@ -8,7 +8,7 @@ metadata:
 
 # anikit
 
-The binary has four routes and one assembly core; pick the route that matches the input.
+The binary has four routes and one shared timing core; pick the route that matches the input.
 
 | Input | Command | Motion |
 |---|---|---|
@@ -17,13 +17,15 @@ The binary has four routes and one assembly core; pick the route that matches th
 | SVG or HTML animation | `bin/anikit vector` | SMIL, CSS, or preset rotate/pulse/fade |
 | Static SVG drawing and a JSON timeline | `bin/anikit tween` | keyframes, easing, springs, ballistic motion, layers |
 
-Every route ends in the same core: one palette across the loop, 10 ms timing grid, identical consecutive frames merged into longer delays, delta frames, atomic write, read-back verification.
+Every frame route ends in the same core: 10 ms timing grid, identical consecutive frames merged into longer delays, atomic write, read-back verification. GIF adds one palette across the loop and delta frames; APNG is truecolor and writes full frames. The tween route can also write an animated SVG.
+
+The output extension chooses the format: `.gif`, `.png` or `.apng` on every route, `.svg` on the tween route. An unknown extension fails before rendering.
 
 ## Binary
 
 `bin/anikit` is one platform binary (`bin/anikit.exe` on Windows). It needs no Python, no Node and no package manager. When the host has no binary for its platform, report the platform as unsupported and stop: do not build, download or substitute one during a GIF run.
 
-The vector and tween routes also need an installed Chromium based browser. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly. Without either, Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`.
+The vector route, and the tween route when it writes GIF or APNG, also need an installed Chromium based browser. An SVG export does not. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly. Without either, Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`.
 
 A failed run prints one `FAIL ...` line on stderr and exits 1. Do not retry with the same arguments.
 
@@ -31,7 +33,7 @@ A failed run prints one `FAIL ...` line on stderr and exits 1. Do not retry with
 
 1. Choose the route from the table. Read the matching section below, and read [references/kinetic-motion.md](references/kinetic-motion.md) before setting fps, delay, easing or a preset.
 2. Run the binary with an explicit output path inside the project being worked on. Do not write to a system temp directory or the Desktop.
-3. Keep the printed summary: frame count, duration, pixel size. A printed path is a verified GIF.
+3. Keep the printed summary: frame count, duration, pixel size. A printed path is a verified file.
 4. For visual work, open the GIF or write `--preview preview.png` and inspect that still before reporting.
 5. Report the absolute path plus settings that matter: fps, size, duration, mode.
 6. Run the motion checklist in `references/kinetic-motion.md` before reporting. A move with no held contact, a bounce that does not decay, or a spring still moving at the loop point is a defect, not a preference.
@@ -106,6 +108,8 @@ A static `.svg` drawing is moved by a JSON timeline. The timeline names the canv
 
 ```powershell
 bin/anikit tween scene.json -o project/scene.gif --preview project/scene.png
+bin/anikit tween scene.json -o project/scene.apng
+bin/anikit tween scene.json -o project/scene.svg
 ```
 
 - Kinds: `svg.transform`, `svg.opacity`, `svg.fill`, `svg.stroke`, `svg.stroke-width`.
@@ -113,18 +117,19 @@ bin/anikit tween scene.json -o project/scene.gif --preview project/scene.png
 - `svg.opacity`, `svg.fill` and `svg.stroke` keys carry `value`; `svg.stroke-width` carries a number. Colours are `#rgb` or `#rrggbb`.
 - `easing` is `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`, `hold`, `{"bezier": [x1, y1, x2, y2]}`, `{"steps": n, "at": "end"}` or `{"spring": {"stiffness": 400, "damping": 30, "mass": 1, "settle": 300}}`.
 - `svg.opacity` and `svg.stroke-width` keys may take `motion` instead of `easing`: `{"ballistic": {"plane": 0, "restitution": 0.5}}` or `{"arc": {"bend": 0.1, "easing": "ease-in-out"}}`. Transforms cannot use ballistic motion.
-- `timing.loop` is `once`, `cycle` or `pingpong` and maps time, not the GIF repeat count. `rate` may be negative; reverse playback needs `cycle` or `pingpong`, because `once` clamps a reversed time to the start. The GIF repeat count is still `--loop`.
+- `timing.loop` is `once`, `cycle` or `pingpong` and maps time, not the GIF repeat count. `rate` may be negative; reverse playback needs `cycle` or `pingpong`, because `once` clamps a reversed time to the start. The repeat count is still `--loop`.
 - A layer adds, multiplies or replaces a track under a time window and a weight: `{"id": "shake", "order": 1, "window": [300, 700], "weight": [{"t": 0, "value": 1}, {"t": 700, "value": 0}], "bindings": [{"target": "mark-move", "op": "add", "keys": [{"t": 0, "translate": [4, 0]}]}]}`. `order` decides application; bindings take `op` (`replace`, `add`, `multiply`, `accumulate`) and, for transforms, `mode` (`append` or `prepend`).
 - Every track must name the same `.svg` file, and `src` is `file.svg#elementId`. The root `svg` cannot be a target. The drawing's own CSS or SMIL animation is paused, so the timeline is the only motion.
 - Canvas size, fps and duration come from the JSON, not from flags. The frame count rounds the duration up at the canvas fps.
+- An SVG export needs no browser. It writes the sampled plan as CSS keyframes inside the drawing and prints `N samples` instead of frames. It replaces any authored transform or CSS animation on the properties it drives, and it keeps the drawing's own size, not the canvas size. `--preview` is refused with `.svg`.
 - Path morphs, raster keys, ASCII grids and spatial masks are not supported by this route.
 
 ## Shared options
 
-- `--colors` 2 to 255. Lower it only when the palette is simple or the file must shrink.
+- `--colors` 2 to 255 and `--dither none|floyd` apply to GIF only; APNG and SVG are truecolor and ignore both.
 - `--dither none` is correct for flat art and text; `floyd` helps gradients and photos.
-- `--loop 0` loops forever; any other value repeats that many times.
-- `--preview PATH` writes a PNG still of the first frame.
+- `--loop 0` loops forever; any other value repeats that many times. On APNG it is the play count; an SVG export ignores it.
+- `--preview PATH` writes a PNG still of the first frame. It is refused when the output is `.svg`.
 - Output is deterministic for the same input, settings and binary.
 
 ## Custom frames
@@ -139,17 +144,17 @@ Frames must share one size and are sorted by name, so number them. `--hold` roun
 
 ## Contract
 
-- The tool writes to `<name>.tmp.gif` in the output directory, verifies frame count, duration sum and pixel size by reading the file back, then renames it. A failure removes the temp file and leaves no partial target.
-- The GIF uses one palette for every frame, so colors cannot flicker.
+- Every output is written under a temp name beside the target, verified by reading it back, then renamed. A failure removes the temp file and leaves no partial target.
+- GIF uses one palette for every frame, so colors cannot flicker. APNG stores truecolor frames and builds no palette.
 - Identical consecutive frames are merged into one frame with a longer delay; the printed frame count is the stored count.
-- Delays sit on the 10 ms GIF grid and are at least 20 ms.
-- After the first frame, each frame carries only the rectangle that changed.
+- Delays sit on the 10 ms grid and are at least 20 ms.
+- After the first frame, each GIF frame carries only the rectangle that changed. APNG writes full frames.
+- An SVG export writes one CSS keyframe rule per property into the drawing and is read back byte for byte before the rename.
 
 ## Limits
 
-- GIF is 8-bit indexed and caps at 256 colors; photos show banding without dithering.
+- GIF is 8-bit indexed and caps at 256 colors; photos show banding without dithering. Write APNG when truecolor matters.
 - Viewers clamp short delays; keep frame delays at 20 ms or more.
-- Long, high-fps, truecolor sequences are better as APNG or WebM. Say so when asked for quality.
 - Frames stream through the encoder, so memory follows the canvas rather than the frame count.
 - Glyph coverage follows the chosen face; a codepoint the font lacks draws an empty box.
 
@@ -157,7 +162,7 @@ See [references/animated-gif-considerations.md](references/animated-gif-consider
 
 ## Files
 
-- `bin/anikit` - the binary: route parsing, the four routes, the shared core.
+- `bin/anikit` - the binary: route parsing, the four routes, the GIF and APNG writers, the SVG export.
 - `references/animated-gif-considerations.md` - format notes.
 - `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, checklist.
 

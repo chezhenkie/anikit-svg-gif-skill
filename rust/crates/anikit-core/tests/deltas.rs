@@ -8,7 +8,9 @@
 use std::fs::File;
 use std::path::PathBuf;
 
-use anikit_core::{Dither, Frame, FrameSink, GifEncoder, Palette, StreamOptions, stream_gif};
+use anikit_core::{
+    Dither, Frame, FrameSink, GifEncoder, OutputFormat, Palette, StreamOptions, stream_output,
+};
 
 #[path = "../../../testsupport/decode.rs"]
 mod decode;
@@ -137,12 +139,15 @@ fn the_stream_route_writes_deltas_too() {
         })
         .collect();
     let options = StreamOptions {
+        format: OutputFormat::Gif,
+        width: WIDTH as u32,
+        height: HEIGHT as u32,
         loop_count: 0,
         colors: 255,
         dither: Dither::None,
         total_ms: 400,
     };
-    let mut stream = stream_gif(&path, &frames, options).unwrap();
+    let mut stream = stream_output(&path, &frames, options).unwrap();
     for (index, frame) in frames.iter().enumerate() {
         stream
             .push(index as u32, index as u64 * 100_000, frame)

@@ -31,10 +31,10 @@ Edges, in full:
   anikit-render-svg    -> anikit-tween, anikit-time, anikit-core
   anikit-tween         -> anikit-time, anikit-core
   anikit-time          -> anikit-core
-  anikit-core          -> none
+  anikit-core          -> png (APNG frame compression)
 
 The picture shows the shortest path through the renderers so it stays readable; the edge
 list is the complete graph. The rule is one-way only: nothing depends on anikit-cli, no
-renderer depends on another renderer, and anikit-core depends on nothing.
+renderer depends on another renderer, and anikit-core depends on nothing in the workspace.
 
 Binding text: docs/specsheet/02-crate-split.md.
