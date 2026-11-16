@@ -12,9 +12,11 @@ anikit turns text frames, an image folder, a live SVG or HTML page, or a JSON ti
 
 ## Samples
 
-| ASCII | Images | SVG | Keyframes |
-|:---:|:---:|:---:|:---:|
+| ASCII | Images |
+|:---:|:---:|
 | [<img src="docs/demo-ascii.gif" width="190" alt="Animated ASCII loading bar">](docs/demo-ascii.gif) | [<img src="docs/demo-pics.gif" width="190" alt="Crossfade between three image cards">](docs/demo-pics.gif) |
+| SVG | Keyframes |
+|:---:|:---:|
 | [<img src="docs/demo-svg.gif" width="190" alt="Rotating group from an SVG">](docs/demo-svg.gif) | [<img src="docs/demo-tween.gif" width="190" alt="Three dots bobbing on springs">](docs/demo-tween.gif) |
 | Text frames | Holds and Ken Burns | SMIL, CSS or preset | Keyframes and springs |
 
