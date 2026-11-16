@@ -236,9 +236,7 @@ pub(crate) fn write_page(
         .map(|dir| dir.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."));
     let base = format!("{}/", page::file_url(&parent)?);
-    let dir = browser::unique("page");
-    std::fs::create_dir_all(&dir)
-        .map_err(|err| Error::io(format!("cannot create {}: {err}", dir.display())))?;
+    let dir = browser::unique_dir("page")?;
     let path = dir.join("page.html");
     std::fs::write(&path, page::wrap_svg(svg, &base, width, height, background))
         .map_err(|err| Error::io(format!("cannot write {}: {err}", path.display())))?;

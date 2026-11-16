@@ -4,9 +4,11 @@
 //! with its profile removed when the run ends or fails.
 
 use std::fs::File;
+use std::hash::{BuildHasher, Hasher};
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
@@ -30,10 +32,62 @@ const PATH_NAMES: [&str; 5] = [
 
 static NEXT: AtomicU64 = AtomicU64::new(1);
 
+/// A random value for this process, drawn from a hasher's random keys.
+fn process_seed() -> u64 {
+    static SEED: OnceLock<u64> = OnceLock::new();
+    *SEED.get_or_init(|| {
+        let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+        hasher.write_u64(std::process::id() as u64);
+        hasher.finish()
+    })
+}
+
 /// A unique path under the system temp directory.
-pub(crate) fn unique(name: &str) -> PathBuf {
+///
+/// The token mixes the per-process seed with the pid and a counter, so a
+/// pre-created path cannot be guessed from outside the process.
+fn unique(name: &str) -> PathBuf {
     let count = NEXT.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("anikit-{name}-{}-{count}", std::process::id()))
+    let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+    hasher.write_u64(process_seed());
+    hasher.write_u64(std::process::id() as u64);
+    hasher.write_u64(count);
+    std::env::temp_dir().join(format!(
+        "anikit-{name}-{}-{:016x}",
+        std::process::id(),
+        hasher.finish()
+    ))
+}
+
+/// Draw a fresh path and create it, drawing again when the name is taken.
+///
+/// A taken name is a stale file or another process, so the run takes a new
+/// name instead of writing through the existing path.
+fn take<T>(
+    name: &str,
+    mut create: impl FnMut(&Path) -> std::io::Result<T>,
+) -> Result<(PathBuf, T)> {
+    for _ in 0..8 {
+        let path = unique(name);
+        match create(&path) {
+            Ok(value) => return Ok((path, value)),
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(err) => {
+                return Err(Error::io(format!(
+                    "cannot create {}: {err}",
+                    path.display()
+                )));
+            }
+        }
+    }
+    Err(Error::io(format!(
+        "cannot find a free temporary name for {name}"
+    )))
+}
+
+/// A new directory under the system temp directory.
+pub(crate) fn unique_dir(name: &str) -> Result<PathBuf> {
+    take(name, |path| std::fs::create_dir(path)).map(|(path, ())| path)
 }
 
 /// The browser to drive: the explicit path, the environment override, or the
@@ -166,12 +220,14 @@ impl Browser {
     }
 
     fn start(exe: &Path, sandbox: bool) -> std::result::Result<Browser, Launch> {
-        let profile = unique("profile");
-        let log = unique("browser.log");
-        let _ = std::fs::remove_dir_all(&profile);
-        let stderr = File::create(&log).map_err(|err| {
-            Launch::Failed(Error::io(format!("cannot write {}: {err}", log.display())))
-        })?;
+        let profile = unique_dir("profile").map_err(Launch::Failed)?;
+        let (log, stderr) = match take("browser.log", |path| File::create_new(path)) {
+            Ok(pair) => pair,
+            Err(err) => {
+                let _ = std::fs::remove_dir_all(&profile);
+                return Err(Launch::Failed(err));
+            }
+        };
         let child = Command::new(exe)
             .args(arguments(sandbox))
             .arg(format!("--user-data-dir={}", profile.display()))
@@ -352,7 +408,45 @@ mod tests {
 
     #[test]
     fn temp_names_are_unique() {
-        assert_ne!(unique("profile"), unique("profile"));
+        let first = unique("profile");
+        let second = unique("profile");
+        assert_ne!(first, second);
+        let name = first.file_name().unwrap().to_string_lossy().into_owned();
+        assert!(
+            name.starts_with(&format!("anikit-profile-{}-", std::process::id())),
+            "{name}"
+        );
+        // A random tail keeps a path from being guessed before the run starts.
+        let tail = name.rsplit('-').next().unwrap();
+        assert_eq!(tail.len(), 16, "{name}");
+        assert!(tail.chars().all(|c| c.is_ascii_hexdigit()), "{name}");
+    }
+
+    #[test]
+    fn a_taken_name_is_skipped() {
+        let mut attempts = 0;
+        let (path, ()) = take("probe", |path| {
+            attempts += 1;
+            std::fs::write(path, b"stale")?;
+            if attempts < 3 {
+                return Err(std::io::Error::from(std::io::ErrorKind::AlreadyExists));
+            }
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(attempts, 3, "the first two names were taken");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "stale");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn another_failure_is_reported_with_its_path() {
+        let err = take("probe", |_| -> std::io::Result<()> {
+            Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied))
+        })
+        .unwrap_err();
+        assert!(err.to_string().contains("cannot create"), "{err}");
+        assert!(err.to_string().contains("anikit-probe-"), "{err}");
     }
 
     #[test]
