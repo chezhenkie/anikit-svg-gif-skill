@@ -6,7 +6,7 @@ Format constraints and the defaults the tools in this skill are built on. Number
 
 - GIF is 8-bit indexed: at most 256 colors per frame. Truecolor and alpha gradients are impossible without banding.
 - Delays are stored in centiseconds. Viewers round or clamp small values; Chrome maps 10 ms or less to 100 ms. Keep delays at 20 ms or more.
-- Disposal mode 1 (do not dispose) is correct when every frame repaints the full canvas. Partial frames need disposal 2 and tight rectangles, which complicates palette handling for little gain on flat art.
+- Disposal mode 1 (do not dispose) is what this encoder writes: every frame is a tight delta rectangle drawn over the canvas the previous frame left, so a cleared area is repainted instead of discarded. Disposal 2 is the general technique for a rectangle that must be cleared, and it complicates palette handling for little gain on flat art.
 - `loop=0` loops forever. Other values repeat that many times.
 - One file can mix per-frame delays, dimensions and local palettes, but uniform size and a shared palette are what prevent jitter.
 

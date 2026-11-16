@@ -29,7 +29,7 @@ The sink is the only writer. A route that already holds its frames, such as the 
 
 ## 3.3 Disposal and deltas
 
-Every GIF frame after the first is a delta against the canvas left by the previous one, with disposal method 1 (leave in place). The writer therefore needs the previous canvas after disposal, and frames cannot be evaluated fully independently: the sink is ordered and synchronous.
+Every GIF frame after the first is a tight delta rectangle against the canvas left by the previous one, with disposal method 1 (leave in place); a cleared area is repainted in a later frame rather than discarded. The writer therefore needs the previous canvas after disposal, and frames cannot be evaluated fully independently: the sink is ordered and synchronous.
 
 A frame that repeats the previous one has nothing to draw, and the merge rule removes it before the encoder. A duplicate that still reaches the encoder is written as a single pixel, so its delay is counted and the picture is unchanged. APNG has no delta rectangles: a repeated frame is merged before the writer, and every remaining frame is the full canvas.
 
