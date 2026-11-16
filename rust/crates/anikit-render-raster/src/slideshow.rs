@@ -7,7 +7,7 @@ use std::path::Path;
 
 use anikit_core::{
     Dither, Error, Frame, FrameSink, OutputFormat, OutputStream, OutputSummary, Result,
-    StreamOptions, stream_output,
+    StreamOptions, check_canvas, stream_output,
 };
 use anikit_time::FramePlan;
 
@@ -61,6 +61,7 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
     }
 
     let size = fit::canvas_size(options.width, options.height, &stills[0])?;
+    check_canvas(size.0, size.1)?;
     let fps = options.fps as f64;
     let hold_count = ((options.hold * fps).round() as u32).max(1);
     let trans_count = if options.mode == Mode::Sequence {
@@ -163,6 +164,7 @@ pub fn write_timed(
     if options.width < 8 {
         return Err(Error::invalid("width must be at least 8"));
     }
+    check_canvas(options.width, options.height.unwrap_or(options.width))?;
     let format = OutputFormat::from_path(out)?;
     format.require_frames()?;
     let files = decode::scan_folder(folder, out)?;
@@ -178,6 +180,7 @@ pub fn write_timed(
         )));
     }
     let size = fit::canvas_size(options.width, options.height, &stills[0])?;
+    check_canvas(size.0, size.1)?;
     let total_ms = delays.iter().try_fold(0u32, |sum, delay| {
         sum.checked_add(*delay)
             .ok_or_else(|| Error::invalid("the delays add up past the 32-bit range"))
@@ -240,6 +243,7 @@ fn validate(options: &Options) -> Result<()> {
     if options.width < 8 {
         return Err(Error::invalid("width must be at least 8"));
     }
+    check_canvas(options.width, options.height.unwrap_or(options.width))?;
     if !options.hold.is_finite() || options.hold <= 0.0 {
         return Err(Error::invalid("hold must be greater than 0"));
     }
@@ -505,6 +509,9 @@ mod tests {
         assert!(write_slideshow(&dir, &dir.join("o.gif"), &opts).is_err());
         opts = options(Mode::Sequence);
         opts.zoom = 0.5;
+        assert!(write_slideshow(&dir, &dir.join("o.gif"), &opts).is_err());
+        opts = options(Mode::Sequence);
+        opts.width = 9000;
         assert!(write_slideshow(&dir, &dir.join("o.gif"), &opts).is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }

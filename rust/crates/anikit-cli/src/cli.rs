@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anikit_core::{
     Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, Result, StreamOptions,
-    stream_output,
+    check_canvas, stream_output,
 };
 use anikit_render_raster::{
     Fit, Mode, Options as SlideshowOptions, extract as extract_animation, read_manifest,
@@ -228,10 +228,11 @@ fn ascii(args: &[String]) -> Result<()> {
             ));
         }
     };
-    if let Some((width, height)) = canvas
-        && (width < 8 || height < 8)
-    {
-        return Err(Error::invalid("canvas width and height must be at least 8"));
+    if let Some((width, height)) = canvas {
+        if width < 8 || height < 8 {
+            return Err(Error::invalid("canvas width and height must be at least 8"));
+        }
+        check_canvas(width, height)?;
     }
 
     let mut owned: Option<Face> = None;
@@ -251,6 +252,7 @@ fn ascii(args: &[String]) -> Result<()> {
     let frames = load_frames(&args.input, args.delay.max(MIN_DELAY_MS), args.fg)?;
     let mut renderer = TextRenderer::new(face, args.size)?;
     let grid = layout(&frames, renderer.metrics(), canvas)?;
+    check_canvas(grid.width, grid.height)?;
     let format = OutputFormat::from_path(&args.out)?;
     format.require_frames()?;
 
@@ -1074,6 +1076,28 @@ mod tests {
         let bytes = std::fs::read(&out).unwrap();
         assert_eq!(delays(&bytes), vec![100, 250]);
         assert!(!dir.join("out.tmp.gif").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_canvas_above_the_limit_is_refused() {
+        let dir = scratch("ascii-limit");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "hi\n").unwrap();
+        let out = dir.join("out.gif");
+        let err = run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--width",
+            "9000",
+            "--height",
+            "100",
+        ]))
+        .unwrap_err();
+        assert!(err.to_string().contains("8192"), "{err}");
+        assert!(!out.exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

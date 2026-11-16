@@ -24,6 +24,8 @@ Vector route flags: `--width`, `--height` (default from the drawing), `--duratio
 
 Vector input: an .svg is wrapped in a page at the requested viewport; an .html page is opened as is. CSS animations, WAAPI animations and SMIL are paused and seeked to explicit times, so frames do not depend on wall clock. A JavaScript canvas page needs its own frame hook and is not driven by the tool.
 
+Every route accepts a canvas side from 8 to 8192 px. An explicit size outside that range, or a source whose own size resolves above it, fails before any frame is rendered, with the limit in the message.
+
 Flags on all routes: `-o` or `--out`, `--colors` 2 to 255 (default 255), `--dither none|floyd` (default none), `--loop` (0 means forever), `--preview` for a PNG of the first frame. The output extension chooses GIF, APNG or, on the tween route, SVG (part 12).
 
 ## 1.2 GIF core rules

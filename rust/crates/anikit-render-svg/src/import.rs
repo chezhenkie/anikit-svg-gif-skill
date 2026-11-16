@@ -8,7 +8,7 @@
 use std::fmt::Write as _;
 use std::path::{Component, Path, PathBuf};
 
-use anikit_core::{Error, Result, temp_path};
+use anikit_core::{Error, Result, check_canvas, temp_path};
 use anikit_time::LoopMode;
 use anikit_tween::Transform;
 use serde_json::{Map, Value as Json, json};
@@ -47,6 +47,7 @@ pub fn write_import(input: &Path, out: &Path, options: &ImportOptions) -> Result
     if width < 8 || height < 8 {
         return Err(Error::invalid("width and height must be at least 8"));
     }
+    check_canvas(width, height)?;
     let fps = options.fps;
     let count = ((options.duration * fps as f64).ceil() as usize).max(2);
     let delay = 1000 / fps;
@@ -1491,6 +1492,13 @@ mod tests {
         };
         let err = write_import(&input, &out, &options).unwrap_err();
         assert!(err.to_string().contains("1, 2, 4, 5, 10, 20, 25 or 50"));
+        let wide = ImportOptions {
+            width: Some(9000),
+            fps: 10,
+            ..options.clone()
+        };
+        let err = write_import(&input, &out, &wide).unwrap_err();
+        assert!(err.to_string().contains("8192"), "{err}");
         for fps in [8, 40] {
             let options = ImportOptions {
                 fps,

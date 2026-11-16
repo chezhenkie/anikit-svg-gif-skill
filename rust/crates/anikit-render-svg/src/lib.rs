@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 use anikit_core::{
     Dither, Error, Frame, FrameSink, OutputFormat, OutputSummary, Result, StreamOptions,
-    stream_output,
+    check_canvas, stream_output,
 };
 use anikit_time::FramePlan;
 use serde_json::{Value, json};
@@ -81,6 +81,7 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
     if width < 8 || height < 8 {
         return Err(Error::invalid("width and height must be at least 8"));
     }
+    check_canvas(width, height)?;
     // The page stays at the logical size; the screenshot and the output carry
     // one pixel per device pixel, so dpr 2 doubles both sides.
     let canvas_width = width.saturating_mul(options.dpr);
@@ -533,6 +534,18 @@ mod tests {
         opts = options();
         opts.duration = 0.0;
         assert!(write_animation(&input, &out, &opts).is_err());
+        opts = options();
+        opts.width = Some(9000);
+        let err = write_animation(&input, &out, &opts).unwrap_err();
+        assert!(err.to_string().contains("8192"), "{err}");
+        let huge = dir.join("huge.svg");
+        std::fs::write(
+            &huge,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="9000" height="100"></svg>"#,
+        )
+        .unwrap();
+        let err = write_animation(&huge, &out, &options()).unwrap_err();
+        assert!(err.to_string().contains("8192"), "{err}");
         let err = write_animation(&dir.join("nope.svg"), &out, &options()).unwrap_err();
         assert!(err.to_string().contains("input not found"));
         std::fs::write(dir.join("a.png"), DRAWING).unwrap();
