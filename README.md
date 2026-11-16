@@ -1,6 +1,6 @@
-# Animated GIF
+# anikit
 
-An animation maker and translator in one binary. It reads motion from four different sources - text frames, an image folder, a live SVG or HTML page, or a keyframe timeline you write yourself - and renders a finished loop on your own machine. It writes GIF today; the tween engine underneath is what makes other directions possible.
+An animation maker in one binary. It reads motion from four different sources - text frames, an image folder, a live SVG or HTML page, or a keyframe timeline you write yourself - and renders a looping GIF on your own machine. A keyframe engine sits at the centre. GIF is the only format it writes so far.
 
 - **Keyframes are the point.** Tracks, easing curves, springs, arcs, ballistic motion, layers and weights. Describe the motion once and the frames are generated from it, instead of drawing each one by hand.
 - **Four ways in, one engine.** ASCII frames, image folders, live SVG or HTML animation, and a JSON timeline over a static drawing are timed, coloured and composited the same way, so a hold or a loop means the same thing on every route.
