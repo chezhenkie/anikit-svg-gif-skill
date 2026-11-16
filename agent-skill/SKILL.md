@@ -6,7 +6,7 @@ metadata:
   version: "0.3.0"
 ---
 
-# Animated GIF
+# anikit
 
 One binary, four routes, one assembly core. Pick the route that matches the input.
 
