@@ -13,6 +13,6 @@ This folder holds the `anikit` binary for the host, copied from a release asset:
 A fresh clone has no binary in this folder. If there is none for the host, the platform is unsupported: the skill does not build or download one while making an animation.
 
 ```sh
-gh release download v0.3.1 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
+gh release download v0.4.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
 chmod +x agent-skill/bin/anikit
 ```

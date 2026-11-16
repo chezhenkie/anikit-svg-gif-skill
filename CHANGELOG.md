@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0
+
+### New features
+
+#### All platforms
+
+* Fifth route, `anikit extract`: a GIF or APNG is split into `frame-0001.png` full-canvas frames and a `manifest.json` with the size, loop count and per-frame delay.
+* Sixth route, `anikit import`: an animated SVG, CSS or SMIL, is sampled into the timeline JSON at the frame times, so a drawing can be re-rendered by the tween route or edited as data.
+* `anikit images --timing`: a frame folder and its manifest are rebuilt into a GIF or APNG at the recorded delays and loop count, with no fps grid and no transition.
+
+### Changes
+
+* Extract reads a GIF through `image` and an APNG through `png`, honours source and over blending and the three dispose operations, then reads every frame and the manifest back before renaming the folder.
+* Import loads one page, collects animated elements from the Web Animations API and from SMIL elements, and samples transform, opacity, fill, stroke and stroke width. A still drawing, a missing element id, a non-zero CSS transform origin or a root `svg` target is refused before the scene is written, and an unsupported property is skipped with a WARN line.
+* `anikit-render-raster` owns extract and the timed image rebuild; `anikit-render-svg` owns import.
+* A browser launch is retried once with a fresh profile after 500 ms, and browser tests take a per-binary lock so parallel test binaries do not race for the port.
+* The skill documents all six routes, the two file formats extract reads and the options import accepts.
+
 ## 0.3.1
 
 ### New features
