@@ -6,8 +6,8 @@
 use std::path::Path;
 
 use anikit_core::{
-    Dither, Error, Frame, FrameSink, OutputFormat, OutputStream, OutputSummary, Result,
-    StreamOptions, check_canvas, check_frames, stream_output,
+    Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, OutputStream, OutputSummary,
+    Result, StreamOptions, check_canvas, check_frames, stream_output,
 };
 use anikit_time::FramePlan;
 
@@ -183,7 +183,13 @@ pub fn write_timed(
     }
     let size = fit::canvas_size(options.width, options.height, &stills[0])?;
     check_canvas(size.0, size.1)?;
-    let total_ms = delays.iter().try_fold(0u32, |sum, delay| {
+    // The format floor applies on rebuild: a source delay of 0 or 10 ms is
+    // written as 20 ms, and the total grows with it.
+    let raised: Vec<u32> = delays
+        .iter()
+        .map(|delay| (*delay).max(MIN_DELAY_MS))
+        .collect();
+    let total_ms = raised.iter().try_fold(0u32, |sum, delay| {
         sum.checked_add(*delay)
             .ok_or_else(|| Error::invalid("the delays add up past the 32-bit range"))
     })?;
@@ -224,7 +230,7 @@ pub fn write_timed(
             first = Some(frame.clone());
         }
         stream.push(index as u32, pts_ms * 1000, &frame)?;
-        pts_ms += delays[index] as u64;
+        pts_ms += raised[index] as u64;
     }
     let summary = stream.finish()?;
     let first = first.ok_or_else(|| Error::invalid("no frames were rendered"))?;
@@ -417,6 +423,18 @@ mod tests {
         assert_eq!(result.summary.frames, 2);
         assert_eq!(result.summary.total_ms, 350);
         assert_eq!(delays(&out), vec![100, 250]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_zero_delay_rebuilds_at_the_floor() {
+        let dir = scratch("timed-floor");
+        png(&dir.join("1.png"), 8, 8, [255, 0, 0]);
+        png(&dir.join("2.png"), 8, 8, [0, 0, 255]);
+        let out = dir.join("out.gif");
+        let result = write_timed(&dir, &out, &[0, 10], &options(Mode::Sequence)).unwrap();
+        assert_eq!(result.summary.total_ms, 40);
+        assert_eq!(delays(&out), vec![20, 20]);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

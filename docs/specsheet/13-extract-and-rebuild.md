@@ -77,7 +77,7 @@ The reader accepts the fields in any order, rejects an unknown field, a missing 
 - The image count must equal the delay count. A mismatch fails before any frame is rendered, names both counts and leaves no output.
 - Identical consecutive stills merge into one stored frame with the summed delay, as on every route, so a rebuilt file can hold fewer frames than the folder while the timeline stays the same.
 
-A round trip through this pair preserves frame count, per-frame delays, total duration and canvas size when the source delays are multiples of 10 ms and no two consecutive frames are identical. Otherwise the timeline is preserved and the merge or the 20 ms floor applies, exactly as the format requires.
+A round trip through this pair preserves frame count, per-frame delays, total duration and canvas size when the source delays are multiples of 10 ms and no two consecutive frames are identical. Otherwise the timeline is preserved and the merge or the 20 ms floor applies, exactly as the format requires. The floor applies on rebuild: a recorded delay of 0 or 10 ms is written as 20 ms, and the summary total is the sum of the raised delays.
 
 An APNG that this pipeline wrote comes back byte for byte, because APNG is truecolor and rebuilds no palette. A GIF rebuild samples a new palette under the rule of part 03, so a frame can shift by a few levels where the source used colours that its twelve samples do not carry.
 
