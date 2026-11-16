@@ -20,7 +20,7 @@ mod value;
 pub use ease::{Ease, EasePlan, Spring, SpringRest, StepAt};
 pub use grid::{Cell, Grid, GridCurve, GridKey, GridTrack};
 pub use layer::{AddMode, Binding, Layer, LayerId, Mask, Op, PropId, Window};
-pub use path::{Command, Cubic, Path, PathCurve, PathKey, PathTrack, Point, Subpath};
+pub use path::{Command, Cubic, Path, PathCurve, PathFidelity, PathKey, PathTrack, Point, Subpath};
 pub use raster::{Blend, FitMode, RasterKey, RasterPlan, RasterRef, RasterStep, RasterTrack, Rect};
 pub use time::{LoopMode, Timing};
 pub use timeline::{Plan, PreparedProperty, Property, Timeline};

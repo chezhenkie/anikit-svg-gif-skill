@@ -1,13 +1,23 @@
-//! Paths normalised to absolute cubics, and the morph between matching keys.
+//! Paths normalised to absolute cubics, and the morph between keys.
 //!
-//! Two paths morph only when their subpath count, per-subpath curve count and
-//! closed flags match. Prepare fails with both counts otherwise; the caller can
-//! ask for a dissolve instead. Sampling fills a caller-owned buffer and does
-//! not allocate once that buffer is warm.
+//! A pair whose subpaths pair by index and whose curve counts match morphs by
+//! interpolating corresponding cubics. A pair that differs only in curve counts
+//! is resampled by arc length into a common polyline, with the start offset and
+//! the direction chosen to minimise travel. Prepare fails on a subpath count or
+//! closed-flag mismatch; sampling fills a caller-owned buffer and does not
+//! allocate once that buffer is warm.
 
 use anikit_core::{Error, Result};
 
 use crate::ease::{Ease, EasePlan};
+
+/// Chords per cubic when flattening for arc-length sampling at prepare.
+const FLATTEN_STEPS: usize = 24;
+/// Target chord length for a resampled subpath, in path units.
+const CHORD_TARGET: f64 = 4.0;
+/// Fewest points a resampled subpath carries, and the most it may carry.
+const MIN_POINTS: usize = 32;
+const MAX_POINTS: usize = 1024;
 
 /// A point in the path's coordinate space.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -156,9 +166,10 @@ impl Path {
         }
     }
 
-    /// Fail unless the two paths can morph by interpolating corresponding
-    /// cubics. The message names both counts.
-    pub fn check_match(&self, other: &Path, name: &str) -> Result<()> {
+    /// Fail unless the subpaths pair by index with the same closed flags. The
+    /// flag returned tells whether every curve count also matches, which picks
+    /// the exact morph or the resampled one.
+    fn check_topology(&self, other: &Path, name: &str) -> Result<bool> {
         if self.subpaths.len() != other.subpaths.len() {
             return Err(Error::invalid(format!(
                 "{name}: path subpath count {} does not match {}",
@@ -166,22 +177,28 @@ impl Path {
                 other.subpaths.len()
             )));
         }
+        let mut exact = true;
         for (index, (a, b)) in self.subpaths.iter().zip(&other.subpaths).enumerate() {
-            if a.curves.len() != b.curves.len() {
-                return Err(Error::invalid(format!(
-                    "{name}: subpath {index} curve count {} does not match {}",
-                    a.curves.len(),
-                    b.curves.len()
-                )));
-            }
             if a.closed != b.closed {
                 return Err(Error::invalid(format!(
                     "{name}: subpath {index} is closed in one key and open in the other"
                 )));
             }
+            if a.curves.len() != b.curves.len() {
+                exact = false;
+            }
         }
-        Ok(())
+        Ok(exact)
     }
+}
+
+/// How a prepared path pair morphs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PathFidelity {
+    /// Corresponding cubics interpolate and the outline is the authored one.
+    Exact,
+    /// The pair was resampled into a polyline at the largest sampled count.
+    Resampled { points: usize },
 }
 
 /// An absolute path command before normalisation.
@@ -266,36 +283,45 @@ impl PathTrack {
                 run = 1;
             }
         }
-        for i in 0..self.keys.len().saturating_sub(1) {
-            if self.keys[i].ease != Ease::Hold {
-                self.keys[i]
-                    .path
-                    .check_match(&self.keys[i + 1].path, name)?;
-            }
-        }
         let mut segments = Vec::with_capacity(self.keys.len().saturating_sub(1));
+        let mut largest = 0usize;
         for i in 0..self.keys.len().saturating_sub(1) {
             let from = &self.keys[i];
             let to = &self.keys[i + 1];
             let span = to.t_us - from.t_us;
+            let hold = span == 0 || from.ease == Ease::Hold;
             let ease = if span == 0 {
                 Ease::Hold.prepare(1)?
             } else {
                 from.ease.prepare(span)?
             };
+            let (plan, points) = if hold {
+                (SegmentPlan::Exact, 0)
+            } else {
+                plan_segment(&from.path, &to.path, name)?
+            };
+            largest = largest.max(points);
             segments.push(PathSegment {
                 start_us: from.t_us,
                 end_us: to.t_us,
                 from: from.path.clone(),
                 to: to.path.clone(),
                 ease,
+                plan,
+                hold,
             });
         }
+        let fidelity = if largest == 0 {
+            PathFidelity::Exact
+        } else {
+            PathFidelity::Resampled { points: largest }
+        };
         Ok(PathCurve {
             start_us: self.keys[0].t_us,
             end_us: self.keys[self.keys.len() - 1].t_us,
             keys: self.keys.clone(),
             segments,
+            fidelity,
         })
     }
 }
@@ -307,6 +333,7 @@ pub struct PathCurve {
     end_us: u64,
     keys: Vec<PathKey>,
     segments: Vec<PathSegment>,
+    fidelity: PathFidelity,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -316,6 +343,25 @@ struct PathSegment {
     from: Path,
     to: Path,
     ease: EasePlan,
+    plan: SegmentPlan,
+    hold: bool,
+}
+
+/// How one segment moves between its two keys.
+#[derive(Debug, Clone, PartialEq)]
+enum SegmentPlan {
+    /// Corresponding cubics interpolate.
+    Exact,
+    /// Both keys were sampled into point lists of equal length, already
+    /// rotated into the chosen direction and start offset.
+    Resampled { subpaths: Vec<ResampledSubpath> },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ResampledSubpath {
+    from: Vec<Point>,
+    to: Vec<Point>,
+    closed: bool,
 }
 
 impl PathCurve {
@@ -325,6 +371,11 @@ impl PathCurve {
 
     pub fn end_us(&self) -> u64 {
         self.end_us
+    }
+
+    /// The best fidelity across the track's segments.
+    pub fn fidelity(&self) -> PathFidelity {
+        self.fidelity
     }
 
     /// Write the path at a time into `out`. Reuses the buffers already in `out`.
@@ -344,11 +395,184 @@ impl PathCurve {
             return;
         }
         let segment = &self.segments[index];
+        if segment.hold {
+            copy_path(&segment.from, out);
+            return;
+        }
         let span = (segment.end_us - segment.start_us) as f64;
         let u = (t_us - segment.start_us) as f64 / span;
         let progress = segment.ease.eval(u);
-        interpolate(&segment.from, &segment.to, progress, out);
+        match &segment.plan {
+            SegmentPlan::Exact => interpolate(&segment.from, &segment.to, progress, out),
+            SegmentPlan::Resampled { subpaths } => interpolate_resampled(subpaths, progress, out),
+        }
     }
+}
+
+/// Decide how one key pair morphs. Topology is checked here, and a curve count
+/// difference selects the resampled plan.
+fn plan_segment(from: &Path, to: &Path, name: &str) -> Result<(SegmentPlan, usize)> {
+    if from.check_topology(to, name)? {
+        return Ok((SegmentPlan::Exact, 0));
+    }
+    let mut subpaths = Vec::with_capacity(from.subpaths.len());
+    let mut largest = 0usize;
+    for (a, b) in from.subpaths.iter().zip(&to.subpaths) {
+        let count = point_count(a.perimeter().max(b.perimeter()));
+        largest = largest.max(count);
+        subpaths.push(ResampledSubpath {
+            from: a.resample(count),
+            to: b.resample(count),
+            closed: a.closed,
+        });
+    }
+    // A path with an open subpath is never reversed: the ends of a stroke are
+    // placed on purpose, and reversing one ring of a compound path would fill
+    // a hole under nonzero. Ring classification is a later step.
+    if from.subpaths.iter().all(|subpath| subpath.closed) {
+        let direct = travel(&subpaths, false);
+        let reversed = travel(&subpaths, true);
+        if reversed < direct {
+            for subpath in &mut subpaths {
+                subpath.to.reverse();
+            }
+        }
+    }
+    for subpath in &mut subpaths {
+        if subpath.closed {
+            let (offset, _) = best_offset(&subpath.from, &subpath.to, false);
+            subpath.to.rotate_left(offset);
+        }
+    }
+    Ok((SegmentPlan::Resampled { subpaths }, largest))
+}
+
+/// The point count for a resampled subpath: a 4 px chord, clamped.
+fn point_count(perimeter: f64) -> usize {
+    let wanted = (perimeter / CHORD_TARGET).ceil();
+    if !wanted.is_finite() {
+        return MAX_POINTS;
+    }
+    (wanted as usize).clamp(MIN_POINTS, MAX_POINTS)
+}
+
+impl Subpath {
+    /// The outline flattened into chords, with cumulative length per point.
+    fn flatten(&self) -> (Vec<Point>, Vec<f64>) {
+        let mut points = Vec::with_capacity(self.curves.len() * FLATTEN_STEPS + 1);
+        let mut lengths = Vec::with_capacity(points.capacity());
+        points.push(self.start);
+        lengths.push(0.0);
+        let mut end = self.start;
+        for curve in &self.curves {
+            let start = end;
+            for step in 1..=FLATTEN_STEPS {
+                let t = step as f64 / FLATTEN_STEPS as f64;
+                let point = cubic_point(&start, curve, t);
+                let last = lengths[lengths.len() - 1];
+                lengths.push(last + distance(&end, &point));
+                points.push(point);
+                end = point;
+            }
+        }
+        (points, lengths)
+    }
+
+    /// The outline length along its chords.
+    fn perimeter(&self) -> f64 {
+        let (_, lengths) = self.flatten();
+        *lengths.last().unwrap_or(&0.0)
+    }
+
+    /// Sample the outline by arc length into `count` points. A closed subpath
+    /// does not repeat its start at the end; an open one keeps both ends.
+    fn resample(&self, count: usize) -> Vec<Point> {
+        let (points, lengths) = self.flatten();
+        let total = *lengths.last().unwrap_or(&0.0);
+        if total <= 0.0 {
+            return vec![self.start; count];
+        }
+        let steps = if self.closed { count } else { count - 1 };
+        let mut out = Vec::with_capacity(count);
+        let mut segment = 0usize;
+        for index in 0..count {
+            let target = total * index as f64 / steps as f64;
+            while segment + 1 < lengths.len() && lengths[segment + 1] < target {
+                segment += 1;
+            }
+            if segment + 1 >= lengths.len() {
+                out.push(points[points.len() - 1]);
+                continue;
+            }
+            let span = lengths[segment + 1] - lengths[segment];
+            let t = if span > 0.0 {
+                (target - lengths[segment]) / span
+            } else {
+                0.0
+            };
+            out.push(points[segment].lerp(&points[segment + 1], t));
+        }
+        out
+    }
+}
+
+fn cubic_point(start: &Point, curve: &Cubic, t: f64) -> Point {
+    let u = 1.0 - t;
+    let w0 = u * u * u;
+    let w1 = 3.0 * u * u * t;
+    let w2 = 3.0 * u * t * t;
+    let w3 = t * t * t;
+    Point {
+        x: start.x * w0 + curve.c1.x * w1 + curve.c2.x * w2 + curve.to.x * w3,
+        y: start.y * w0 + curve.c1.y * w1 + curve.c2.y * w2 + curve.to.y * w3,
+    }
+}
+
+/// The start offset with the least squared travel, and that cost. With
+/// `reversed`, the target ring is walked the other way.
+fn best_offset(from: &[Point], to: &[Point], reversed: bool) -> (usize, f64) {
+    let count = from.len();
+    let mut best = (0usize, f64::INFINITY);
+    for offset in 0..count {
+        let mut cost = 0.0;
+        for (index, point) in from.iter().enumerate() {
+            let target = if reversed {
+                (count - 1 - index + offset) % count
+            } else {
+                (index + offset) % count
+            };
+            cost += distance_squared(point, &to[target]);
+        }
+        if cost < best.1 {
+            best = (offset, cost);
+        }
+    }
+    best
+}
+
+/// Total squared travel of a plan, allowing a start offset per closed subpath.
+fn travel(subpaths: &[ResampledSubpath], reversed: bool) -> f64 {
+    let mut total = 0.0;
+    for subpath in subpaths {
+        if subpath.closed {
+            total += best_offset(&subpath.from, &subpath.to, reversed).1;
+        } else {
+            for (from, to) in subpath.from.iter().zip(&subpath.to) {
+                total += distance_squared(from, to);
+            }
+        }
+    }
+    total
+}
+
+fn distance(from: &Point, to: &Point) -> f64 {
+    (from.x - to.x).hypot(from.y - to.y)
+}
+
+fn distance_squared(from: &Point, to: &Point) -> f64 {
+    let dx = from.x - to.x;
+    let dy = from.y - to.y;
+    dx * dx + dy * dy
 }
 
 fn copy_path(path: &Path, out: &mut Path) {
@@ -389,6 +613,42 @@ fn interpolate(from: &Path, to: &Path, progress: f64, out: &mut Path) {
     }
 }
 
+fn interpolate_resampled(subpaths: &[ResampledSubpath], progress: f64, out: &mut Path) {
+    out.subpaths.truncate(subpaths.len());
+    for (index, subpath) in subpaths.iter().enumerate() {
+        if index == out.subpaths.len() {
+            out.subpaths.push(Subpath::new(Point::ZERO, subpath.closed));
+        }
+        let slot = &mut out.subpaths[index];
+        let count = subpath.from.len();
+        slot.start = subpath.from[0].lerp(&subpath.to[0], progress);
+        slot.closed = subpath.closed;
+        slot.curves.clear();
+        slot.curves.reserve(count);
+        let chords = if subpath.closed { count } else { count - 1 };
+        for (chord_index, (from, to)) in subpath
+            .from
+            .iter()
+            .zip(&subpath.to)
+            .enumerate()
+            .take(chords)
+        {
+            let next = (chord_index + 1) % count;
+            let start = from.lerp(to, progress);
+            let end = subpath.from[next].lerp(&subpath.to[next], progress);
+            slot.curves.push(straight(start, end));
+        }
+    }
+}
+
+fn straight(from: Point, to: Point) -> Cubic {
+    Cubic {
+        c1: from.lerp(&to, 1.0 / 3.0),
+        c2: from.lerp(&to, 2.0 / 3.0),
+        to,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -399,6 +659,51 @@ mod tests {
             commands.push(Command::LineTo(Point::new(point.0, point.1)));
         }
         Path::from_commands(&commands).unwrap()
+    }
+
+    /// A circle of `segments` cubics at the origin, started at an angle.
+    fn ring(radius: f64, segments: usize, start: f64, ccw: bool) -> Path {
+        use std::f64::consts::TAU;
+        let sweep = if ccw { TAU } else { -TAU };
+        let step = sweep / segments as f64;
+        let k = 4.0 / 3.0 * (step.abs() / 4.0).tan();
+        let sign = step.signum();
+        let first = Point::new(radius * start.cos(), radius * start.sin());
+        let mut commands = Vec::with_capacity(segments + 2);
+        commands.push(Command::MoveTo(first));
+        let mut angle = start;
+        let mut point = first;
+        for _ in 0..segments {
+            let next_angle = angle + step;
+            let next = Point::new(radius * next_angle.cos(), radius * next_angle.sin());
+            let tangent = |a: f64| Point::new(-a.sin() * sign, a.cos() * sign);
+            let unit = k * radius;
+            let c1 = Point::new(
+                point.x + unit * tangent(angle).x,
+                point.y + unit * tangent(angle).y,
+            );
+            let c2 = Point::new(
+                next.x - unit * tangent(next_angle).x,
+                next.y - unit * tangent(next_angle).y,
+            );
+            commands.push(Command::CubicTo { c1, c2, to: next });
+            angle = next_angle;
+            point = next;
+        }
+        commands.push(Command::Close);
+        Path::from_commands(&commands).unwrap()
+    }
+
+    fn radii(path: &Path) -> Vec<f64> {
+        let mut out = Vec::new();
+        for subpath in &path.subpaths {
+            let points =
+                std::iter::once(&subpath.start).chain(subpath.curves.iter().map(|curve| &curve.to));
+            for point in points {
+                out.push(point.x.hypot(point.y));
+            }
+        }
+        out
     }
 
     #[test]
@@ -441,15 +746,148 @@ mod tests {
     }
 
     #[test]
-    fn mismatched_curve_counts_fail_with_both_counts() {
+    fn a_curve_count_mismatch_resamples_instead_of_failing() {
+        let a = ring(100.0, 4, 0.0, true);
+        let b = ring(100.0, 3, 0.0, true);
+        let curve = PathTrack::new(vec![
+            PathKey::new(0, a.clone()),
+            PathKey::new(1_000_000, b.clone()),
+        ])
+        .prepare("logo")
+        .unwrap();
+        match curve.fidelity() {
+            PathFidelity::Resampled { points } => {
+                assert!(
+                    (MIN_POINTS..=MAX_POINTS).contains(&points),
+                    "points {points}"
+                );
+            }
+            other => panic!("expected a resampled plan, got {other:?}"),
+        }
+        let mut out = Path::empty_like(&a);
+        curve.sample_into(0, &mut out);
+        assert_eq!(out, a);
+        curve.sample_into(1_000_000, &mut out);
+        assert_eq!(out, b);
+    }
+
+    #[test]
+    fn a_matched_pair_reports_exact() {
+        let a = ring(100.0, 4, 0.0, true);
+        let b = ring(100.0, 4, 0.0, true);
+        let curve = PathTrack::new(vec![PathKey::new(0, a), PathKey::new(1_000_000, b)])
+            .prepare("logo")
+            .unwrap();
+        assert_eq!(curve.fidelity(), PathFidelity::Exact);
+    }
+
+    #[test]
+    fn a_rotated_start_is_aligned_before_the_morph() {
+        use std::f64::consts::PI;
+        let a = ring(100.0, 4, 0.0, true);
+        let b = ring(100.0, 6, PI, true);
+        let curve = PathTrack::new(vec![PathKey::new(0, a.clone()), PathKey::new(1_000_000, b)])
+            .prepare("logo")
+            .unwrap();
+        let mut out = Path::empty_like(&a);
+        curve.sample_into(500_000, &mut out);
+        for radius in radii(&out) {
+            assert!((radius - 100.0).abs() < 6.0, "radius {radius}");
+        }
+    }
+
+    #[test]
+    fn an_opposite_winding_is_reversed_before_the_morph() {
+        let a = ring(100.0, 4, 0.0, true);
+        let b = ring(100.0, 6, 0.0, false);
+        let curve = PathTrack::new(vec![PathKey::new(0, a.clone()), PathKey::new(1_000_000, b)])
+            .prepare("logo")
+            .unwrap();
+        let mut out = Path::empty_like(&a);
+        curve.sample_into(500_000, &mut out);
+        let min = radii(&out).into_iter().fold(f64::INFINITY, f64::min);
+        assert!(min > 95.0, "mid-morph pinched to {min}");
+    }
+
+    #[test]
+    fn an_open_subpath_keeps_its_authored_ends() {
         let a = path(&[(0.0, 0.0), (100.0, 0.0)]);
-        let b = path(&[(0.0, 0.0), (100.0, 0.0), (100.0, 100.0)]);
+        let b = path(&[(0.0, 100.0), (50.0, 100.0), (100.0, 100.0)]);
+        let curve = PathTrack::new(vec![PathKey::new(0, a.clone()), PathKey::new(1_000_000, b)])
+            .prepare("logo")
+            .unwrap();
+        let mut out = Path::empty_like(&a);
+        curve.sample_into(500_000, &mut out);
+        assert_eq!(out.subpaths[0].start, Point::new(0.0, 50.0));
+        let end = out.subpaths[0].curves.last().unwrap().to;
+        assert_eq!(end, Point::new(100.0, 50.0));
+    }
+
+    #[test]
+    fn a_zero_length_subpath_resamples_to_its_own_point() {
+        let dot = Path::from_commands(&[Command::MoveTo(Point::new(10.0, 10.0)), Command::Close])
+            .unwrap();
+        let circle = ring(100.0, 4, 0.0, true);
+        let curve = PathTrack::new(vec![
+            PathKey::new(0, dot.clone()),
+            PathKey::new(1_000_000, circle),
+        ])
+        .prepare("logo")
+        .unwrap();
+        let mut out = Path::empty_like(&dot);
+        curve.sample_into(500_000, &mut out);
+        for subpath in &out.subpaths {
+            assert!(subpath.start.x.is_finite() && subpath.start.y.is_finite());
+            for point in subpath.curves.iter().map(|curve| curve.to) {
+                assert!(point.x.is_finite() && point.y.is_finite());
+            }
+        }
+    }
+
+    #[test]
+    fn a_closed_flag_mismatch_still_fails() {
+        let a = ring(100.0, 4, 0.0, true);
+        let mut b = ring(100.0, 4, 0.0, true);
+        b.subpaths[0].closed = false;
         let error = PathTrack::new(vec![PathKey::new(0, a), PathKey::new(1_000_000, b)])
             .prepare("logo")
             .unwrap_err()
             .to_string();
-        assert!(error.contains('1') && error.contains('2'), "{error}");
-        assert!(error.contains("subpath"), "{error}");
+        assert!(error.contains("closed"), "{error}");
+    }
+
+    #[test]
+    fn a_hold_between_different_shapes_keeps_the_first() {
+        let a = ring(100.0, 4, 0.0, true);
+        let b = ring(100.0, 3, 0.0, true);
+        let curve = PathTrack::new(vec![
+            PathKey::new(0, a.clone()).hold(),
+            PathKey::new(1_000_000, b.clone()),
+        ])
+        .prepare("logo")
+        .unwrap();
+        let mut out = Path::empty_like(&a);
+        curve.sample_into(500_000, &mut out);
+        assert_eq!(out, a);
+        curve.sample_into(1_000_000, &mut out);
+        assert_eq!(out, b);
+    }
+
+    #[test]
+    fn a_resampled_morph_reuses_a_warm_buffer() {
+        let a = ring(100.0, 4, 0.0, true);
+        let b = ring(100.0, 3, 0.0, true);
+        let curve = PathTrack::new(vec![PathKey::new(0, a.clone()), PathKey::new(1_000_000, b)])
+            .prepare("logo")
+            .unwrap();
+        let mut out = Path::empty_like(&a);
+        curve.sample_into(500_000, &mut out);
+        let capacity = out.subpaths[0].curves.capacity();
+        assert!(capacity >= MIN_POINTS, "capacity {capacity}");
+        for t in 0..1000 {
+            curve.sample_into(t * 1000, &mut out);
+        }
+        assert_eq!(out.subpaths[0].curves.capacity(), capacity);
     }
 
     #[test]

@@ -138,6 +138,34 @@ fn sampling_allocates_nothing_after_warmup() {
         after - before
     );
 
+    let a = Path::from_commands(&[
+        Command::MoveTo(Point::new(0.0, 0.0)),
+        Command::LineTo(Point::new(100.0, 0.0)),
+    ])
+    .unwrap();
+    let b = Path::from_commands(&[
+        Command::MoveTo(Point::new(0.0, 100.0)),
+        Command::LineTo(Point::new(50.0, 100.0)),
+        Command::LineTo(Point::new(100.0, 100.0)),
+    ])
+    .unwrap();
+    let curve = PathTrack::new(vec![PathKey::new(0, a.clone()), PathKey::new(1_000_000, b)])
+        .prepare("resampled")
+        .unwrap();
+    let mut path_out = Path::empty_like(&a);
+    curve.sample_into(500_000, &mut path_out);
+    let before = ALLOCATIONS.load(Ordering::Relaxed);
+    for frame in 0..1000u64 {
+        curve.sample_into(frame * 1000, &mut path_out);
+    }
+    let after = ALLOCATIONS.load(Ordering::Relaxed);
+    assert_eq!(
+        after,
+        before,
+        "resampled path sampling allocated {} times",
+        after - before
+    );
+
     let cell = anikit_tween::Cell {
         density: 0.0,
         color: Color::TRANSPARENT,

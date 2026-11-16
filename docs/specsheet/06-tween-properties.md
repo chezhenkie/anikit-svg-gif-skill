@@ -1,6 +1,6 @@
 # 06-tween-properties
 
-Status: implemented for matched-structure path morphs, raster plans and density grids. The flubber correspondence fallback, hole growth and arc normalisation remain unimplemented. Evidence and costs: docs/research/tween-property-types.md.
+Status: implemented for matched-structure path morphs, the correspondence fallback, raster plans and density grids. Hole growth and arc normalisation remain unimplemented. Evidence and costs: docs/research/tween-property-types.md.
 
 ## 6.1 The type set
 
@@ -18,18 +18,22 @@ Status: implemented for matched-structure path morphs, raster plans and density 
 
 `prepare` is allowed to be slow, to allocate and to fail. `sample` must be fast, allocation free and total.
 
-Prepare does all the work that depends on the whole track: parsing, normalising, sorting, resampling a path to matching structure, building the arc-length table, choosing the rotation offset, and computing spring settle times. Sample does a lookup, an interpolation and a compose.
+Prepare does all the work that depends on the whole track: parsing, normalising, sorting, resampling a path into a common point count, building the arc-length table, choosing the rotation offset, and computing spring settle times. Sample does a lookup, an interpolation and a compose.
 
 This split is what makes the two-pass frame flow in part 03 possible: the palette pass and the render pass share one prepared plan and pay the expensive work once.
 
 ## 6.3 Paths
 
 - Commands are normalised to absolute cubics, so line, quadratic and arc segments become one form.
-- Two paths morph only when their subpath count and their per-subpath command count match. That is the condition the whole design rests on.
-- Resampling follows flubber: sample each subpath by arc length at the same number of points, then choose the start point offset and the direction that minimises total distance. The offset search is quadratic in point count and runs at prepare; it costs 1 to 3 ms per pair at a few hundred points.
-- Per frame the work is linear in point count and costs microseconds. The cubic is evaluated, not resampled again.
-- A mismatch is not repaired by guessing. Prepare fails with a message naming the path and the counts, and the caller can ask for a dissolve instead.
-- Holes are matched by containment and then by the same resampling rule; a hole that exists in one key only is grown from a zero-area path at the same centroid.
+- A pair with the same subpath count, the same closed flags and the same per-subpath curve count interpolates corresponding cubics. That mode is exact and stays the first choice.
+- A pair that differs only in curve counts takes the correspondence fallback (09, row 27). Each subpath pair is flattened and sampled by arc length into a common polyline: the count is `ceil(longest perimeter / 4 px)`, clamped to 32 and 1024, so the polyline stays within about a pixel of the authored outline at normal drawing sizes.
+- A closed subpath tries every start offset and keeps the one with the least squared travel. An open subpath keeps its authored ends and is not rotated, because the ends of a stroke are placed on purpose.
+- Direction is chosen per path, every subpath reversed or none. Reversing one ring of a compound path would fill a hole under nonzero, and ring classification is a later gap, so a path with an open subpath is never reversed.
+- The offset search is quadratic in point count and runs at prepare, once per ring per direction tried: 0.02 ms at 100 points, 0.13 ms at 300, 1.5 ms at 1000. Per frame the work is linear in point count and costs microseconds.
+- The fallback writes a straight cubic per pair of points, so the result is a polyline. A key time still returns the authored path itself, which makes the outline step by about a pixel as the polyline morph begins.
+- Prepare reports the mode as `PathFidelity`: `Exact` for the cubic mode, `Resampled { points }` with the largest sampled count otherwise. A route that draws paths prints that line; the tween route still draws only five properties (09, row 21).
+- A subpath count or closed-flag mismatch is not repaired by guessing. Prepare fails with a message naming the path and the counts, and the caller can ask for a dissolve instead.
+- Hole matching by containment, and the growth of a hole that exists in one key only from a zero-area path at its centroid, remain open. Until they land, a subpath present in one key only fails.
 
 ## 6.4 Raster
 
@@ -56,7 +60,9 @@ The same rule applies to colour strings, transform strings and numbers: the rend
 ## 6.7 Tests
 
 - A path pair with matching structure morphs without a jump at either endpoint.
-- A pair with mismatched counts fails at prepare with the counts in the message.
+- A pair that differs in curve count prepares as `Resampled`, and its mid-morph stays on the shape when the two keys start at different angles and run in opposite directions.
+- A resampled morph returns both authored keys exactly at their times.
+- A mismatched subpath count or closed flag fails at prepare with the path name in the message.
 - A crossfade of two rasters produces the same pixels as a direct blend of the two decoded frames.
 - A density field interpolation reaches the ramp endpoints exactly.
 - Sample performs no allocation: a counting allocator sees zero allocations in the sample loop.
