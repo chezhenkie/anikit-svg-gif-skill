@@ -225,7 +225,7 @@ impl Face {
             // non-empty; there is no contour table to read.
             0 => {}
             c if c > 0 => {
-                let mut points = self.simple_points(base, c as usize)?;
+                let mut points = self.simple_points(gid, base, c as usize)?;
                 apply_matrix(&mut points, matrix);
                 out.extend(points);
             }
@@ -253,7 +253,7 @@ impl Face {
         Ok((start, end))
     }
 
-    fn simple_points(&self, base: usize, contours: usize) -> Result<Vec<Vec<Point>>> {
+    fn simple_points(&self, gid: u16, base: usize, contours: usize) -> Result<Vec<Vec<Point>>> {
         let data = &self.data;
         let ends_at = base + 10;
         let last = be_u16(data, ends_at + (contours - 1) * 2)
@@ -317,7 +317,7 @@ impl Face {
                 at += 2;
                 word as i32
             };
-            value += delta;
+            value = add_point(value, delta, gid)?;
             xs[i] = value;
         }
 
@@ -342,7 +342,7 @@ impl Face {
                 at += 2;
                 word as i32
             };
-            value += delta;
+            value = add_point(value, delta, gid)?;
             ys[i] = value;
         }
 
@@ -532,6 +532,13 @@ fn cmap12_lookup(data: &[u8], at: usize, ch: char) -> Option<u16> {
     None
 }
 
+/// One coordinate step, refused rather than wrapped when it leaves `i32`.
+fn add_point(value: i32, delta: i32, gid: u16) -> Result<i32> {
+    value
+        .checked_add(delta)
+        .ok_or_else(|| Error::invalid(format!("glyph {gid} coordinate overflows")))
+}
+
 fn apply_matrix(points: &mut [Vec<Point>], m: [f32; 6]) {
     for contour in points.iter_mut() {
         for point in contour.iter_mut() {
@@ -675,6 +682,13 @@ mod tests {
             let at = face.loca_at + index as usize * 4;
             data[at..at + 4].copy_from_slice(&value.to_be_bytes());
         }
+    }
+
+    #[test]
+    fn a_coordinate_that_leaves_its_range_is_refused() {
+        let err = add_point(i32::MAX, 1, 7).unwrap_err();
+        assert!(err.to_string().contains("glyph 7"), "{err}");
+        assert_eq!(add_point(-5, 5, 7).unwrap(), 0);
     }
 
     #[test]
