@@ -14,7 +14,7 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: toolchain
         run: rustup toolchain install stable --profile minimal --component clippy,rustfmt --target x86_64-unknown-linux-musl
       - name: format
@@ -33,7 +33,7 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: toolchain
         run: rustup toolchain install stable --profile minimal --component clippy
       - name: lint
@@ -48,7 +48,7 @@ jobs:
   windows-arm:
     runs-on: windows-11-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: toolchain
         run: rustup toolchain install stable --profile minimal --target aarch64-pc-windows-msvc
       - name: release build
@@ -60,7 +60,7 @@ jobs:
   arm:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: toolchain
         run: rustup toolchain install stable --profile minimal --target aarch64-unknown-linux-musl
       - name: musl build
@@ -77,7 +77,7 @@ jobs:
         target: [aarch64-apple-darwin]
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: toolchain
         run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
       - name: build

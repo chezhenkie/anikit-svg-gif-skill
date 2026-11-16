@@ -35,7 +35,7 @@ jobs:
             binary: rust/target/aarch64-apple-darwin/release/anikit
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: toolchain
         run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
       - name: build
@@ -45,7 +45,7 @@ jobs:
         run: |
           mkdir -p dist
           cp "${{ matrix.binary }}" "dist/${{ matrix.asset }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}
@@ -55,8 +55,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
