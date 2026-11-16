@@ -1,6 +1,6 @@
 # Documentation
 
-The skill turns text frames, a folder of images, an SVG animation, or a static SVG drawing with a JSON timeline into one looping GIF. This folder holds three kinds of document, and they are kept apart on purpose.
+An animation maker and translator with a keyframe engine at its centre: text frames, image folders, a live SVG or HTML page, and a JSON timeline over a static drawing all run through the same pipeline. This folder holds three kinds of document, and they are kept apart on purpose.
 
 - [specsheet/](specsheet/00-overview.md) is binding. It states what the system does and what the Rust port must satisfy. Start with the overview, which holds the table of contents and the design rules.
 - `research/` is evidence. Measurements, sources and prior art sit there, and a specsheet wins wherever the two disagree.
