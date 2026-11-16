@@ -220,12 +220,16 @@ impl Face {
         let base = self.glyf_at + start;
         let contours =
             be_i16(&self.data, base).ok_or_else(|| Error::invalid("glyph header is cut off"))?;
-        if contours >= 0 {
-            let mut points = self.simple_points(base, contours as usize)?;
-            apply_matrix(&mut points, matrix);
-            out.extend(points);
-        } else {
-            self.composite_points(base, matrix, depth, out)?;
+        match contours {
+            // A glyph with no contours is empty even though its loca range is
+            // non-empty; there is no contour table to read.
+            0 => {}
+            c if c > 0 => {
+                let mut points = self.simple_points(base, c as usize)?;
+                apply_matrix(&mut points, matrix);
+                out.extend(points);
+            }
+            _ => self.composite_points(base, matrix, depth, out)?,
         }
         Ok(())
     }
@@ -651,5 +655,46 @@ mod tests {
     fn broken_fonts_are_rejected() {
         assert!(Face::from_bytes(vec![0; 4]).is_err());
         assert!(Face::from_bytes(vec![0; 64]).is_err());
+    }
+
+    /// The embedded face with one glyph's contour count overwritten.
+    fn with_contours(face: &Face, gid: u16, contours: i16) -> Face {
+        let mut data = face.data.clone();
+        let (start, _end) = face.glyph_range(gid).unwrap();
+        let base = face.glyf_at + start;
+        data[base..base + 2].copy_from_slice(&contours.to_be_bytes());
+        Face::from_bytes(data).unwrap()
+    }
+
+    /// One loca entry, in the encoding the face uses.
+    fn set_loca(face: &Face, data: &mut [u8], index: u16, value: u32) {
+        if face.loca_format == 0 {
+            let at = face.loca_at + index as usize * 2;
+            data[at..at + 2].copy_from_slice(&(value as u16).to_be_bytes());
+        } else {
+            let at = face.loca_at + index as usize * 4;
+            data[at..at + 4].copy_from_slice(&value.to_be_bytes());
+        }
+    }
+
+    #[test]
+    fn a_glyph_with_no_contours_has_no_outline() {
+        let face = Face::embedded();
+        let gid = face.glyph_index('M').unwrap();
+        assert!(!face.glyph_points(gid).unwrap().is_empty());
+        let empty = with_contours(face, gid, 0);
+        assert!(empty.glyph_points(gid).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_glyph_outside_its_loca_range_is_refused() {
+        let face = Face::embedded();
+        let gid = face.glyph_index('M').unwrap();
+        let mut data = face.data.clone();
+        set_loca(face, &mut data, gid, 0xFFFF);
+        set_loca(face, &mut data, gid + 1, 0);
+        let broken = Face::from_bytes(data).unwrap();
+        let err = broken.glyph_points(gid).unwrap_err();
+        assert!(err.to_string().contains("bad location"), "{err}");
     }
 }
