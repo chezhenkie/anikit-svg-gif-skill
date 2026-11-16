@@ -50,7 +50,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: toolchain
-        run: rustup toolchain install stable --profile minimal --target aarch64-pc-windows-msvc
+        run: rustup toolchain install stable --profile minimal --component clippy --target aarch64-pc-windows-msvc
+      - name: lint
+        run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
+      - name: test
+        run: cargo test --manifest-path rust/Cargo.toml --workspace
       - name: release build
         run: cargo build --manifest-path rust/Cargo.toml --release --target aarch64-pc-windows-msvc -p anikit-cli
       - name: routes

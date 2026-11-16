@@ -45,7 +45,7 @@ No Python, Node, Playwright, ffmpeg, ImageMagick, package manager or network acc
 
 ## Build
 
-The workspace builds with stable Rust and cargo. CI runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace` on Linux x86_64, Linux arm, Windows x86_64, Windows arm and macOS arm, and builds static musl binaries. Release assets are built on GitHub Actions from a version tag, one runner per target; building all five locally needs the matching hosts or cross toolchains.
+The workspace builds with stable Rust and cargo. CI checks formatting on Linux x86_64, runs `cargo clippy -D warnings` and `cargo test --workspace` on Linux x86_64, Windows x86_64 and Windows arm, and builds and smoke-tests the release binary on every target, with the static-link check on the two musl jobs. Release assets are built on GitHub Actions from a version tag, one runner per target; building all five locally needs the matching hosts or cross toolchains.
 
 Every crate is pure Rust and the shipped assets are static where the platform needs it, so no C compiler or system library is required on the build host or the target. The only dev-only tools are cargo, rustup and Python for the smoke script and the sample generator.
 
