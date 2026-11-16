@@ -354,15 +354,12 @@ impl SpringPlan {
         if spring.rest_delta < 0.0 || spring.rest_speed < 0.0 {
             return Err(Error::invalid("spring rest thresholds must be 0 or more"));
         }
-        if spring.settle_us > span_us {
-            return Err(Error::invalid(format!(
-                "spring settle of {} us is longer than its segment of {} us",
-                spring.settle_us, span_us
-            )));
-        }
+        // A settle longer than the segment only decides the rest check, so it
+        // is capped at 1.5 times the segment rather than refusing the spring.
+        let settle_us = spring.settle_us.min(span_us.saturating_add(span_us / 2));
         let omega0 = (spring.stiffness / spring.mass).sqrt();
         let zeta = spring.damping / (2.0 * (spring.stiffness * spring.mass).sqrt());
-        let settle_s = spring.settle_us as f64 / 1e6;
+        let settle_s = settle_us as f64 / 1e6;
         let span_s = span_us as f64 / 1e6;
         let (kind, omega_d, r1, r2) = if zeta < 1.0 - 1e-9 {
             (
@@ -638,11 +635,21 @@ mod tests {
     }
 
     #[test]
-    fn spring_needs_a_settle_inside_its_segment() {
-        let spring = Spring::new(100.0, 10.0, 1.0, 2_000_000);
-        assert!(Ease::Spring(spring).prepare(1_000_000).is_err());
-        let zero = Spring::new(100.0, 10.0, 1.0, 0);
-        assert!(Ease::Spring(zero).prepare(1_000_000).is_err());
+    fn a_long_spring_settle_is_capped_at_the_segment() {
+        let span = 1_000_000;
+        let long = Ease::Spring(Spring::new(100.0, 10.0, 1.0, 3_000_000))
+            .prepare(span)
+            .unwrap();
+        let capped = Ease::Spring(Spring::new(100.0, 10.0, 1.0, 1_500_000))
+            .prepare(span)
+            .unwrap();
+        assert_eq!(long.spring_rest(), capped.spring_rest());
+        let exact = Ease::Spring(Spring::new(100.0, 10.0, 1.0, 1_000_000))
+            .prepare(span)
+            .unwrap();
+        assert_ne!(exact.spring_rest(), long.spring_rest());
+        let zero = Ease::Spring(Spring::new(100.0, 10.0, 1.0, 0));
+        assert!(zero.prepare(span).is_err());
     }
 
     #[test]
