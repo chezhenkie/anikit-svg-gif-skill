@@ -54,7 +54,7 @@ jobs:
       - name: release build
         run: cargo build --manifest-path rust/Cargo.toml --release -p anikit-cli
 
-  arm64:
+  arm:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
@@ -82,7 +82,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+        target: [aarch64-apple-darwin]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4

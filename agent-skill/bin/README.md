@@ -5,10 +5,9 @@ This folder holds the `anikit` binary for the host, copied from a release asset:
 | Platform | Asset | Name here |
 |---|---|---|
 | Linux x86_64, glibc or musl | `anikit-linux-x86_64` | `anikit` |
-| Linux aarch64, musl | `anikit-linux-aarch64` | `anikit` |
+| Linux arm, musl | `anikit-linux-arm` | `anikit` |
 | Windows x86_64 | `anikit-windows-x86_64.exe` | `anikit.exe` |
-| macOS Apple silicon | `anikit-macos-aarch64` | `anikit` |
-| macOS Intel | `anikit-macos-x86_64` | `anikit` |
+| macOS arm | `anikit-macos-arm` | `anikit` |
 
 A fresh clone has no binary in this folder. If there is none for the host, the platform is unsupported: the skill does not build or download one while making an animation.
 
