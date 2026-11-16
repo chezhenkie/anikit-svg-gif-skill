@@ -787,7 +787,7 @@ fn js_setup() -> String {
     const target = a.effect && a.effect.target;
     if (isSvg(target)) { animated.add(target); }
   });
-  document.querySelectorAll('animate, animateTransform, set').forEach((a) => {
+  document.querySelectorAll('animate, animateTransform, animateMotion, animateColor, set').forEach((a) => {
     const target = a.parentElement;
     if (isSvg(target)) { animated.add(target); }
   });
@@ -807,11 +807,12 @@ fn js_setup() -> String {
       });
     });
   });
-  document.querySelectorAll('animate, animateTransform, set').forEach((a) => {
+  document.querySelectorAll('animate, animateTransform, animateMotion, animateColor, set').forEach((a) => {
     const name = (a.getAttribute('attributeName') || '').trim();
     if (name && !supported.has(name)) { others.add(name); }
+    if (a.localName === 'animateColor') { others.add('animateColor'); }
   });
-  const targets = list.map((el) => ({id: el.id, transform: el.getAttribute('transform') || ''}));
+  const targets = list.map((el) => ({id: el.id, transform: el.getAttribute('transform') || '', motion: Array.from(el.children).some((child) => child.localName === 'animateMotion')}));
   window.__anikitImport = {targets};
   return JSON.stringify({targets, others: [...others]});
 })()"#
@@ -848,6 +849,18 @@ fn js_sample(seconds: f64) -> String {
         if (!isFinite(x) || !isFinite(y) || Math.abs(x) > 1e-6 || Math.abs(y) > 1e-6) {
           return JSON.stringify({error: 'transform origin is not 0 0', id: target.id, origin: style.transformOrigin});
         }
+        matrix = [m.a, m.b, m.c, m.d, m.e, m.f];
+      }
+    }
+    if (target.motion) {
+      // animateMotion is a supplemental transform, so the element's own
+      // transform does not carry it. The local matrix relative to the parent
+      // does, and the wrapper applies it outside the authored transform.
+      const own = el.getCTM ? el.getCTM() : null;
+      const parent = el.parentElement;
+      const above = parent && parent.getCTM ? parent.getCTM() : null;
+      if (own) {
+        const m = above ? above.inverse().multiply(own) : own;
         matrix = [m.a, m.b, m.c, m.d, m.e, m.f];
       }
     }
@@ -991,6 +1004,71 @@ mod tests {
         assert_eq!(keys[25]["t"], 1000);
         let closing = keys[25]["translate"][0].as_f64().unwrap();
         assert!((closing - 38.4).abs() < 1e-6, "closing value {closing}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    const MOTION_DRAWING: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 80 40">
+<rect id="box" x="0" y="0" width="10" height="10" fill="#ff0000">
+  <animateMotion path="M 0 0 L 40 0" dur="1s" fill="freeze"/>
+</rect>
+</svg>"##;
+
+    #[test]
+    fn an_animate_motion_drawing_imports_its_transform() {
+        let _browser = browser_lock();
+        if discover(None).is_err() {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        }
+        let dir = scratch("motion");
+        let input = dir.join("art.svg");
+        std::fs::write(&input, MOTION_DRAWING).unwrap();
+        let out = dir.join("scene.json");
+        let imported = write_import(&input, &out, &options()).unwrap();
+        assert_eq!(imported.tracks, 1);
+
+        let scene = scene_of(&out);
+        let transform = find_track(&scene, "box-transform");
+        let keys = transform["keys"].as_array().unwrap();
+        assert_eq!(keys[9]["t"], 900);
+        let x = keys[9]["translate"][0].as_f64().unwrap();
+        assert!((x - 36.0).abs() < 2.0, "animateMotion x {x}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    const COLOUR_DRAWING: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 80 40">
+<rect id="box" x="0" y="0" width="10" height="10" fill="#ff0000">
+  <animateColor attributeName="fill" values="#ff0000;#0000ff" dur="1s" fill="freeze"/>
+  <animate attributeName="opacity" values="1;0.5" dur="1s" fill="freeze"/>
+</rect>
+</svg>"##;
+
+    #[test]
+    fn an_animate_color_drawing_reports_the_unsupported_colour() {
+        let _browser = browser_lock();
+        if discover(None).is_err() {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        }
+        let dir = scratch("colour");
+        let input = dir.join("art.svg");
+        std::fs::write(&input, COLOUR_DRAWING).unwrap();
+        let out = dir.join("scene.json");
+        let imported = write_import(&input, &out, &options()).unwrap();
+        // Chromium does not run animateColor, so the route reports it instead
+        // of claiming a colour track it cannot sample.
+        assert!(
+            imported
+                .skipped
+                .iter()
+                .any(|name| name.contains("animateColor")),
+            "skipped: {:?}",
+            imported.skipped
+        );
+        assert_eq!(imported.tracks, 1);
+        let text = std::fs::read_to_string(&out).unwrap();
+        assert!(text.contains("svg.opacity"), "{text}");
+        assert!(!text.contains("svg.fill"), "no fill track: {text}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

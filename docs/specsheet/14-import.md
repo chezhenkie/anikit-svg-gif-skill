@@ -23,7 +23,7 @@ The frame count is `max(2, ceil(duration * fps))`, and the timeline lasts `count
 
 ## 14.3 What is imported
 
-- A candidate is every element that the page reports as animated: an element with a CSS or WAAPI animation from `document.getAnimations()`, and the parent of any `animate`, `animateTransform` or `set` element.
+- A candidate is every element that the page reports as animated: an element with a CSS or WAAPI animation from `document.getAnimations()`, and the parent of any `animate`, `animateTransform`, `animateMotion`, `animateColor` or `set` element.
 - A candidate must have an id, because a track names `file.svg#id`. A candidate without an id, and an animation on the root `svg`, fail the run with a message naming the element. The root cannot be a target (11.7).
 - Only five properties are imported: transform, opacity, fill, stroke and stroke-width. An animation of any other property is reported with a `WARN` line when the run writes a scene, and it does not become a track. A drawing whose only animations are outside the five fails with "the drawing has no importable animation" and names the skipped properties.
 - A drawing with no candidate at all fails the run.
@@ -34,7 +34,7 @@ The frame count is `max(2, ceil(duration * fps))`, and the timeline lasts `count
 The page is loaded once with the same wrapper as the vector route, fonts are awaited, every CSS and WAAPI clock is paused, and the SVG clock is paused. For each frame index `i`, the route seeks every clock to `i * 1000 / fps` milliseconds and reads the computed state of every candidate.
 
 - `opacity`, `fill`, `stroke` and `stroke-width` come from `getComputedStyle` of the element.
-- The transform is the element's own rendered transform. When a CSS transform is in effect, its matrix is read from the computed style; otherwise the XML transform presentation value is read from the SVG DOM, which includes SMIL. The two are distinguished by comparing the computed matrix with the presentation matrix.
+- The transform is the element's own rendered transform. When a CSS transform is in effect, its matrix is read from the computed style; otherwise the XML transform presentation value is read from the SVG DOM, which includes SMIL. The two are distinguished by comparing the computed matrix with the presentation matrix. An element with `animateMotion` is read through its current matrix relative to its parent, because the motion is a supplemental transform the presentation value does not carry.
 - The tween route puts its matrix on a wrapper outside the element and leaves the element's static `transform` attribute in place. The sampled matrix is therefore multiplied by the inverse of the static attribute matrix: a track moves the element from its authored transform, not from the identity. The static matrix is read from the element's `transform` attribute in the page and parsed with the SVG transform list grammar: `matrix`, `translate`, `scale`, `rotate` with an optional centre, `skewX` and `skewY`, in list order. An attribute the parser does not understand fails the run and names the element.
 - A CSS transform is applied about `transform-origin`. The route accepts only an origin of `0px 0px` and fails otherwise, naming the element; the exported CSS of part 12 sets exactly that origin. An XML transform is always about 0 0 and needs no correction.
 - A sampled matrix is decomposed into translate, rotate, scale and skew, the components of part 11's transform value. The decomposition is the inverse of the composition in the tween crate, so the matrix survives the round trip. Negative scales and rotations beyond a half turn are reported by the decomposition without loss.
@@ -81,5 +81,5 @@ The route reports, with one `FAIL` line and no output:
 - The route samples, it does not parse. The source easing is exact at the imported frame times and linear between them, so an imported scene is rendered at its own fps for an exact match. A higher render fps shows the straight segments.
 - Only the five properties. Position, size, path data, text content, paint servers and colour alpha stay with their open parts (06, 07) and are not imported.
 - One interval. Animations with different periods are sampled over `--duration` and the scene repeats that interval; several independent periods cannot be represented.
-- A JavaScript loop that writes attributes or CSS by hand is not an animation object, so it is not seen. CSS, WAAPI and declarative SMIL are.
+- A JavaScript loop that writes attributes or CSS by hand is not an animation object, so it is not seen. CSS, WAAPI and declarative SMIL are, including `animateMotion`. Chromium does not run the obsolete `animateColor`; the route lists it as skipped and the imported scene keeps the element's painted colour.
 - A non-zero CSS `transform-origin` is refused rather than approximated.
