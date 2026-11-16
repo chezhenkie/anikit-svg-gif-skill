@@ -147,12 +147,23 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
         },
     )?;
 
-    let mut first: Option<Frame> = None;
+    // The palette pass captured the frame at index 0 for a GIF, so the stream
+    // pass reuses it instead of seeking to the same time twice.
+    let mut kept = if format == OutputFormat::Gif {
+        samples.first().cloned()
+    } else {
+        None
+    };
+    let mut first: Option<Frame> = kept.clone();
     for index in 0..count {
         let pts = plan
             .presentation_us(index)
             .ok_or_else(|| Error::invalid(format!("frame {index} is outside the plan")))?;
-        let frame = page.frame(pts as f64 / 1_000_000.0)?;
+        let captured = if index == 0 { kept.take() } else { None };
+        let frame = match captured {
+            Some(frame) => frame,
+            None => page.frame(pts as f64 / 1_000_000.0)?,
+        };
         if first.is_none() {
             first = Some(frame.clone());
         }
@@ -358,6 +369,8 @@ struct Capturer {
 
 impl Capturer {
     fn shoot(&mut self) -> Result<Frame> {
+        #[cfg(test)]
+        SHOTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let reply = self.session.call(
             "Page.captureScreenshot",
             Some(json!({
@@ -426,6 +439,10 @@ pub(crate) mod test_lock {
     /// several Chromium processes at once on a small runner.
     pub static BROWSER: std::sync::Mutex<()> = std::sync::Mutex::new(());
 }
+
+/// Screenshots taken by this test binary, so a test can count browser work.
+#[cfg(test)]
+pub(crate) static SHOTS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 #[cfg(test)]
 pub(crate) mod test_support {
@@ -654,6 +671,25 @@ mod tests {
             .and_then(Value::as_str)
             .unwrap_or_default();
         assert_eq!(text, "blocked:TypeError", "the page read a local file");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_first_palette_frame_is_captured_once() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
+        if test_support::browser().is_none() {
+            return;
+        }
+        let dir = scratch("one-shot");
+        let input = dir.join("drawing.svg");
+        std::fs::write(&input, DRAWING).unwrap();
+        let out = dir.join("out.gif");
+        SHOTS.store(0, std::sync::atomic::Ordering::Relaxed);
+        let rendered = write_animation(&input, &out, &options()).unwrap();
+        let shots = SHOTS.load(std::sync::atomic::Ordering::Relaxed);
+        assert_eq!(rendered.summary.frames, 4);
+        // Four palette samples and four stream frames share the first capture.
+        assert_eq!(shots, 7, "screenshots taken");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

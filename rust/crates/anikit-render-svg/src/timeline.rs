@@ -154,9 +154,20 @@ pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Resul
         },
     )?;
 
-    let mut first: Option<Frame> = None;
+    // The palette pass captured the frame at index 0 for a GIF, so the stream
+    // pass reuses it instead of writing the same state and shooting again.
+    let mut kept = if format == OutputFormat::Gif {
+        samples.first().cloned()
+    } else {
+        None
+    };
+    let mut first: Option<Frame> = kept.clone();
     for index in 0..plan.len() {
-        let frame = capture_frame(&mut page, &scene, &plan, index, &mut values)?;
+        let captured = if index == 0 { kept.take() } else { None };
+        let frame = match captured {
+            Some(frame) => frame,
+            None => capture_frame(&mut page, &scene, &plan, index, &mut values)?,
+        };
         if first.is_none() {
             first = Some(frame.clone());
         }
