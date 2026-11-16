@@ -14,7 +14,6 @@ members = [
 edition = "2024"
 version = "0.0.0"
 license = "MIT"
-repository = "https://github.com/chezhenkie/anikit-svg-gif-skill"
 
 [workspace.dependencies]
 anikit-core = { path = "crates/anikit-core" }
