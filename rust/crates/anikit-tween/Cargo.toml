@@ -8,3 +8,4 @@ description = "Keyframes, easing, property values and layers"
 [dependencies]
 anikit-core.workspace = true
 anikit-time.workspace = true
+libm = "0.2"
