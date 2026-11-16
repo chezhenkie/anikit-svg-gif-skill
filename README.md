@@ -133,6 +133,7 @@ The tween route reads one JSON file: `anikit tween scene.json -o scene.gif`. The
 | `agent-skill/references/kinetic-motion.md` | Motion rules, presets, checklist |
 | `rust/` | The source workspace, one crate per stage |
 | `tools/make_docs.py` | Regenerates the sample GIFs |
+| `e2e-smoke-tests/` | Route smoke checks against a built binary |
 | `docs/` | Samples, human index and the specsheet |
 | `docs/specsheet/` | Binding specification, starting at `00-overview.md` |
 | `docs/research/` | Research notes and measurements, not binding |
@@ -148,7 +149,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-The suite covers the GIF and APNG writers, timing, the six routes against exported fixtures, delta compositing, extraction and rebuild, the SVG export and import, and a memory check that streams 1000 frames. `.github/workflows/ci.yml` runs it on Linux and Windows, builds static musl binaries for x86_64 and arm, builds the Windows arm and macOS arm targets, runs the text and SVG-export smoke tests from the arm builds, and runs the text and images routes from the musl binaries. A release asset is only ever produced by `.github/workflows/release.yml` on a version tag.
+The suite covers the GIF and APNG writers, timing, the six routes against exported fixtures, delta compositing, extraction and rebuild, the SVG export and import, and a memory check that streams 1000 frames. `.github/workflows/ci.yml` runs it on Linux and Windows, builds static musl binaries for x86_64 and arm, builds the Windows arm and macOS arm targets, and runs `e2e-smoke-tests/smoke.py` against each built binary. A release asset is only ever produced by `.github/workflows/release.yml` on a version tag.
 
 ## Limits
 

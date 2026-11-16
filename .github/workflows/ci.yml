@@ -25,19 +25,8 @@ jobs:
         run: cargo test --manifest-path rust/Cargo.toml --workspace
       - name: musl build
         run: cargo build --manifest-path rust/Cargo.toml --release --target x86_64-unknown-linux-musl -p anikit-cli
-      - name: musl routes
-        run: |
-          set -eu
-          cd rust
-          bin=./target/x86_64-unknown-linux-musl/release/anikit
-          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.gif" --size 28 --width 480 --height 270
-          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.png" --size 28 --width 480 --height 270
-          $bin images crates/anikit-cli/tests/fixtures/images/input -o "$RUNNER_TEMP/images.gif" --width 320 --height 180 --mode crossfade --fps 12 --hold 0.5 --transition 0.25
-          $bin tween crates/anikit-cli/tests/fixtures/tween/input/scene.json -o "$RUNNER_TEMP/tween.svg"
-          test -s "$RUNNER_TEMP/text.gif"
-          test -s "$RUNNER_TEMP/text.png"
-          test -s "$RUNNER_TEMP/images.gif"
-          test -s "$RUNNER_TEMP/tween.svg"
+      - name: routes
+        run: python3 e2e-smoke-tests/smoke.py rust/target/x86_64-unknown-linux-musl/release/anikit --out "$RUNNER_TEMP/smoke"
       - name: static link
         run: file rust/target/x86_64-unknown-linux-musl/release/anikit | grep -Eq "statically linked|static-pie linked"
 
@@ -53,6 +42,8 @@ jobs:
         run: cargo test --manifest-path rust/Cargo.toml --workspace
       - name: release build
         run: cargo build --manifest-path rust/Cargo.toml --release -p anikit-cli
+      - name: routes
+        run: python e2e-smoke-tests/smoke.py rust/target/release/anikit.exe --out "$env:RUNNER_TEMP/smoke"
 
   windows-arm:
     runs-on: windows-11-arm
@@ -64,16 +55,7 @@ jobs:
         run: cargo build --manifest-path rust/Cargo.toml --release --target aarch64-pc-windows-msvc -p anikit-cli
       - name: routes
         shell: bash
-        run: |
-          set -eu
-          cd rust
-          bin=./target/aarch64-pc-windows-msvc/release/anikit.exe
-          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.gif" --size 28 --width 480 --height 270
-          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.png" --size 28 --width 480 --height 270
-          $bin tween crates/anikit-cli/tests/fixtures/tween/input/scene.json -o "$RUNNER_TEMP/tween.svg"
-          test -s "$RUNNER_TEMP/text.gif"
-          test -s "$RUNNER_TEMP/text.png"
-          test -s "$RUNNER_TEMP/tween.svg"
+        run: python e2e-smoke-tests/smoke.py rust/target/aarch64-pc-windows-msvc/release/anikit.exe --out "$RUNNER_TEMP/smoke"
 
   arm:
     runs-on: ubuntu-24.04-arm
@@ -83,19 +65,8 @@ jobs:
         run: rustup toolchain install stable --profile minimal --target aarch64-unknown-linux-musl
       - name: musl build
         run: cargo build --manifest-path rust/Cargo.toml --release --target aarch64-unknown-linux-musl -p anikit-cli
-      - name: musl routes
-        run: |
-          set -eu
-          cd rust
-          bin=./target/aarch64-unknown-linux-musl/release/anikit
-          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.gif" --size 28 --width 480 --height 270
-          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.png" --size 28 --width 480 --height 270
-          $bin images crates/anikit-cli/tests/fixtures/images/input -o "$RUNNER_TEMP/images.gif" --width 320 --height 180 --mode crossfade --fps 12 --hold 0.5 --transition 0.25
-          $bin tween crates/anikit-cli/tests/fixtures/tween/input/scene.json -o "$RUNNER_TEMP/tween.svg"
-          test -s "$RUNNER_TEMP/text.gif"
-          test -s "$RUNNER_TEMP/text.png"
-          test -s "$RUNNER_TEMP/images.gif"
-          test -s "$RUNNER_TEMP/tween.svg"
+      - name: routes
+        run: python3 e2e-smoke-tests/smoke.py rust/target/aarch64-unknown-linux-musl/release/anikit --out "$RUNNER_TEMP/smoke"
       - name: static link
         run: file rust/target/aarch64-unknown-linux-musl/release/anikit | grep -Eq "statically linked|static-pie linked"
 
@@ -111,3 +82,5 @@ jobs:
         run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
       - name: build
         run: cargo build --manifest-path rust/Cargo.toml --release --target ${{ matrix.target }} -p anikit-cli
+      - name: routes
+        run: python3 e2e-smoke-tests/smoke.py rust/target/${{ matrix.target }}/release/anikit --out "$RUNNER_TEMP/smoke"
