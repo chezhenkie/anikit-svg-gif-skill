@@ -130,7 +130,7 @@ Each run prints `<name>  N frames, X.XX s, W x H` after writing and verifying th
 
 `import` needs a Chromium based browser, like the vector route. It samples transform, opacity, fill, stroke and stroke width at the chosen frame times and writes the five-property timeline of the tween route. The scene is exact at its own fps; properties outside those five and a non-zero CSS transform origin are not imported, and a colour that changes must be opaque.
 
-The output extension chooses the format: `.gif` and `.png` or `.apng` on every route, `.svg` on the tween route. The SVG export writes the sampled timeline as CSS keyframes inside the drawing, so it plays without a browser, but it replaces any authored transform or animation on the properties it drives.
+The output extension chooses the format on the four frame routes: `.gif`, `.png` or `.apng`, and `.svg` on the tween route. Extract takes a folder and import writes a `.json` timeline. The SVG export writes the sampled timeline as CSS keyframes inside the drawing, so it plays without a browser, but it replaces any authored transform or animation on the properties it drives.
 
 The tween route reads one JSON file: `anikit tween scene.json -o scene.apng`. The file names the canvas, fps, timing, tracks and layers; its grammar is in [docs/specsheet/11-tween-route.md](docs/specsheet/11-tween-route.md), and `agent-skill/SKILL.md` carries the short form for the skill.
 

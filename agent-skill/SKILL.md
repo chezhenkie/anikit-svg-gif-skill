@@ -21,7 +21,7 @@ The binary has six routes and one shared timing core; pick the route that matche
 
 Every frame route ends in the same core: 10 ms timing grid, identical consecutive frames merged into longer delays, atomic write, read-back verification. GIF adds one palette across the loop and delta frames; APNG is truecolor and writes full frames. The tween route can also write an animated SVG.
 
-The output extension chooses the format: `.gif`, `.png` or `.apng` on every route, `.svg` on the tween route. An unknown extension fails before rendering.
+The output extension chooses the format on the four frame routes: `.gif`, `.png` or `.apng`, and `.svg` on the tween route. Extract takes a folder and import writes a `.json` timeline. An unknown extension fails before rendering.
 
 ## Binary
 
