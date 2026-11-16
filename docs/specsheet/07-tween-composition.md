@@ -44,7 +44,7 @@ pub enum Op { Replace, Add, Multiply, Accumulate }
 pub enum AddMode { Append, Prepend }
 ```
 
-Prepare resolves the stack into either a single prepared track or one contiguous range of prepared layers. A property with zero or one contributing `Replace` binding takes the single path, which is the current code path with no per-frame cost. Everything else takes the stacked path, where sampling walks the range, skips closed windows and zero weights, and pays for the mix only when the weight is strictly between 0 and 1.
+Prepare resolves the stack into either a single prepared track or one contiguous range of prepared layers. A full-weight, unwindowed `Replace` binding with nothing else contributing below it folds into the single path, which is the current code path with no per-frame cost; a Replace with a partial weight or a window stays stacked. Everything else takes the stacked path, where sampling walks the range, skips closed windows and zero weights, and pays for the mix only when the weight is strictly between 0 and 1.
 
 Prepare folds the stack below a full-weight, unwindowed `Replace` binding: that binding becomes the base and the layers under it are not sampled. A constant `Add` or `Multiply` binding stays a layer and is sampled each frame. A binding to a missing element fails at prepare, never at render.
 
