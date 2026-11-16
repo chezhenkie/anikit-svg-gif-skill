@@ -61,10 +61,10 @@ The binary is produced by the `anikit-cli` package; the other packages are libra
 | Linux arm, musl | anikit | static, same rules as x86_64 musl |
 | macOS arm | anikit | Apple silicon, no special flags |
 
-The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector and tween routes depend on an installed Chromium; on musl the distribution package is the only source of one.
+The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector, tween and import routes depend on an installed Chromium; on musl the distribution package is the only source of one.
 
 ## 2.6 Delivery
 
-Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector and tween routes use it.
+Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector, tween and import routes use it.
 
 The workflow builds Windows x86_64, Windows arm, Linux x86_64 static musl, Linux arm static musl and macOS arm, and attaches each under its asset name. A host with no matching asset is reported as unsupported.
