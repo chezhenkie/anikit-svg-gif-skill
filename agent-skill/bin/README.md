@@ -10,7 +10,7 @@ This folder holds the `anikit` binary for the host, copied from a release asset:
 | macOS Apple silicon | `anikit-macos-aarch64` | `anikit` |
 | macOS Intel | `anikit-macos-x86_64` | `anikit` |
 
-A fresh clone has no binary in this folder. If there is none for the host, the platform is unsupported: the skill does not build or download one while making a GIF.
+A fresh clone has no binary in this folder. If there is none for the host, the platform is unsupported: the skill does not build or download one while making an animation.
 
 ```sh
 gh release download v0.3.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
