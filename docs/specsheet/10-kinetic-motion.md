@@ -25,7 +25,7 @@ pub enum Motion {
 
 - `Ease` interpolates between two key values with progress 0 to 1, as specified in part 05.
 - `Ballistic` owns an absolute value and ignores the end key, because a fall ends on a plane, not on a key. It compiles at prepare into flights and contact holds, so sampling stays a closed form.
-- `Arc` is a quadratic through a control point offset from the chord midpoint by `bend` times the chord length. A bend of 0.1 bows a 100 px move by 10 px.
+- `Arc` is a quadratic through a control point offset from the chord midpoint by `bend` times the chord length. A quadratic reaches half that offset at its midpoint, so a bend of 0.1 bows a 100 px move by 5 px.
 - A follow-through chain is not a segment. It reads another track, so it is a layer binding with a delay, which is the additive path already defined in part 07.
 
 Ballistic fields, all compiled at prepare:
