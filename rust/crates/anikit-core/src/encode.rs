@@ -81,8 +81,8 @@ impl<W: Write> GifEncoder<W> {
         })
     }
 
-    /// Append one frame. `delay_ms` must be a multiple of 10, which is the grid
-    /// the time crate guarantees.
+    /// Append one frame. `delay_ms` must be a positive multiple of 10, which is
+    /// the grid the time crate guarantees.
     pub fn write_frame(&mut self, indices: &[u8], delay_ms: u32) -> Result<()> {
         let width = self.width as usize;
         let height = self.height as usize;
@@ -97,6 +97,10 @@ impl<W: Write> GifEncoder<W> {
             return Err(Error::invalid(format!(
                 "delay {delay_ms} ms is not a multiple of 10"
             )));
+        }
+        if delay_ms == 0 {
+            // A zero delay field is read as 100 ms by most decoders.
+            return Err(Error::invalid("delay 0 ms must be at least 10 ms"));
         }
         if delay_ms / 10 > u16::MAX as u32 {
             return Err(Error::invalid(format!(
@@ -379,6 +383,15 @@ mod tests {
         let mut enc = GifEncoder::new(&mut out, 1, 1, &palette, 0).unwrap();
         assert!(enc.write_frame(&[0], 105).is_err());
         assert!(enc.write_frame(&[0], 100).is_ok());
+    }
+
+    #[test]
+    fn delay_must_not_be_zero() {
+        let palette = Palette::from_colors(vec![[0, 0, 0], [255, 255, 255]]).unwrap();
+        let mut out = Vec::new();
+        let mut enc = GifEncoder::new(&mut out, 1, 1, &palette, 0).unwrap();
+        assert!(enc.write_frame(&[0], 0).is_err());
+        assert!(enc.write_frame(&[0], 20).is_ok());
     }
 
     #[test]
