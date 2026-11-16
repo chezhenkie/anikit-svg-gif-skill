@@ -73,7 +73,7 @@ Gravity is a scene setting, not a per-object one. A scene uses 1400 px/s^2 for a
 - Damping ratio sets overshoot, natural frequency sets pace. 0.4 to 0.55 is playful, 0.6 to 0.75 is confident, 0.8 to 0.95 is crisp, 1.0 and above never overshoots. Frequency 8 to 12 rad/s is heavy, 15 to 25 is normal, 30 to 40 is snappy.
 - Use a spring for a reaction: a landing, a settle, a follow-through, an interruption. Use a bezier for choreography: an entrance, an exit, a camera move, a loop.
 - A bezier's duration is authored and a spring's is emergent, so a route with a fixed frame count prefers a bezier.
-- Overshoot is not a control point value. Writing 1.05 into the first y handle produces 0.04 percent, not 5; y near 1.4 is what gives about 5.3 percent. The crate therefore measures overshoot from the evaluated curve, and the renderer caps it at 6 px regardless of travel.
+- Overshoot is not a control point value. Writing 1.05 into the first y handle produces 0.04 percent, not 5; y near 1.4 is what gives about 5.3 percent. The crate therefore measures overshoot from the evaluated curve. A 6 px cap on that overshoot is not implemented yet, so keep travel small until it is.
 
 ## 10.6 Frame rate and small motion
 

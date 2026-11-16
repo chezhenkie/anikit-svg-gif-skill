@@ -11,7 +11,7 @@ Mandatory before choosing fps, delay, easing or a preset. Motion that reads as p
 5. The last pixels sell the weight: the final 2 to 3 px take 2 to 3 frames, at 0.5 to 1 px per frame. Stop a spring at 0.5 px or 2 px/s, and never let it cross the loop point.
 6. Squash preserves area: width = 1 / height. Contact squash 15 to 25 percent, stretch at speed 15 to 30 percent.
 7. Weight is carried by the edges, not the middle. Heavy means 6 to 10 frames of anticipation against 2 to 3, a longer contact, 0 or 1 bounces against 3 to 5, and 2 percent overshoot against 8 to 12. Gravity is the same for all masses; a heavy object does not fall faster.
-8. Overshoot is measured from the evaluated curve, not written into a control point: y1 1.05 gives 0.04 percent, y1 1.4 gives about 5.3 percent. Cap overshoot at 6 px whatever the travel.
+8. Overshoot is measured from the evaluated curve, not written into a control point: y1 1.05 gives 0.04 percent, y1 1.4 gives about 5.3 percent. The 6 px cap is planned but not implemented, so keep travel small.
 9. Springs are for reactions (landing, settle, follow-through, interruption); beziers are for choreography (entrance, exit, camera, loop). Damping 0.4 to 0.55 is playful, 0.6 to 0.75 confident, 0.8 to 1.0 crisp, 1.0 never overshoots.
 10. Follow-through is a delay: one to two frames per link at 25 fps, damping at or above 0.35, gain at or below 0.85. Fewer links at 12 fps, not longer delays.
 11. Keep positions sub-pixel through the move and snap only at render. Snapping every frame turns a 0.4 px move into 1 px jumps.
