@@ -22,12 +22,13 @@ const START_TIMEOUT: Duration = Duration::from_secs(20);
 const POLL: Duration = Duration::from_millis(20);
 
 /// Names looked up on PATH, in order.
-const PATH_NAMES: [&str; 5] = [
+const PATH_NAMES: [&str; 6] = [
     "ungoogled-chromium",
     "chromium",
     "chromium-browser",
     "google-chrome",
     "google-chrome-stable",
+    "msedge",
 ];
 
 static NEXT: AtomicU64 = AtomicU64::new(1);
@@ -117,17 +118,25 @@ pub fn discover(explicit: Option<&Path>) -> Result<PathBuf> {
             return Ok(candidate);
         }
     }
-    for name in PATH_NAMES {
-        for dir in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
-            let candidate = dir.join(name);
-            if candidate.is_file() {
-                return Ok(candidate);
-            }
-        }
+    if let Some(found) = on_path(&std::env::var_os("PATH").unwrap_or_default()) {
+        return Ok(found);
     }
     Err(Error::invalid(format!(
         "no Chromium based browser found; pass --browser PATH or set {BROWSER_ENV}"
     )))
+}
+
+/// The first named browser that exists in a PATH value.
+fn on_path(path: &std::ffi::OsStr) -> Option<PathBuf> {
+    for name in PATH_NAMES {
+        for dir in std::env::split_paths(path) {
+            let candidate = dir.join(name);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
 }
 
 /// Browser locations by platform, most likely first.
@@ -404,6 +413,19 @@ mod tests {
     fn a_missing_browser_path_fails() {
         let err = discover(Some(Path::new("no-such-browser.exe"))).unwrap_err();
         assert!(err.to_string().contains("browser not found"));
+    }
+
+    #[test]
+    fn msedge_on_path_is_found_and_chromium_still_wins() {
+        let dir = std::env::temp_dir().join(format!("anikit-path-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("msedge"), b"").unwrap();
+        let path = dir.clone().into_os_string();
+        assert_eq!(on_path(&path), Some(dir.join("msedge")));
+        std::fs::write(dir.join("chromium"), b"").unwrap();
+        assert_eq!(on_path(&path), Some(dir.join("chromium")));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
