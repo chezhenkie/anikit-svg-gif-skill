@@ -68,4 +68,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* \
             --verify-tag \
             --title "anikit $GITHUB_REF_NAME" \
-            --notes "One binary with four routes: ascii, images, vector and tween. Download the asset for the platform and install it as bin/anikit (bin/anikit.exe on Windows). See CHANGELOG.md for the change list."
+            --notes "One binary with four routes: ascii, images, vector and tween, writing GIF and APNG, with SVG export from the tween route. Download the asset for the platform and install it as bin/anikit (bin/anikit.exe on Windows). See CHANGELOG.md for the change list."
