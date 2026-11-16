@@ -14,7 +14,7 @@ Three routes in the baseline, one shared core, one output type (GIF). The Rust b
 
 Text route flags: `--font`, `--size` (default 28), `--fg` (default `#e6edf6`), `--bg` (default `#0a0d12`), `--delay` (default 100 ms), `--width` and `--height` for a fixed canvas with the grid centred. The port draws with an embedded face, so `--font` is an override rather than the only way to get stable metrics (09, row 11).
 
-Text input format: frames separated by a line containing only `---`, optionally with a delay in milliseconds (`--- 250`). A directory contributes one frame per .txt file, sorted by name. ANSI SGR sequences for 16 colours, 256 colours and truecolor set the glyph colour per cell; other CSI sequences are stripped. Tabs expand to four spaces.
+Text input format: frames separated by a line containing only `---`, optionally with a delay in milliseconds (`--- 250`). A directory contributes one frame per .txt file, sorted by name. ANSI SGR sequences for 16 colours, 256 colours and truecolor set the glyph colour per cell; other CSI sequences are stripped. A tab advances to the next multiple of four columns.
 
 Images route flags: `--mode sequence|crossfade|kenburns` (default crossfade), `--fps` (default 12, maximum 50), `--hold` (default 1.2 s), `--transition` (default 0.5 s), `--zoom` (default 1.10), `--fit cover|contain` (default cover), `--bg` for contain padding, `--width` (default 800), `--height` (default from the first image).
 
