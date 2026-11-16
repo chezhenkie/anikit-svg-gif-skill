@@ -6,11 +6,16 @@ use anikit_core::{
     Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, Result, StreamOptions, snap_delay,
     stream_output,
 };
-use anikit_render_raster::{Fit, Mode, Options as SlideshowOptions, write_slideshow};
+use anikit_render_raster::{
+    Fit, Mode, Options as SlideshowOptions, extract as extract_animation, read_manifest,
+    write_slideshow, write_timed,
+};
 use anikit_render_svg::{
-    Options as VectorOptions, Preset, TweenOptions, write_animation, write_tween,
+    ImportOptions, Options as VectorOptions, Preset, TweenOptions, write_animation, write_import,
+    write_tween,
 };
 use anikit_render_text::{Face, TextRenderer, layout, load_frames};
+use anikit_time::LoopMode;
 
 use crate::png;
 
@@ -22,6 +27,8 @@ routes:
   images   a folder of images
   vector   an SVG or HTML page captured in a browser
   tween    an SVG drawing moved by a JSON timeline
+  import   an animated SVG written as a JSON timeline
+  extract  frames of a GIF or APNG written to a folder with a manifest
 
 ascii options:
   -o, --out PATH      output .gif or .png/.apng (default ascii.gif)
@@ -39,8 +46,8 @@ ascii options:
 
 images options:
   -o, --out PATH      output .gif or .png/.apng (default slideshow.gif)
-  --width N           canvas width (default 800)
-  --height N          canvas height (default from the first image)
+  --width N           canvas width (default 800, or the manifest)
+  --height N          canvas height (default from the first image, or the manifest)
   --mode MODE         sequence, crossfade or kenburns (default crossfade)
   --fps N             frames per second, 1 to 50 (default 12)
   --hold SECONDS      time each image holds (default 1.2)
@@ -48,9 +55,11 @@ images options:
   --zoom FACTOR       kenburns end zoom (default 1.10)
   --fit MODE          cover or contain (default cover)
   --bg COLOUR         pad colour for contain (default #000000)
+  --timing PATH       per-frame delays from an extract manifest; ignores
+                      --mode, --fps, --hold, --transition and --zoom
   --colors N          palette size, 2 to 255 (default 255)
   --dither MODE       none or floyd (default none)
-  --loop N            play count, 0 loops forever (default 0)
+  --loop N            play count, 0 loops forever (default 0, or the manifest)
   --preview PATH      write the first frame as a PNG
 
 vector options:
@@ -75,13 +84,29 @@ tween options:
   --colors N          palette size, 2 to 255 (default 255)
   --dither MODE       none or floyd (default none)
   --loop N            play count, 0 loops forever (default 0)
-  --preview PATH      write the first frame as a PNG";
+  --preview PATH      write the first frame as a PNG
+
+import options:
+  -o, --out PATH      output .json timeline (default scene.json)
+  --width N           canvas width, default from the drawing
+  --height N          canvas height, default from the drawing
+  --duration SEC      sampled interval (default 2)
+  --fps N             sample rate, must divide 1000 (default 25)
+  --background COLOUR page colour behind the drawing (default #ffffff)
+  --loop-mode MODE    once, cycle or pingpong (default cycle)
+  --browser PATH      Chromium based browser to drive
+
+extract options:
+  -o, --out DIR       output folder for frame-0001.png and manifest.json
+                      (default frames)
+  --bg COLOUR         matte colour for transparent source pixels (default #000000)";
 
 /// Images route options, parsed from the same helpers as the text route.
 struct Images {
     folder: PathBuf,
     out: PathBuf,
     width: u32,
+    width_given: bool,
     height: Option<u32>,
     mode: Mode,
     fps: u32,
@@ -90,9 +115,11 @@ struct Images {
     zoom: f64,
     fit: Fit,
     bg: [u8; 3],
+    timing: Option<PathBuf>,
     colors: usize,
     dither: Dither,
     loop_count: u16,
+    loop_given: bool,
     preview: Option<PathBuf>,
 }
 
@@ -126,11 +153,31 @@ struct Tween {
     preview: Option<PathBuf>,
 }
 
+/// Extract route options: an animation in, a folder of frames out.
+struct Extract {
+    input: PathBuf,
+    out: PathBuf,
+    bg: [u8; 3],
+}
+
+/// Import route options: an animated SVG in, a JSON timeline out.
+struct Import {
+    input: PathBuf,
+    out: PathBuf,
+    width: Option<u32>,
+    height: Option<u32>,
+    duration: f64,
+    fps: u32,
+    background: [u8; 3],
+    loop_mode: LoopMode,
+    browser: Option<PathBuf>,
+}
+
 /// Run one command line.
 pub fn run(args: &[String]) -> Result<()> {
     let Some(command) = args.first() else {
         return Err(Error::invalid(
-            "missing route; expected ascii, images, vector or tween",
+            "missing route; expected ascii, images, vector, tween, import or extract",
         ));
     };
     match command.as_str() {
@@ -142,8 +189,10 @@ pub fn run(args: &[String]) -> Result<()> {
         "images" => images(&args[1..]),
         "vector" => vector(&args[1..]),
         "tween" => tween(&args[1..]),
+        "import" => import(&args[1..]),
+        "extract" => extract(&args[1..]),
         other => Err(Error::invalid(format!(
-            "unknown route {other}; expected ascii, images, vector or tween"
+            "unknown route {other}; expected ascii, images, vector, tween, import or extract"
         ))),
     }
 }
@@ -276,31 +325,54 @@ fn images(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_images(args)?;
-    let options = SlideshowOptions {
-        width: args.width,
-        height: args.height,
-        mode: args.mode,
-        fps: args.fps,
-        hold: args.hold,
-        transition: args.transition,
-        zoom: args.zoom,
-        fit: args.fit,
-        bg: args.bg,
-        colors: args.colors,
-        dither: args.dither,
-        loop_count: args.loop_count,
+    let rendered = if let Some(path) = &args.timing {
+        let manifest = read_manifest(path)?;
+        let options = SlideshowOptions {
+            width: if args.width_given {
+                args.width
+            } else {
+                manifest.width
+            },
+            height: Some(args.height.unwrap_or(manifest.height)),
+            mode: Mode::Sequence,
+            fps: args.fps,
+            hold: args.hold,
+            transition: args.transition,
+            zoom: args.zoom,
+            fit: args.fit,
+            bg: args.bg,
+            colors: args.colors,
+            dither: args.dither,
+            loop_count: if args.loop_given {
+                args.loop_count
+            } else {
+                manifest.loop_count
+            },
+        };
+        write_timed(&args.folder, &args.out, &manifest.delays, &options)?
+    } else {
+        let options = SlideshowOptions {
+            width: args.width,
+            height: args.height,
+            mode: args.mode,
+            fps: args.fps,
+            hold: args.hold,
+            transition: args.transition,
+            zoom: args.zoom,
+            fit: args.fit,
+            bg: args.bg,
+            colors: args.colors,
+            dither: args.dither,
+            loop_count: args.loop_count,
+        };
+        write_slideshow(&args.folder, &args.out, &options)?
     };
-    let rendered = write_slideshow(&args.folder, &args.out, &options)?;
     if let Some(path) = &args.preview {
         png::write_png(path, &rendered.first)?;
         println!("{}  still frame", path.display());
     }
     let summary = rendered.summary;
-    let name = args
-        .out
-        .file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_else(|| args.out.display().to_string());
+    let name = file_name(&args.out);
     println!(
         "{}  {} frames, {:.2} s, {} x {}",
         name,
@@ -312,11 +384,30 @@ fn images(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+fn extract(args: &[String]) -> Result<()> {
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        println!("{USAGE}");
+        return Ok(());
+    }
+    let args = parse_extract(args)?;
+    let info = extract_animation(&args.input, &args.out, args.bg)?;
+    println!(
+        "{}  {} frames, {:.2} s, {} x {}",
+        file_name(&args.out),
+        info.frames,
+        info.total_ms as f64 / 1000.0,
+        info.width,
+        info.height
+    );
+    Ok(())
+}
+
 fn parse_images(args: &[String]) -> Result<Images> {
     let mut parsed = Images {
         folder: PathBuf::new(),
         out: PathBuf::from("slideshow.gif"),
         width: 800,
+        width_given: false,
         height: None,
         mode: Mode::Crossfade,
         fps: 12,
@@ -325,9 +416,11 @@ fn parse_images(args: &[String]) -> Result<Images> {
         zoom: 1.1,
         fit: Fit::Cover,
         bg: [0, 0, 0],
+        timing: None,
         colors: 255,
         dither: Dither::None,
         loop_count: 0,
+        loop_given: false,
         preview: None,
     };
     let mut folder: Option<PathBuf> = None;
@@ -344,6 +437,7 @@ fn parse_images(args: &[String]) -> Result<Images> {
             }
             "--width" => {
                 parsed.width = number(&take(args, &mut i, inline, name)?, name)?;
+                parsed.width_given = true;
             }
             "--height" => {
                 parsed.height = Some(number(&take(args, &mut i, inline, name)?, name)?);
@@ -369,6 +463,9 @@ fn parse_images(args: &[String]) -> Result<Images> {
             "--bg" => {
                 parsed.bg = parse_color(&take(args, &mut i, inline, name)?)?;
             }
+            "--timing" => {
+                parsed.timing = Some(PathBuf::from(take(args, &mut i, inline, name)?));
+            }
             "--colors" => {
                 parsed.colors = number(&take(args, &mut i, inline, name)?, name)?;
             }
@@ -377,6 +474,7 @@ fn parse_images(args: &[String]) -> Result<Images> {
             }
             "--loop" => {
                 parsed.loop_count = number(&take(args, &mut i, inline, name)?, name)?;
+                parsed.loop_given = true;
             }
             "--preview" => {
                 parsed.preview = Some(PathBuf::from(take(args, &mut i, inline, name)?));
@@ -471,6 +569,36 @@ fn tween(args: &[String]) -> Result<()> {
         rendered.summary.total_ms as f64 / 1000.0,
         rendered.summary.width,
         rendered.summary.height
+    );
+    Ok(())
+}
+
+fn import(args: &[String]) -> Result<()> {
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        println!("{USAGE}");
+        return Ok(());
+    }
+    let args = parse_import(args)?;
+    let options = ImportOptions {
+        width: args.width,
+        height: args.height,
+        duration: args.duration,
+        fps: args.fps,
+        background: args.background,
+        loop_mode: args.loop_mode,
+        browser: args.browser,
+    };
+    let imported = write_import(&args.input, &args.out, &options)?;
+    for property in &imported.skipped {
+        eprintln!("WARN animation of {property} is not imported");
+    }
+    println!(
+        "{}  {} tracks, {:.2} s, {} x {}",
+        file_name(&args.out),
+        imported.tracks,
+        imported.total_ms as f64 / 1000.0,
+        imported.width,
+        imported.height
     );
     Ok(())
 }
@@ -617,6 +745,115 @@ fn parse_tween(args: &[String]) -> Result<Tween> {
     }
     parsed.input = input.ok_or_else(|| Error::invalid("missing input"))?;
     Ok(parsed)
+}
+
+fn parse_import(args: &[String]) -> Result<Import> {
+    let mut parsed = Import {
+        input: PathBuf::new(),
+        out: PathBuf::from("scene.json"),
+        width: None,
+        height: None,
+        duration: 2.0,
+        fps: 25,
+        background: [255, 255, 255],
+        loop_mode: LoopMode::Cycle,
+        browser: None,
+    };
+    let mut input: Option<PathBuf> = None;
+    let mut i = 0usize;
+    while i < args.len() {
+        let arg = args[i].as_str();
+        let (name, inline) = match arg.split_once('=') {
+            Some((name, value)) => (name, Some(value.to_string())),
+            None => (arg, None),
+        };
+        match name {
+            "-o" | "--out" => {
+                parsed.out = PathBuf::from(take(args, &mut i, inline, name)?);
+            }
+            "--width" => {
+                parsed.width = Some(number(&take(args, &mut i, inline, name)?, name)?);
+            }
+            "--height" => {
+                parsed.height = Some(number(&take(args, &mut i, inline, name)?, name)?);
+            }
+            "--duration" => {
+                parsed.duration = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--fps" => {
+                parsed.fps = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--background" | "--bg" => {
+                parsed.background = parse_color(&take(args, &mut i, inline, name)?)?;
+            }
+            "--loop-mode" => {
+                parsed.loop_mode = parse_loop_mode(&take(args, &mut i, inline, name)?)?;
+            }
+            "--browser" => {
+                parsed.browser = Some(PathBuf::from(take(args, &mut i, inline, name)?));
+            }
+            other if other.starts_with('-') => {
+                return Err(Error::invalid(format!("unknown option {other}")));
+            }
+            other => {
+                if input.is_some() {
+                    return Err(Error::invalid(format!("unexpected argument {other}")));
+                }
+                input = Some(PathBuf::from(other));
+            }
+        }
+        i += 1;
+    }
+    parsed.input = input.ok_or_else(|| Error::invalid("missing input"))?;
+    Ok(parsed)
+}
+
+fn parse_extract(args: &[String]) -> Result<Extract> {
+    let mut parsed = Extract {
+        input: PathBuf::new(),
+        out: PathBuf::from("frames"),
+        bg: [0, 0, 0],
+    };
+    let mut input: Option<PathBuf> = None;
+    let mut i = 0usize;
+    while i < args.len() {
+        let arg = args[i].as_str();
+        let (name, inline) = match arg.split_once('=') {
+            Some((name, value)) => (name, Some(value.to_string())),
+            None => (arg, None),
+        };
+        match name {
+            "-o" | "--out" => {
+                parsed.out = PathBuf::from(take(args, &mut i, inline, name)?);
+            }
+            "--bg" => {
+                parsed.bg = parse_color(&take(args, &mut i, inline, name)?)?;
+            }
+            other if other.starts_with('-') => {
+                return Err(Error::invalid(format!("unknown option {other}")));
+            }
+            other => {
+                if input.is_some() {
+                    return Err(Error::invalid(format!("unexpected argument {other}")));
+                }
+                input = Some(PathBuf::from(other));
+            }
+        }
+        i += 1;
+    }
+    parsed.input = input.ok_or_else(|| Error::invalid("missing input"))?;
+    Ok(parsed)
+}
+
+fn parse_loop_mode(value: &str) -> Result<LoopMode> {
+    match value {
+        "once" => Ok(LoopMode::Once),
+        "cycle" => Ok(LoopMode::Cycle),
+        "pingpong" => Ok(LoopMode::PingPong),
+        _ => Err(Error::invalid(format!(
+            "loop mode must be one of: cycle, once, pingpong, got {value}"
+        ))),
+    }
 }
 
 fn parse_mode(value: &str) -> Result<Mode> {
@@ -1035,6 +1272,156 @@ mod tests {
         let dir = scratch("images-missing");
         let err = run(&args(&["images", dir.join("nothere").to_str().unwrap()])).unwrap_err();
         assert!(err.to_string().contains("folder not found"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn extract_and_rebuild_keep_the_gif_timeline() {
+        let dir = scratch("extract-gif");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "aa\n--- 250\nbb\n").unwrap();
+        let source = dir.join("source.gif");
+        run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            source.to_str().unwrap(),
+            "--size",
+            "12",
+        ]))
+        .unwrap();
+        let before = inspect_file(&source).unwrap();
+
+        let folder = dir.join("frames");
+        run(&args(&[
+            "extract",
+            source.to_str().unwrap(),
+            "-o",
+            folder.to_str().unwrap(),
+        ]))
+        .unwrap();
+        assert!(folder.join("frame-0001.png").is_file());
+        assert!(folder.join("frame-0002.png").is_file());
+        let manifest = read_manifest(&folder.join("manifest.json")).unwrap();
+        assert_eq!(manifest.delays, vec![100, 250]);
+
+        let rebuilt = dir.join("rebuilt.gif");
+        run(&args(&[
+            "images",
+            folder.to_str().unwrap(),
+            "-o",
+            rebuilt.to_str().unwrap(),
+            "--timing",
+            folder.join("manifest.json").to_str().unwrap(),
+        ]))
+        .unwrap();
+        let after = inspect_file(&rebuilt).unwrap();
+        assert_eq!(after.frames, before.frames);
+        assert_eq!(after.total_ms, before.total_ms);
+        assert_eq!((after.width, after.height), (before.width, before.height));
+        assert_eq!(delays(&std::fs::read(&rebuilt).unwrap()), vec![100, 250]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn extract_and_rebuild_keep_the_apng_timeline() {
+        let dir = scratch("extract-apng");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "aa\n--- 250\nbb\n").unwrap();
+        let source = dir.join("source.apng");
+        run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            source.to_str().unwrap(),
+            "--size",
+            "12",
+        ]))
+        .unwrap();
+        let before = anikit_core::inspect_apng_file(&source).unwrap();
+
+        let folder = dir.join("frames");
+        run(&args(&[
+            "extract",
+            source.to_str().unwrap(),
+            "-o",
+            folder.to_str().unwrap(),
+        ]))
+        .unwrap();
+        let rebuilt = dir.join("rebuilt.apng");
+        run(&args(&[
+            "images",
+            folder.to_str().unwrap(),
+            "-o",
+            rebuilt.to_str().unwrap(),
+            "--timing",
+            folder.join("manifest.json").to_str().unwrap(),
+        ]))
+        .unwrap();
+        let after = anikit_core::inspect_apng_file(&rebuilt).unwrap();
+        assert_eq!(after.frames, before.frames);
+        assert_eq!(after.total_ms, before.total_ms);
+        assert_eq!((after.width, after.height), (before.width, before.height));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn import_writes_a_timeline() {
+        if anikit_render_svg::discover(None).is_err() {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        }
+        let dir = scratch("import-route");
+        let input = dir.join("art.svg");
+        std::fs::write(
+            &input,
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40">
+<style>@keyframes slide { from { transform: translateX(0px); } to { transform: translateX(40px); } } #box { animation: slide 1s linear infinite; }</style>
+<rect id="box" width="20" height="20" fill="#ff0000"/></svg>"##,
+        )
+        .unwrap();
+        let out = dir.join("scene.json");
+        run(&args(&[
+            "import",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--fps",
+            "10",
+            "--duration",
+            "1",
+        ]))
+        .unwrap();
+        let text = std::fs::read_to_string(&out).unwrap();
+        assert!(text.contains("svg.transform"));
+        assert!(text.contains("box-transform"));
+        assert!(!dir.join("scene.tmp.json").exists());
+
+        let err = run(&args(&["import", input.to_str().unwrap(), "--fps", "15"])).unwrap_err();
+        assert!(err.to_string().contains("divide 1000"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_missing_timing_manifest_is_refused() {
+        let dir = scratch("timing-missing");
+        let folder = dir.join("frames");
+        std::fs::create_dir_all(&folder).unwrap();
+        let mut frame = anikit_core::Frame::new(8, 8).unwrap();
+        frame.fill([1, 2, 3]);
+        png::write_png(&folder.join("frame-0001.png"), &frame).unwrap();
+        let out = dir.join("out.gif");
+        let err = run(&args(&[
+            "images",
+            folder.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--timing",
+            dir.join("nothere.json").to_str().unwrap(),
+        ]))
+        .unwrap_err();
+        assert!(err.to_string().contains("cannot read"));
+        assert!(!out.exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -40,6 +40,8 @@ dependencies = [
  "gif",
  "image",
  "kamadak-exif",
+ "png",
+ "serde_json",
 ]
 
 [[package]]

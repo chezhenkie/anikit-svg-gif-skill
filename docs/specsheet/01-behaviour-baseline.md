@@ -1,10 +1,10 @@
 # 01-behaviour-baseline
 
-Status: the frozen Python at tag python-freeze, main 08fd195, deleted from main at 0.2.0. This part records what the Rust binary reproduces. A rule marked as a defect is not a decision and the port may correct it, but the correction is stated in 09 first. The tween route and the APNG and SVG outputs are additions to this baseline, specified in parts 11 and 12.
+Status: the frozen Python at tag python-freeze, main 08fd195, deleted from main at 0.2.0. This part records what the Rust binary reproduces. A rule marked as a defect is not a decision and the port may correct it, but the correction is stated in 09 first. The tween and import routes, the APNG and SVG outputs, and the extract route are additions to this baseline, specified in parts 11 to 14.
 
 ## 1.1 Routes and flags
 
-Three routes in the baseline, one shared core, one output type (GIF). The Rust binary adds the tween route and APNG and SVG output.
+Three routes in the baseline, one shared core, one output type (GIF). The Rust binary adds the tween, import and extract routes and APNG and SVG output.
 
 | route | input | entry point |
 |---|---|---|

@@ -32,6 +32,8 @@ Edges, in full:
   anikit-tween         -> anikit-time, anikit-core
   anikit-time          -> anikit-core
   anikit-core          -> png (APNG frame compression)
+  anikit-render-raster -> image, kamadak-exif, png, serde_json (decoding and the extract manifest)
+  anikit-render-svg    -> image, serde_json, tungstenite (browser protocol and screenshots)
 
 The picture shows the shortest path through the renderers so it stays readable; the edge
 list is the complete graph. The rule is one-way only: nothing depends on anikit-cli, no

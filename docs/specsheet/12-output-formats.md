@@ -14,6 +14,8 @@ There is no default extension: the command line defaults are `.gif`, but an outp
 
 The choice is made before the palette pass. GIF builds the palette from up to twelve samples; APNG and SVG never build one, so they also never dither. `--colors` and `--dither` are accepted on every route and have no effect on APNG or SVG.
 
+The extract route is not governed by this part: it writes numbered PNG frames and a manifest to a folder, and the folder is not an animation. Part 13 fixes that output.
+
 The summary line is `<name>  N frames, X.XX s, W x H` for GIF and APNG. For SVG it is `<name>  N samples, X.XX s, W x H`, because the file holds sampled keyframes, not captured frames. An SVG export captures nothing, so `--preview` is refused for it.
 
 ## 12.2 APNG

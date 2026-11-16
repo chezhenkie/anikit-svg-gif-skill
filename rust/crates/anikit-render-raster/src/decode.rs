@@ -159,6 +159,14 @@ fn rotate(image: DynamicImage, orientation: u32) -> DynamicImage {
 fn matte(image: RgbaImage, background: [u8; 3]) -> Result<Frame> {
     let (width, height) = image.dimensions();
     let mut frame = Frame::new(width, height)?;
+    matte_into(&image, background, &mut frame);
+    Ok(frame)
+}
+
+/// Matted RGBA pixels written into an existing frame, so a decoder loop can
+/// reuse one buffer for every frame.
+pub(crate) fn matte_into(image: &RgbaImage, background: [u8; 3], frame: &mut Frame) {
+    debug_assert_eq!(frame.size(), image.dimensions());
     let data = frame.data_mut();
     for (index, pixel) in image.pixels().enumerate() {
         let alpha = pixel[3] as u32;
@@ -170,7 +178,6 @@ fn matte(image: RgbaImage, background: [u8; 3]) -> Result<Frame> {
                     as u8;
         }
     }
-    Ok(frame)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]

@@ -12,8 +12,8 @@ Seven crates, one binary. Every package carries the `anikit-` prefix; this part 
 | anikit-time | lib | presentation times, the 10 ms grid, cumulative rounding, the frame plan, loop modes |
 | anikit-tween | lib | timeline, tracks, keys, easing, property values, layers and composition |
 | anikit-render-text | lib | glyph grid, ANSI SGR parsing, glyph loading and metrics |
-| anikit-render-raster | lib | image decoding, EXIF rotation, fit, Ken Burns, crossfade, pixel adjustments |
-| anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation, timeline-driven element state, SVG export |
+| anikit-render-raster | lib | image decoding, EXIF rotation, fit, Ken Burns, crossfade, pixel adjustments, extraction of GIF and APNG frames, the timing manifest |
+| anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation, timeline-driven element state, SVG export, and sampling an animated SVG into a timeline |
 | anikit-cli | bin | argument parsing, route dispatch, messages, exit codes, preview output |
 
 There is no render-web crate. HTML and JavaScript pages are out of scope for the port, so the vector route handles SVG plus pages whose animation is CSS, WAAPI or SMIL. The tween route accepts an SVG drawing only, because its `src` names elements.
@@ -30,7 +30,7 @@ time          -> core
 core          -> none
 ```
 
-One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer depends on another renderer. A renderer that needs a rule from a sibling has found a rule that belongs in `core` or `tween`. `core` carries one external crate, `png`, for APNG frame compression (09, row 22); `time` carries none.
+One way only. `core` and `time` sit at the bottom, `cli` on top, and no renderer depends on another renderer. A renderer that needs a rule from a sibling has found a rule that belongs in `core` or `tween`. `core` carries one external crate, `png`, for APNG frame compression (09, row 22); `time` carries none. `render-raster` carries `image` and `kamadak-exif` for decoding (row 18), `png` for APNG extraction and frame writing, and `serde_json` for the extract manifest (row 24).
 
 The same graph as a picture: docs/ascii-crate-flow.txt.
 
@@ -40,13 +40,13 @@ The same graph as a picture: docs/ascii-crate-flow.txt.
 - `time` owns the mapping from a duration and a frame rate to presentation times, including the 10 ms grid and the cumulative rounding rule. It holds no pixels and no property values.
 - `tween` owns values over time. It knows nothing about pixels, files or fonts, and it never allocates per sample.
 - `render-text` owns glyphs, font metrics and colour per cell. It does not quantise or write.
-- `render-raster` owns decoding, geometry and per-pixel adjustment. It does not choose a palette. It carries the `image` and `kamadak-exif` crates, so `time` and the text route keep no image dependencies (09, row 18).
-- `render-svg` owns the browser: finding it, driving it, and turning a time into an image. It also writes the SVG export of a prepared timeline, because it owns the plan and the drawing. It does not compose frames or choose a palette.
+- `render-raster` owns decoding, geometry and per-pixel adjustment, and the reverse direction of part 13: reading a GIF or APNG back into frames and a timing manifest, and rebuilding slideshow timing from that manifest. It does not choose a palette. It carries the `image` and `kamadak-exif` crates, so `time` and the text route keep no image dependencies (09, row 18), `png` for APNG frames, and `serde_json` for the manifest.
+- `render-svg` owns the browser: finding it, driving it, and turning a time into an image. It also writes the SVG export of a prepared timeline, because it owns the plan and the drawing, and it samples an animated SVG into that timeline on the import route. It does not compose frames or choose a palette.
 - `cli` is the composition root: it validates arguments, builds a plan, selects a renderer, and reports. No route rules live there.
 
 ## 2.4 Binary and subcommands
 
-One binary, `anikit` (`anikit.exe` on Windows), because the four routes share the core and a second executable would duplicate the writer and the error contract. The text, images and vector subcommands keep the names of `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`; `tween` is new in the Rust binary.
+One binary, `anikit` (`anikit.exe` on Windows), because the routes share the core and a second executable would duplicate the writer and the error contract. The text, images and vector subcommands keep the names of `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`; `tween`, `import` and `extract` are new in the Rust binary.
 
 The binary is produced by the `anikit-cli` package; the other packages are libraries and ship no executable. The skill's invocation table in README.md is updated in the same change that introduces the binary.
 

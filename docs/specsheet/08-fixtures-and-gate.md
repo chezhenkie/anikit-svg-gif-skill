@@ -1,6 +1,6 @@
 # 08-fixtures-and-gate
 
-Status: all four routes have fixtures. The Rust gate is the only gate and covers the workspace: core, time, all four routes, the two frame writers and the SVG export, and the browser routes where a browser is installed.
+Status: all six routes are covered. The Rust gate is the only gate and covers the workspace: core, time, all four render routes, the extract and import routes, the two frame writers and the SVG export, and the browser routes where a browser is installed.
 
 ## 8.1 Fixtures
 
@@ -16,6 +16,10 @@ The frozen Python exported one fixture set per route before its file was deleted
 The manifest is a plain text file beside the fixture, one `key=value` per line, plus a line per frame with its delay and a hash of its pixels. Hashes are of the composited canvas, not of the file or of one patch: the encoder writes deltas, so a frame's picture only exists after every frame up to it has been drawn.
 
 The tween fixture is also exported to `.svg` and fed back through the vector route: the export is checked for its keyframes and its lack of script, and the playback must move the box across the captured frames. APNG output is checked against the same recorded structure where a route already has a fixture, and by the png crate's decoder in `anikit-core/tests/apng.rs`.
+
+The extract route has no fixture folder. Its tests build a GIF and an APNG from known frames, extract them, and rebuild them through the images timing mode; frame count, delays, loop count, size and the manifest are checked at each step (part 13).
+
+The import route has no fixture folder either. Its tests build a CSS drawing and a SMIL drawing, import both, and check time, tracks and sampled values; the tween route's SVG export is imported back and compared with the source plan (part 14).
 
 A fixture is compared structurally, never byte for byte against the Python output: frame count, delays, size, and per-frame pixel hashes. The Rust encoder is allowed to differ in compression as long as the decoded frames match.
 

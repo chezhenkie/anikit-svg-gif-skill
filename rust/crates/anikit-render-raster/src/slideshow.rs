@@ -150,6 +150,89 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
     Ok(Rendered { summary, first })
 }
 
+/// Build one animation from stills that hold for their recorded delays.
+///
+/// This is the rebuild side of part 13: no frame grid and no transition, only
+/// the per-frame delays of an extract manifest. Delays arrive in folder order.
+pub fn write_timed(
+    folder: &Path,
+    out: &Path,
+    delays: &[u32],
+    options: &Options,
+) -> Result<Rendered> {
+    if options.width < 8 {
+        return Err(Error::invalid("width must be at least 8"));
+    }
+    let format = OutputFormat::from_path(out)?;
+    format.require_frames()?;
+    let files = decode::scan_folder(folder, out)?;
+    let mut stills = Vec::new();
+    for file in &files {
+        stills.extend(decode::load(file, options.bg)?);
+    }
+    if stills.len() != delays.len() {
+        return Err(Error::invalid(format!(
+            "the timing has {} delays for {} images",
+            delays.len(),
+            stills.len()
+        )));
+    }
+    let size = fit::canvas_size(options.width, options.height, &stills[0])?;
+    let total_ms = delays.iter().try_fold(0u32, |sum, delay| {
+        sum.checked_add(*delay)
+            .ok_or_else(|| Error::invalid("the delays add up past the 32-bit range"))
+    })?;
+
+    // The palette pass is GIF only, as on every route (part 03).
+    let mut samples = Vec::new();
+    if format == OutputFormat::Gif {
+        let count = stills.len();
+        let picks: Vec<usize> = if count <= 12 {
+            (0..count).collect()
+        } else {
+            (0..12).map(|index| index * (count - 1) / 11).collect()
+        };
+        for index in picks {
+            samples.push(fit_still(&stills[index], size, options)?);
+        }
+    }
+
+    let mut stream = stream_output(
+        out,
+        &samples,
+        StreamOptions {
+            format,
+            width: size.0,
+            height: size.1,
+            loop_count: options.loop_count,
+            colors: options.colors,
+            dither: options.dither,
+            total_ms,
+        },
+    )?;
+
+    let mut first: Option<Frame> = None;
+    let mut pts_ms = 0u64;
+    for (index, still) in stills.iter().enumerate() {
+        let frame = fit_still(still, size, options)?;
+        if first.is_none() {
+            first = Some(frame.clone());
+        }
+        stream.push(index as u32, pts_ms * 1000, &frame)?;
+        pts_ms += delays[index] as u64;
+    }
+    let summary = stream.finish()?;
+    let first = first.ok_or_else(|| Error::invalid("no frames were rendered"))?;
+    Ok(Rendered { summary, first })
+}
+
+fn fit_still(still: &Frame, size: (u32, u32), options: &Options) -> Result<Frame> {
+    match options.fit {
+        Fit::Cover => fit::cover(still, size),
+        Fit::Contain => fit::contain(still, size, options.bg),
+    }
+}
+
 fn validate(options: &Options) -> Result<()> {
     if !(1..=50).contains(&options.fps) {
         return Err(Error::invalid("fps must be between 1 and 50"));
@@ -303,6 +386,43 @@ mod tests {
         let info = inspect_file(&out).unwrap();
         assert_eq!(info.frames, 2);
         assert_eq!(info.total_ms, 1000);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn delays(path: &Path) -> Vec<u32> {
+        let bytes = std::fs::read(path).unwrap();
+        let mut options = gif::DecodeOptions::new();
+        options.set_color_output(gif::ColorOutput::RGBA);
+        let mut decoder = options.read_info(&bytes[..]).unwrap();
+        let mut out = Vec::new();
+        while let Some(frame) = decoder.read_next_frame().unwrap() {
+            out.push(frame.delay as u32 * 10);
+        }
+        out
+    }
+
+    #[test]
+    fn timed_stills_hold_for_their_recorded_delays() {
+        let dir = scratch("timed");
+        png(&dir.join("1.png"), 8, 8, [255, 0, 0]);
+        png(&dir.join("2.png"), 8, 8, [0, 0, 255]);
+        let out = dir.join("out.gif");
+        let result = write_timed(&dir, &out, &[100, 250], &options(Mode::Sequence)).unwrap();
+        assert_eq!(result.summary.frames, 2);
+        assert_eq!(result.summary.total_ms, 350);
+        assert_eq!(delays(&out), vec![100, 250]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_timing_count_mismatch_is_refused() {
+        let dir = scratch("timed-mismatch");
+        png(&dir.join("1.png"), 8, 8, [255, 0, 0]);
+        png(&dir.join("2.png"), 8, 8, [0, 0, 255]);
+        let out = dir.join("out.gif");
+        let err = write_timed(&dir, &out, &[100], &options(Mode::Sequence)).unwrap_err();
+        assert!(err.to_string().contains("2 images"));
+        assert!(!out.exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

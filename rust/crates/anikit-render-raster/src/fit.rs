@@ -33,12 +33,18 @@ pub fn canvas_size(width: u32, height: Option<u32>, first: &Frame) -> Result<(u3
 
 /// Cover the canvas, cropping the overflow.
 pub fn cover(still: &Frame, size: (u32, u32)) -> Result<Frame> {
+    if still.size() == size {
+        return Ok(still.clone());
+    }
     let image = resize_to_fill(&to_rgba(still), size);
     from_rgba(image)
 }
 
 /// Fit inside the canvas, padding with the background colour.
 pub fn contain(still: &Frame, size: (u32, u32), background: [u8; 3]) -> Result<Frame> {
+    if still.size() == size {
+        return Ok(still.clone());
+    }
     let source = to_rgba(still);
     let scale = (size.0 as f64 / source.width() as f64).min(size.1 as f64 / source.height() as f64);
     let scaled_w = ((source.width() as f64 * scale).round() as u32).clamp(1, size.0);
@@ -157,6 +163,25 @@ mod tests {
         let out = cover(&wide, (4, 4)).unwrap();
         assert_eq!(out.size(), (4, 4));
         assert_eq!(out.pixel(0, 0), [255, 0, 0]);
+    }
+
+    #[test]
+    fn a_same_size_still_is_not_filtered() {
+        let mut still = Frame::new(4, 3).unwrap();
+        for (index, pixel) in still
+            .data_mut()
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .enumerate()
+        {
+            *pixel = [(index * 37 % 251) as u8, (index * 53 % 241) as u8, 17];
+        }
+        assert_eq!(cover(&still, (4, 3)).unwrap().data(), still.data());
+        assert_eq!(
+            contain(&still, (4, 3), [9, 9, 9]).unwrap().data(),
+            still.data()
+        );
     }
 
     #[test]

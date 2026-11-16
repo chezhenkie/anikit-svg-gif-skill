@@ -1,6 +1,6 @@
 ---
 name: animated-gif
-description: "Build animated GIFs and APNGs from ASCII text frames, a folder of images, an SVG or HTML animation, or a JSON timeline over a static SVG drawing, and export a timeline as an animated SVG, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, produce an APNG, animate ASCII art, turn photos into a slideshow GIF, animate an SVG, or keyframe an SVG drawing."
+description: "Build animated GIFs and APNGs from ASCII text frames, a folder of images, an SVG or HTML animation, or a JSON timeline over a static SVG drawing, export a timeline as an animated SVG, import an animated SVG into that timeline, and split a GIF or APNG into frames with their timing, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, produce an APNG, animate ASCII art, turn photos into a slideshow GIF, animate an SVG, keyframe an SVG drawing, or extract frames and delays from an animation."
 license: MIT
 metadata:
   version: "0.3.1"
@@ -8,7 +8,7 @@ metadata:
 
 # anikit
 
-The binary has four routes and one shared timing core; pick the route that matches the input.
+The binary has six routes and one shared timing core; pick the route that matches the input.
 
 | Input | Command | Motion |
 |---|---|---|
@@ -16,6 +16,8 @@ The binary has four routes and one shared timing core; pick the route that match
 | Folder of photos or images | `bin/anikit images` | holds, crossfade, Ken Burns |
 | SVG or HTML animation | `bin/anikit vector` | SMIL, CSS, or preset rotate/pulse/fade |
 | Static SVG drawing and a JSON timeline | `bin/anikit tween` | keyframes, easing, springs, ballistic motion, layers |
+| Animated SVG, CSS or SMIL | `bin/anikit import` | sampled into the JSON timeline |
+| Animated GIF or APNG | `bin/anikit extract` | frames and timing written to a folder |
 
 Every frame route ends in the same core: 10 ms timing grid, identical consecutive frames merged into longer delays, atomic write, read-back verification. GIF adds one palette across the loop and delta frames; APNG is truecolor and writes full frames. The tween route can also write an animated SVG.
 
@@ -25,7 +27,7 @@ The output extension chooses the format: `.gif`, `.png` or `.apng` on every rout
 
 `bin/anikit` is one platform binary (`bin/anikit.exe` on Windows). It needs no Python, no Node and no package manager. When the host has no binary for its platform, report the platform as unsupported and stop: do not build, download or substitute one during a GIF run.
 
-The vector route, and the tween route when it writes GIF or APNG, also need an installed Chromium based browser. An SVG export does not. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly. Without either, Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`.
+The vector and import routes, and the tween route when it writes GIF or APNG, also need an installed Chromium based browser. An SVG export does not. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly. Without either, Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`.
 
 A failed run prints one `FAIL ...` line on stderr and exits 1. Do not retry with the same arguments.
 
@@ -124,12 +126,44 @@ bin/anikit tween scene.json -o project/scene.svg
 - An SVG export needs no browser. It writes the sampled plan as CSS keyframes inside the drawing and prints `N samples` instead of frames. It replaces any authored transform or CSS animation on the properties it drives, and it keeps the drawing's own size, not the canvas size. `--preview` is refused with `.svg`.
 - Path morphs, raster keys, ASCII grids and spatial masks are not supported by this route.
 
+## Import route
+
+`import` samples an animated SVG and writes the JSON timeline the tween route reads, so an existing CSS or SMIL animation becomes editable keyframes.
+
+```powershell
+bin/anikit import banner.svg -o project/banner.json --duration 3 --fps 25
+bin/anikit tween project/banner.json -o project/banner.gif
+```
+
+- The drawing must animate through CSS, WAAPI or SMIL. Every animated element needs an id; the root `svg` cannot be the target.
+- `--duration` is the sampled interval, `--fps` the scene and sample rate. The fps must divide 1000: 1, 2, 4, 5, 8, 10, 20, 25, 40 or 50. This keeps every frame on a whole millisecond and the scene exact at its own frame times.
+- Only transform, opacity, fill, stroke and stroke-width are imported. Other properties are reported with `WARN`; a drawing with nothing else importable fails.
+- Values come from the rendered page, so CSS and SMIL both work. The source easing is baked into the samples and every segment is linear; render the imported scene at the import fps for an exact match.
+- A colour that changes must be opaque. A non-zero CSS `transform-origin` is refused; the drawing's own static `transform` is divided out, because the tween route adds its matrix outside the element.
+- `--loop-mode once|cycle|pingpong` sets the scene's time map, default `cycle`. The browser is required, as on the vector route.
+
+## Extract route
+
+`extract` reads an existing GIF or APNG back into frames, so a file can be inspected, edited or rebuilt.
+
+```powershell
+bin/anikit extract reel.gif -o project/frames
+bin/anikit images project/frames -o project/rebuilt.gif --timing project/frames/manifest.json
+```
+
+- One PNG per stored frame: `frame-0001.png` and so on, full canvas, matted onto `--bg` (`#000000` by default).
+- `manifest.json` records the source size, loop count and per-frame delays in ms. Frames are not merged or snapped on the way out.
+- The output folder must be new. The folder is built under a temp name, every PNG and the manifest are read back, and the folder is renamed only then.
+- `images --timing` rebuilds the timeline: each frame holds for its recorded delay, with no fps grid and no transition. Missing `--width`, `--height` and `--loop` take the manifest values.
+- The rebuilt file can carry fewer frames than the folder when identical frames merge; the timeline is the same.
+
 ## Shared options
 
 - `--colors` 2 to 255 and `--dither none|floyd` apply to GIF only; APNG and SVG are truecolor and ignore both.
 - `--dither none` is correct for flat art and text; `floyd` helps gradients and photos.
 - `--loop 0` loops forever; any other value repeats that many times. On APNG it is the play count; an SVG export ignores it.
 - `--preview PATH` writes a PNG still of the first frame. It is refused when the output is `.svg`.
+- `--timing PATH` on the images route rebuilds the delays of an `extract` manifest and ignores `--mode`, `--fps`, `--hold`, `--transition` and `--zoom`.
 - Output is deterministic for the same input, settings and binary.
 
 ## Custom frames
@@ -140,7 +174,7 @@ A generated sequence becomes a folder of PNGs and the image route:
 bin/anikit images frames/ -o project/plot.gif --mode sequence --fps 10 --hold 0.1 --width 480 --height 270
 ```
 
-Frames must share one size and are sorted by name, so number them. `--hold` rounds to the frame grid: at `--fps 10`, `--hold 0.1` shows one frame per 100 ms. Use this route for data animations, generated diagrams or any frames the four routes above do not cover.
+Frames must share one size and are sorted by name, so number them. `--hold` rounds to the frame grid: at `--fps 10`, `--hold 0.1` shows one frame per 100 ms. Use this route for data animations, generated diagrams or any frames the six routes above do not cover.
 
 ## Contract
 
@@ -162,7 +196,7 @@ See [references/animated-gif-considerations.md](references/animated-gif-consider
 
 ## Files
 
-- `bin/anikit` - the binary: route parsing, the four routes, the GIF and APNG writers, the SVG export.
+- `bin/anikit` - the binary: route parsing, the six routes, the GIF and APNG writers, the SVG export and import.
 - `references/animated-gif-considerations.md` - format notes.
 - `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, checklist.
 

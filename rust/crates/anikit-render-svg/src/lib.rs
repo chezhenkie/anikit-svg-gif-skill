@@ -7,6 +7,7 @@
 mod browser;
 pub(crate) mod cdp;
 mod export;
+mod import;
 pub(crate) mod page;
 mod timeline;
 
@@ -24,6 +25,7 @@ use browser::Browser;
 use cdp::Session;
 
 pub use browser::discover;
+pub use import::{ImportOptions, Imported, write_import};
 pub use page::{Preset, SvgSize, resolve_size, svg_size};
 pub use timeline::{TweenOptions, TweenRendered, write_tween};
 
