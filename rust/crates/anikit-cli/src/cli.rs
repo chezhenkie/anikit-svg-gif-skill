@@ -55,8 +55,8 @@ images options:
   --zoom FACTOR       kenburns end zoom (default 1.10)
   --fit MODE          cover or contain (default cover)
   --bg COLOUR         pad colour for contain (default #000000)
-  --timing PATH       per-frame delays from an extract manifest; ignores
-                      --mode, --fps, --hold, --transition and --zoom
+  --timing PATH       per-frame delays from an extract manifest; --fps,
+                      --hold, --transition and --zoom are refused
   --colors N          palette size, 2 to 255 (default 255)
   --dither MODE       none or floyd (default none)
   --loop N            play count, 0 loops forever (default 0, or the manifest)
@@ -110,9 +110,13 @@ struct Images {
     height: Option<u32>,
     mode: Mode,
     fps: u32,
+    fps_given: bool,
     hold: f64,
+    hold_given: bool,
     transition: f64,
+    transition_given: bool,
     zoom: f64,
+    zoom_given: bool,
     fit: Fit,
     bg: [u8; 3],
     timing: Option<PathBuf>,
@@ -326,6 +330,25 @@ fn images(args: &[String]) -> Result<()> {
     }
     let args = parse_images(args)?;
     let rendered = if let Some(path) = &args.timing {
+        let mut refused = Vec::new();
+        if args.fps_given {
+            refused.push("--fps");
+        }
+        if args.hold_given {
+            refused.push("--hold");
+        }
+        if args.transition_given {
+            refused.push("--transition");
+        }
+        if args.zoom_given {
+            refused.push("--zoom");
+        }
+        if !refused.is_empty() {
+            return Err(Error::invalid(format!(
+                "{} cannot apply with --timing; the manifest holds the frame delays",
+                refused.join(", ")
+            )));
+        }
         let manifest = read_manifest(path)?;
         let options = SlideshowOptions {
             width: if args.width_given {
@@ -411,9 +434,13 @@ fn parse_images(args: &[String]) -> Result<Images> {
         height: None,
         mode: Mode::Crossfade,
         fps: 12,
+        fps_given: false,
         hold: 1.2,
+        hold_given: false,
         transition: 0.5,
+        transition_given: false,
         zoom: 1.1,
+        zoom_given: false,
         fit: Fit::Cover,
         bg: [0, 0, 0],
         timing: None,
@@ -447,15 +474,19 @@ fn parse_images(args: &[String]) -> Result<Images> {
             }
             "--fps" => {
                 parsed.fps = number(&take(args, &mut i, inline, name)?, name)?;
+                parsed.fps_given = true;
             }
             "--hold" => {
                 parsed.hold = number(&take(args, &mut i, inline, name)?, name)?;
+                parsed.hold_given = true;
             }
             "--transition" => {
                 parsed.transition = number(&take(args, &mut i, inline, name)?, name)?;
+                parsed.transition_given = true;
             }
             "--zoom" => {
                 parsed.zoom = number(&take(args, &mut i, inline, name)?, name)?;
+                parsed.zoom_given = true;
             }
             "--fit" => {
                 parsed.fit = parse_fit(&take(args, &mut i, inline, name)?)?;
@@ -1449,6 +1480,44 @@ mod tests {
         .unwrap_err();
         assert!(err.to_string().contains("cannot read"));
         assert!(!out.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn timing_refuses_flags_it_cannot_use() {
+        let dir = scratch("timing-flags");
+        let folder = dir.join("frames");
+        std::fs::create_dir_all(&folder).unwrap();
+        let mut frame = anikit_core::Frame::new(8, 8).unwrap();
+        frame.fill([1, 2, 3]);
+        png::write_png(&folder.join("frame-0001.png"), &frame).unwrap();
+        let manifest = dir.join("manifest.json");
+        std::fs::write(
+            &manifest,
+            "{\"version\":1,\"format\":\"gif\",\"width\":8,\"height\":8,\"loop\":0,\"delays\":[100]}",
+        )
+        .unwrap();
+        let out = dir.join("out.gif");
+        for flag in [
+            ["--fps", "0"],
+            ["--hold", "0.1"],
+            ["--transition", "0.1"],
+            ["--zoom", "0.1"],
+        ] {
+            let err = run(&args(&[
+                "images",
+                folder.to_str().unwrap(),
+                "-o",
+                out.to_str().unwrap(),
+                "--timing",
+                manifest.to_str().unwrap(),
+                flag[0],
+                flag[1],
+            ]))
+            .unwrap_err();
+            assert!(err.to_string().contains(flag[0]), "{err}");
+            assert!(!out.exists(), "{} wrote a file", flag[0]);
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 

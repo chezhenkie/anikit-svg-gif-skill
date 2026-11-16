@@ -163,7 +163,7 @@ bin/anikit images project/frames -o project/rebuilt.gif --timing project/frames/
 - `--dither none` is correct for flat art and text; `floyd` helps gradients and photos.
 - `--loop 0` loops forever; any other value repeats that many times. On APNG it is the play count; an SVG export ignores it.
 - `--preview PATH` writes a PNG still of the first frame. It is refused when the output is `.svg`.
-- `--timing PATH` on the images route rebuilds the delays of an `extract` manifest and ignores `--mode`, `--fps`, `--hold`, `--transition` and `--zoom`.
+- `--timing PATH` on the images route rebuilds the delays of an `extract` manifest and refuses `--fps`, `--hold`, `--transition` and `--zoom`.
 - Output is deterministic for the same input, settings and binary.
 
 ## Custom frames

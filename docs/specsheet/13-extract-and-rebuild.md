@@ -72,7 +72,7 @@ The reader accepts the fields in any order, rejects an unknown field, a missing 
 
 - Every still is shown once, in natural folder order, for its delay from the manifest. Presentation times are cumulative milliseconds, so the timeline matches the source up to the writer's own grid: GIF and APNG snap on the cumulative clock to 10 ms and keep delays at 20 ms or more, as every route does.
 - `--mode`, `--fps`, `--hold`, `--transition` and `--zoom` do not apply and are documented as ignored. There is no frame grid to resample and no blend to insert.
-- `--width` and `--height` default to the manifest's canvas, per axis: a missing width takes the manifest width, a missing height the manifest height. `--fit`, `--bg`, `--colors` and `--dither` apply as on any images run.
+- `--width` and `--height` default to the manifest's canvas, per axis: a missing width takes the manifest width, a missing height the manifest height. `--fit`, `--bg`, `--colors` and `--dither` apply as on any images run. `--fps`, `--hold`, `--transition` and `--zoom` are refused with the flag named, because the manifest holds the timing.
 - `--loop` sets the play count as usual. When `--loop` is absent, the manifest loop count is used.
 - The image count must equal the delay count. A mismatch fails before any frame is rendered, names both counts and leaves no output.
 - Identical consecutive stills merge into one stored frame with the summed delay, as on every route, so a rebuilt file can hold fewer frames than the folder while the timeline stays the same.
