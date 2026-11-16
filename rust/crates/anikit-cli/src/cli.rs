@@ -1111,6 +1111,38 @@ mod tests {
     }
 
     #[test]
+    fn an_enormous_delay_fails_instead_of_wrapping() {
+        let dir = scratch("ascii-delay");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "aa\n").unwrap();
+        let out = dir.join("out.gif");
+        let err = run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--delay",
+            "4294967295",
+        ]))
+        .unwrap_err();
+        assert!(err.to_string().contains("delay"), "{err}");
+        assert!(!out.exists());
+
+        let separated = dir.join("separated.txt");
+        std::fs::write(&separated, "aa\n--- 4294967295\nbb\n").unwrap();
+        let err = run(&args(&[
+            "ascii",
+            separated.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+        ]))
+        .unwrap_err();
+        assert!(err.to_string().contains("delay"), "{err}");
+        assert!(!out.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn a_canvas_above_the_limit_is_refused() {
         let dir = scratch("ascii-limit");
         let input = dir.join("frames.txt");

@@ -7,8 +7,10 @@ pub const MIN_DELAY_MS: u32 = 20;
 pub const DELAY_UNIT_MS: u32 = 10;
 
 /// Snap a running total onto the grid, without the minimum applied.
+///
+/// The sum saturates, so a total near `u32::MAX` snaps instead of wrapping.
 pub fn snap_total(ms: u32) -> u32 {
-    ((ms + DELAY_UNIT_MS / 2) / DELAY_UNIT_MS) * DELAY_UNIT_MS
+    ((ms.saturating_add(DELAY_UNIT_MS / 2)) / DELAY_UNIT_MS) * DELAY_UNIT_MS
 }
 
 /// Snap one delay onto the 10 ms grid, never below 20 ms.
@@ -37,5 +39,11 @@ mod tests {
         assert_eq!(snap_total(6), 10);
         assert_eq!(snap_total(33), 30);
         assert_eq!(snap_total(36), 40);
+    }
+
+    #[test]
+    fn a_total_at_the_top_of_the_range_snaps() {
+        assert_eq!(snap_total(u32::MAX), 4_294_967_290);
+        assert_eq!(snap_delay(u32::MAX), 4_294_967_290);
     }
 }

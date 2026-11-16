@@ -57,7 +57,11 @@ impl FramePlan {
             }
             previous = point;
         }
-        let total_ms = starts.last().copied().unwrap_or(0) + delays.last().copied().unwrap_or(0);
+        let total_ms = starts
+            .last()
+            .copied()
+            .unwrap_or(0)
+            .saturating_add(delays.last().copied().unwrap_or(0));
         Ok(FramePlan {
             delays,
             starts,
@@ -75,12 +79,12 @@ impl FramePlan {
         let mut elapsed = 0u32;
         let mut emitted = 0u32;
         for ms in durations_ms {
-            elapsed += *ms;
+            elapsed = elapsed.saturating_add(*ms);
             let target = snap_total(elapsed);
             let delay = target.saturating_sub(emitted).max(MIN_DELAY_MS);
             starts.push(emitted);
             delays.push(delay);
-            emitted += delay;
+            emitted = emitted.saturating_add(delay);
         }
         FramePlan {
             delays,
@@ -207,6 +211,14 @@ mod tests {
         assert!(FramePlan::uniform(2, 51.0).is_err());
         assert!(FramePlan::uniform(0, 15.0).is_err());
         assert!(FramePlan::uniform(2, 50.0).is_ok());
+    }
+
+    #[test]
+    fn a_total_at_the_top_of_the_range_does_not_wrap() {
+        let plan = FramePlan::cumulative(&[u32::MAX, u32::MAX]);
+        assert_eq!(plan.len(), 2);
+        assert_eq!(plan.delays()[0], 4_294_967_290);
+        assert_eq!(plan.total_ms(), u32::MAX);
     }
 
     #[test]

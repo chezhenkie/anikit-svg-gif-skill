@@ -181,12 +181,18 @@ impl GifStream {
         };
         let target = snap_total(until_ms);
         let delay = target.saturating_sub(self.emitted_ms).max(MIN_DELAY_MS);
+        let emitted_ms = self.emitted_ms.checked_add(delay).ok_or_else(|| {
+            Error::invalid(format!(
+                "delay {delay} ms would take the total past {} ms",
+                u32::MAX
+            ))
+        })?;
         let encoder = self
             .encoder
             .as_mut()
             .ok_or_else(|| Error::io("stream has no encoder"))?;
         encoder.write_frame(&indices, delay)?;
-        self.emitted_ms += delay;
+        self.emitted_ms = emitted_ms;
         Ok(())
     }
 }

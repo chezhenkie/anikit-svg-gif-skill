@@ -112,6 +112,12 @@ impl ApngStream {
                 "delay {delay} ms is too long for APNG"
             )));
         }
+        let emitted_ms = self.emitted_ms.checked_add(delay).ok_or_else(|| {
+            Error::invalid(format!(
+                "delay {delay} ms would take the total past {} ms",
+                u32::MAX
+            ))
+        })?;
         let idat = idat_payload(&encode_png(self.width, self.height, self.pending.data())?)?;
         let first = self.frames == 0;
 
@@ -145,7 +151,7 @@ impl ApngStream {
         }
 
         self.frames += 1;
-        self.emitted_ms += delay;
+        self.emitted_ms = emitted_ms;
         self.has_pending = false;
         Ok(())
     }
