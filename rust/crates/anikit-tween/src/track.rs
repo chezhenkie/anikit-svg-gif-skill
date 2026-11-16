@@ -403,9 +403,21 @@ impl<T: Lerp> Track<T> {
                     let start = from.value.scalar().ok_or_else(|| {
                         Error::invalid(format!("{name}: ballistic motion needs a scalar track"))
                     })?;
-                    SegmentKind::Ballistic(BallisticPlan::prepare(ballistic, start).map_err(
-                        |error| Error::invalid(format!("{name}: key at {}: {error}", from.t_us)),
-                    )?)
+                    let plan = BallisticPlan::prepare(ballistic, start).map_err(|error| {
+                        Error::invalid(format!("{name}: key at {}: {error}", from.t_us))
+                    })?;
+                    // The flight ends on the plane, so the next key must carry
+                    // that value; otherwise the last microsecond jumps.
+                    let landing = to.value.scalar().ok_or_else(|| {
+                        Error::invalid(format!("{name}: ballistic motion needs a scalar track"))
+                    })?;
+                    if (landing - ballistic.plane).abs() > 0.5 {
+                        return Err(Error::invalid(format!(
+                            "{name}: ballistic segment at {} lands on {} but the next key at {} is {}",
+                            from.t_us, ballistic.plane, to.t_us, landing
+                        )));
+                    }
+                    SegmentKind::Ballistic(plan)
                 }
                 Motion::Arc { bend, ease } => {
                     let a = from.value.scalar().ok_or_else(|| {
@@ -1077,6 +1089,36 @@ mod tests {
         // The contact is held, so the value is the plane on both sides.
         assert_eq!(curve.sample(contacts[0]), 100.0);
         assert_eq!(curve.sample(contacts[0] + 20_000), 100.0);
+    }
+
+    #[test]
+    fn a_ballistic_landing_key_must_equal_the_plane() {
+        let drop = Ballistic::drop(100.0).contact_hold(0);
+        let err = number_track(vec![
+            Key::new(0, 0.0).motion(Motion::Ballistic(drop)),
+            Key::new(1_000_000, 50.0),
+        ])
+        .prepare_named("landing")
+        .unwrap_err();
+        let text = err.to_string();
+        assert!(text.contains("1000000"), "{text}");
+        assert!(text.contains("50"), "{text}");
+        assert!(text.contains("100"), "{text}");
+    }
+
+    #[test]
+    fn a_landing_on_the_plane_holds_the_plane_to_the_key() {
+        // No rebound, so the plan settles on the plane after the fall and the
+        // sample just before the key must already be there.
+        let drop = Ballistic::drop(100.0).contact_hold(0).restitution(0.0);
+        let curve = number_track(vec![
+            Key::new(0, 0.0).motion(Motion::Ballistic(drop)),
+            Key::new(1_000_000, 100.0),
+        ])
+        .prepare()
+        .unwrap();
+        assert!((curve.sample(999_999) - 100.0).abs() < 0.01);
+        assert_eq!(curve.sample(1_000_000), 100.0);
     }
 
     #[test]
