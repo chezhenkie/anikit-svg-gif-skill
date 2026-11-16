@@ -83,4 +83,4 @@ Three masks exist, and they are different things:
 - Accumulation is order dependent, so order must be serialised; reordering a JSON array must not change the output.
 - A weight outside 0 to 1 is rejected unless the binding declares overshoot.
 - A round trip through GIF or Lottie bakes the stack and cannot recover it, so the source timeline stays the only editable copy.
-- Double application is the common authoring error: an effect that is already baked into the base must not be added again. The crate cannot detect it, so the importer reports when a base timeline already contains a layer-shaped track.
+- Double application is the common authoring error: an effect that is already baked into the base must not be added again. The crate cannot detect it, and the importer has no check for a layer-shaped track either; a base timeline carrying one is imported as it stands.
