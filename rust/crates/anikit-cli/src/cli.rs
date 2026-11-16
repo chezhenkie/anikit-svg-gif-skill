@@ -1,6 +1,6 @@
 //! Argument parsing, route dispatch and the text route.
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use anikit_core::{
     Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, Result, StreamOptions,
@@ -259,6 +259,7 @@ fn ascii(args: &[String]) -> Result<()> {
     check_canvas(grid.width, grid.height)?;
     let format = OutputFormat::from_path(&args.out)?;
     format.require_frames()?;
+    check_preview(args.preview.as_deref(), &args.out)?;
 
     // Palette pass: up to twelve frames spread across the loop, GIF only.
     let mut samples = Vec::new();
@@ -329,6 +330,7 @@ fn images(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_images(args)?;
+    check_preview(args.preview.as_deref(), &args.out)?;
     let rendered = if let Some(path) = &args.timing {
         let mut refused = Vec::new();
         if args.fps_given {
@@ -532,6 +534,7 @@ fn vector(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_vector(args)?;
+    check_preview(args.preview.as_deref(), &args.out)?;
     let options = VectorOptions {
         width: args.width,
         height: args.height,
@@ -572,6 +575,7 @@ fn tween(args: &[String]) -> Result<()> {
     if format == OutputFormat::Svg && args.preview.is_some() {
         return Err(Error::invalid("--preview needs a frame-based output"));
     }
+    check_preview(args.preview.as_deref(), &args.out)?;
     let options = TweenOptions {
         colors: args.colors,
         dither: args.dither,
@@ -638,6 +642,57 @@ fn file_name(path: &Path) -> String {
     path.file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string())
+}
+
+/// The preview must not be the output file, which it would replace.
+fn check_preview(preview: Option<&Path>, out: &Path) -> Result<()> {
+    let Some(preview) = preview else {
+        return Ok(());
+    };
+    if same_path(preview, out) {
+        return Err(Error::invalid(format!(
+            "--preview {} would replace the output {}",
+            preview.display(),
+            out.display()
+        )));
+    }
+    Ok(())
+}
+
+/// Compare two paths without touching the file system, so a missing output is
+/// still compared by name. Windows names are case-insensitive.
+fn same_path(a: &Path, b: &Path) -> bool {
+    let a = normalized(a);
+    let b = normalized(b);
+    if cfg!(windows) {
+        a.as_os_str()
+            .to_string_lossy()
+            .eq_ignore_ascii_case(&b.as_os_str().to_string_lossy())
+    } else {
+        a == b
+    }
+}
+
+/// An absolute path with `.` and `..` resolved lexically.
+fn normalized(path: &Path) -> PathBuf {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map(|dir| dir.join(path))
+            .unwrap_or_else(|_| path.to_path_buf())
+    };
+    let mut out = PathBuf::new();
+    for part in absolute.components() {
+        match part {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            other => out.push(other.as_os_str()),
+        }
+    }
+    out
 }
 
 fn parse_vector(args: &[String]) -> Result<Vector> {
@@ -1233,6 +1288,71 @@ mod tests {
         let png = std::fs::read(&preview).unwrap();
         assert_eq!(&png[..8], &[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]);
         assert_eq!(u32::from_be_bytes([png[16], png[17], png[18], png[19]]), 34);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_preview_cannot_replace_the_output() {
+        let dir = scratch("preview-same");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "ok\n").unwrap();
+        let out = dir.join("same.gif");
+        std::fs::write(&out, b"keep me").unwrap();
+        let err = run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--preview",
+            out.to_str().unwrap(),
+        ]))
+        .unwrap_err();
+        assert!(err.to_string().contains("--preview"), "{err}");
+        assert_eq!(std::fs::read(&out).unwrap(), b"keep me");
+
+        let spelled = dir.join(".").join("same.gif");
+        let err = run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--preview",
+            spelled.to_str().unwrap(),
+        ]))
+        .unwrap_err();
+        assert!(err.to_string().contains("--preview"), "{err}");
+        assert_eq!(std::fs::read(&out).unwrap(), b"keep me");
+
+        let preview = dir.join("still.png");
+        run(&args(&[
+            "ascii",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+            "--preview",
+            preview.to_str().unwrap(),
+        ]))
+        .unwrap();
+        assert!(preview.exists());
+        assert_eq!(&std::fs::read(&out).unwrap()[..3], b"GIF");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn one_file_has_one_identity() {
+        let dir = scratch("same-path");
+        let file = dir.join("out.gif");
+        assert!(same_path(&file, &file));
+        assert!(same_path(&file, &dir.join(".").join("out.gif")));
+        assert!(same_path(
+            &file,
+            &dir.join("sub").join("..").join("out.gif")
+        ));
+        assert!(!same_path(&file, &dir.join("other.gif")));
+        assert!(!same_path(&file, &dir.join("sub").join("out.gif")));
+        if cfg!(windows) {
+            assert!(same_path(&file, &dir.join("OUT.GIF")));
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 
