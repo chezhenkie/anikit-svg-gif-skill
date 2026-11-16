@@ -136,7 +136,7 @@ bin/anikit tween project/banner.json -o project/banner.gif
 ```
 
 - The drawing must animate through CSS, WAAPI or SMIL. Every animated element needs an id; the root `svg` cannot be the target.
-- `--duration` is the sampled interval, default 2 seconds, and `--fps` the scene and sample rate, default 25. The fps must divide 1000: 1, 2, 4, 5, 8, 10, 20, 25, 40 or 50. This keeps every frame on a whole millisecond and the scene exact at its own frame times. Pass the drawing's real length, or the scene holds two seconds wherever the animation is shorter or longer.
+- `--duration` is the sampled interval, default 2 seconds, and `--fps` the scene and sample rate, default 25. The fps must put its delay on the 10 ms grid: 1, 2, 4, 5, 10, 20, 25 or 50. This keeps the frame count and the scene exact at its own frame times. Pass the drawing's real length, or the scene holds two seconds wherever the animation is shorter or longer.
 - Only transform, opacity, fill, stroke and stroke-width are imported. Other properties are reported with `WARN`; a drawing with nothing else importable fails.
 - Values come from the rendered page, so CSS and SMIL both work. The source easing is baked into the samples and every segment is linear; render the imported scene at the import fps for an exact match.
 - A colour that changes must be opaque. A non-zero CSS `transform-origin` is refused; the drawing's own static `transform` is divided out, because the tween route adds its matrix outside the element.

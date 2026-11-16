@@ -216,16 +216,17 @@ fn validate(input: &Path, out: &Path, options: &ImportOptions) -> Result<()> {
     if !options.duration.is_finite() || options.duration <= 0.0 {
         return Err(Error::invalid("duration must be greater than 0"));
     }
-    if !divides_thousand(options.fps) {
+    if !exact_rate(options.fps) {
         return Err(Error::invalid(
-            "fps must divide 1000: 1, 2, 4, 5, 8, 10, 20, 25, 40 or 50",
+            "fps must be one of: 1, 2, 4, 5, 10, 20, 25 or 50, so every delay is a multiple of 10 ms",
         ));
     }
     Ok(())
 }
 
-fn divides_thousand(fps: u32) -> bool {
-    matches!(fps, 1 | 2 | 4 | 5 | 8 | 10 | 20 | 25 | 40 | 50)
+/// A rate whose delay is a whole unit on the 10 ms grid.
+fn exact_rate(fps: u32) -> bool {
+    fps > 0 && 1000 % fps == 0 && (1000 / fps).is_multiple_of(10)
 }
 
 fn loop_name(mode: LoopMode) -> &'static str {
@@ -962,6 +963,37 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    #[test]
+    fn a_twenty_five_fps_import_closes_on_the_duration() {
+        let _browser = browser_lock();
+        if discover(None).is_err() {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        }
+        let dir = scratch("fps-25");
+        let input = dir.join("art.svg");
+        std::fs::write(&input, CSS_DRAWING).unwrap();
+        let out = dir.join("scene.json");
+        let options = ImportOptions {
+            fps: 25,
+            ..options()
+        };
+        let imported = write_import(&input, &out, &options).unwrap();
+        assert_eq!(imported.total_ms, 1000);
+
+        let scene = scene_of(&out);
+        assert_eq!(scene["canvas"]["fps"], 25);
+        let transform = find_track(&scene, "box-transform");
+        let keys = transform["keys"].as_array().unwrap();
+        assert_eq!(keys.len(), 26);
+        assert_eq!(keys[1]["t"], 40);
+        assert_eq!(keys[24]["t"], 960);
+        assert_eq!(keys[25]["t"], 1000);
+        let closing = keys[25]["translate"][0].as_f64().unwrap();
+        assert!((closing - 38.4).abs() < 1e-6, "closing value {closing}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     const SMIL_DRAWING: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 80 40">
 <rect id="box" transform="translate(10 5)" x="0" y="0" width="20" height="20" fill="#00ff00">
   <animate attributeName="opacity" values="1;0.25" dur="1s" fill="freeze"/>
@@ -1380,7 +1412,18 @@ mod tests {
             browser: None,
         };
         let err = write_import(&input, &out, &options).unwrap_err();
-        assert!(err.to_string().contains("divide 1000"));
+        assert!(err.to_string().contains("1, 2, 4, 5, 10, 20, 25 or 50"));
+        for fps in [8, 40] {
+            let options = ImportOptions {
+                fps,
+                ..options.clone()
+            };
+            let err = write_import(&input, &out, &options).unwrap_err();
+            assert!(
+                err.to_string().contains("multiple of 10 ms"),
+                "fps {fps}: {err}"
+            );
+        }
         let options = ImportOptions { fps: 10, ..options };
         let err = write_import(&input, &dir.join("scene.txt"), &options).unwrap_err();
         assert!(err.to_string().contains(".json"));

@@ -57,7 +57,7 @@ Frames stream: the GIF path holds one frame, the APNG path one RGB frame and one
 
 ## Limits
 
-- Canvas sides are 8 to 8192 pixels; the tween and import fps is 1 to 50, and the import fps must divide 1000.
+- Canvas sides are 8 to 8192 pixels; the tween and import fps is 1 to 50, and the import fps must put its delay on the 10 ms grid.
 - GIF holds up to 256 colours and one palette per loop; APNG is truecolor and builds no palette.
 - Delays sit on the 10 ms grid and are at least 20 ms; identical consecutive frames merge into one.
 - Samples in this repository are 480x270.

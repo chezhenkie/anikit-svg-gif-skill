@@ -91,7 +91,7 @@ import options:
   --width N           canvas width, default from the drawing
   --height N          canvas height, default from the drawing
   --duration SEC      sampled interval (default 2)
-  --fps N             sample rate, must divide 1000 (default 25)
+  --fps N             sample rate on the 10 ms grid (default 25)
   --background COLOUR page colour behind the drawing (default #ffffff)
   --loop-mode MODE    once, cycle or pingpong (default cycle)
   --browser PATH      Chromium based browser to drive
@@ -1401,7 +1401,7 @@ mod tests {
         assert!(!dir.join("scene.tmp.json").exists());
 
         let err = run(&args(&["import", input.to_str().unwrap(), "--fps", "15"])).unwrap_err();
-        assert!(err.to_string().contains("divide 1000"));
+        assert!(err.to_string().contains("multiple of 10 ms"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -13,13 +13,13 @@ It does not parse CSS or SMIL text. The browser resolves selectors, units, timin
 - The input must end in `.svg` and exist. HTML pages are not imported, because the timeline names SVG elements.
 - The output must end in `.json`. No other extension is accepted.
 - The canvas is the drawing's viewport, resolved as on the vector route: `--width` and `--height` override it, and a missing side follows the drawing's own size. The background is `--background`, default `#ffffff`.
-- `--duration SEC` is the sampled interval, default 2. `--fps N` is the sample rate and the scene's canvas rate, default 25. The fps must divide 1000 exactly, so the 10 ms grid and the frame count agree: 1, 2, 4, 5, 8, 10, 20, 25, 40 or 50. Any other value fails before the browser starts.
+- `--duration SEC` is the sampled interval, default 2. `--fps N` is the sample rate and the scene's canvas rate, default 25. The fps must put its delay on the 10 ms grid, so the frame count and the frame plan agree: 1, 2, 4, 5, 10, 20, 25 or 50. Any other value fails before the browser starts.
 - `--loop-mode once|cycle|pingpong` sets `timing.loop`, default `cycle`. The rate is 1.0.
 - `--browser PATH` names the browser, as on the vector route.
 - The output is written under a temp name, read back byte for byte and renamed. A failed run leaves no file and no temp file.
 - The summary line is `<name>  N tracks, X.XX s, W x H`.
 
-The frame count is `max(2, ceil(duration * fps))`, and the timeline lasts `count / fps` seconds. With an fps that divides 1000, every frame time is a whole number of milliseconds, the frame plan of the tween route reproduces the same count and the same times, and the sampled motion is exact at every rendered frame.
+The frame count is `max(2, ceil(duration * fps))`, and the timeline lasts `count / fps` seconds. With one of those rates every frame time is a whole multiple of 10 ms, the frame plan of the tween route reproduces the same count and the same times, and the sampled motion is exact at every rendered frame.
 
 ## 14.3 What is imported
 
@@ -59,7 +59,7 @@ The output is the canonical object of 11.2 with these values:
 The route reports, with one `FAIL` line and no output:
 
 - the input is missing or not `.svg`, or the output is not `.json`;
-- the fps does not divide 1000, or another option is out of range;
+- the fps delay is not a multiple of 10 ms, or another option is out of range;
 - no Chromium based browser is found or the page does not load;
 - the drawing has no animation, or no animation of the five properties;
 - an animated element has no id, or the root `svg` is animated;
