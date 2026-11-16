@@ -13,6 +13,11 @@ pub trait Lerp: Clone + PartialEq + core::fmt::Debug {
     /// The additive zero used to combine weighted values.
     fn zero() -> Self;
 
+    /// The additive zero shaped like this value, preserving its kind.
+    fn zero_like(&self) -> Self {
+        Self::zero()
+    }
+
     /// `self += other * k`, component by component.
     fn add_scaled(&mut self, other: &Self, k: f64);
 
@@ -24,7 +29,7 @@ pub trait Lerp: Clone + PartialEq + core::fmt::Debug {
         if t >= 1.0 {
             return other.clone();
         }
-        let mut out = Self::zero();
+        let mut out = self.zero_like();
         out.add_scaled(self, 1.0 - t);
         out.add_scaled(other, t);
         out
@@ -39,7 +44,7 @@ pub trait Lerp: Clone + PartialEq + core::fmt::Debug {
         if t == 1.0 {
             return other.clone();
         }
-        let mut out = Self::zero();
+        let mut out = self.zero_like();
         out.add_scaled(self, 1.0 - t);
         out.add_scaled(other, t);
         out
@@ -462,11 +467,11 @@ impl<T: Lerp> Track<T> {
                 continue;
             }
             let tangent = if n == 1 {
-                T::zero()
+                key.value.zero_like()
             } else if i == 0 {
                 let dt = (self.keys[1].t_us - key.t_us) as f64 / 1e6;
                 if dt <= 0.0 {
-                    T::zero()
+                    key.value.zero_like()
                 } else {
                     difference(&self.keys[1].value, &key.value, 1.0 / dt)
                 }
@@ -474,7 +479,7 @@ impl<T: Lerp> Track<T> {
                 let previous = &self.keys[i - 1];
                 let dt = (key.t_us - previous.t_us) as f64 / 1e6;
                 if dt <= 0.0 {
-                    T::zero()
+                    key.value.zero_like()
                 } else {
                     difference(&key.value, &previous.value, 1.0 / dt)
                 }
@@ -482,7 +487,7 @@ impl<T: Lerp> Track<T> {
                 let previous = &self.keys[i - 1];
                 let next = &self.keys[i + 1];
                 if previous.t_us == key.t_us || next.t_us == key.t_us {
-                    T::zero()
+                    key.value.zero_like()
                 } else {
                     let dt = (next.t_us - previous.t_us) as f64 / 1e6;
                     difference(&next.value, &previous.value, 1.0 / dt)
@@ -542,14 +547,14 @@ impl<T: Lerp> Track<T> {
 }
 
 fn difference<T: Lerp>(next: &T, previous: &T, k: f64) -> T {
-    let mut out = T::zero();
+    let mut out = next.zero_like();
     out.add_scaled(next, k);
     out.add_scaled(previous, -k);
     out
 }
 
 fn scale<T: Lerp>(value: &T, k: f64) -> T {
-    let mut out = T::zero();
+    let mut out = value.zero_like();
     out.add_scaled(value, k);
     out
 }
@@ -620,7 +625,7 @@ impl<T: Lerp> Curve<T> {
                 let h10 = u3 - 2.0 * u2 + u;
                 let h01 = -2.0 * u3 + 3.0 * u2;
                 let h11 = u3 - u2;
-                let mut out = T::zero();
+                let mut out = segment.from.zero_like();
                 out.add_scaled(&segment.from, h00);
                 out.add_scaled(&segment.to, h01);
                 out.add_scaled(m0, h10);
@@ -633,7 +638,7 @@ impl<T: Lerp> Curve<T> {
                 .unwrap_or_else(|| segment.to.clone()),
             SegmentKind::Arc { control, ease } => {
                 let p = ease.eval(u);
-                let mut out = T::zero();
+                let mut out = segment.from.zero_like();
                 let one = 1.0 - p;
                 out.add_scaled(&segment.from, one * one);
                 out.add_scaled(control, 2.0 * one * p);

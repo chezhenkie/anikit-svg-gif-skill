@@ -398,6 +398,15 @@ impl Lerp for Value {
         Value::Number(0.0)
     }
 
+    fn zero_like(&self) -> Value {
+        match self {
+            Value::Number(_) => Value::Number(0.0),
+            Value::Opacity(_) => Value::Opacity(0.0),
+            Value::Transform(_) => Value::Transform(Transform::ZERO),
+            Value::Color(_) => Value::Color(Color::TRANSPARENT),
+        }
+    }
+
     fn add_scaled(&mut self, other: &Value, k: f64) {
         match (self, other) {
             (Value::Number(a), Value::Number(b)) => *a += *b * k,
@@ -552,5 +561,21 @@ mod tests {
         ]);
         let curve = track.prepare().unwrap();
         assert_eq!(curve.sample(500_000), Value::Opacity(0.5));
+    }
+
+    #[test]
+    fn auto_smoothing_keeps_the_value_kind() {
+        let track = Track::new(vec![
+            Key::new(0, Value::Opacity(0.0)),
+            Key::new(500_000, Value::Opacity(1.0)),
+            Key::new(1_000_000, Value::Opacity(0.0)),
+        ])
+        .smooth(crate::Smooth::Auto);
+        let curve = track.prepare().unwrap();
+        let value = curve.sample(250_000);
+        assert!(
+            matches!(value, Value::Opacity(inner) if inner > 0.0 && inner < 1.0),
+            "{value:?}"
+        );
     }
 }
