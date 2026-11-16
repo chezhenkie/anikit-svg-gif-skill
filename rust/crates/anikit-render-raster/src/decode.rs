@@ -2,7 +2,7 @@
 //!
 //! Every decoded frame is EXIF-rotated and matted onto the background before
 //! it reaches the layout code, so alpha never survives into a GIF (09, row 10).
-//! Animated GIF and WebP sources expand to all their frames in order (row 9).
+//! Animated GIF and WebP sources yield their frames in order, one at a time.
 
 use std::fs::File;
 use std::io::BufReader;
@@ -70,58 +70,104 @@ pub fn scan_folder(folder: &Path, skip: &Path) -> Result<Vec<PathBuf>> {
     Ok(files)
 }
 
-/// Decode one file into one frame per image it contains.
+/// Decode one file into every frame it carries, for the tests.
+#[cfg(test)]
 pub fn load(path: &Path, background: [u8; 3]) -> Result<Vec<Frame>> {
-    let orientation = orientation(path);
-    let reader = image::ImageReader::open(path)
-        .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?
-        .with_guessed_format()
-        .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?;
-    let format = reader.format();
+    Frames::new(path, background)?.collect()
+}
 
-    if format == Some(ImageFormat::Gif) {
-        let file = File::open(path)
-            .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?;
-        let decoder = image::codecs::gif::GifDecoder::new(BufReader::new(file))
-            .map_err(|err| decode_error(path, err))?;
-        let frames = decoder
-            .into_frames()
-            .collect_frames()
-            .map_err(|err| decode_error(path, err))?;
-        return frames
-            .into_iter()
-            .map(|frame| {
-                let image = DynamicImage::ImageRgba8(frame.into_buffer());
-                matte(rotate(image, orientation).to_rgba8(), background)
-            })
-            .collect();
-    }
+/// A file whose first frame is the whole image.
+pub fn is_static(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|extension| extension.to_str())
+            .map(|extension| extension.to_ascii_lowercase())
+            .as_deref(),
+        Some("png" | "jpg" | "jpeg" | "bmp" | "tif" | "tiff")
+    )
+}
 
-    if format == Some(ImageFormat::WebP) {
-        let file = File::open(path)
-            .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?;
-        let decoder = image::codecs::webp::WebPDecoder::new(BufReader::new(file))
-            .map_err(|err| decode_error(path, err))?;
-        if decoder.has_animation() {
-            let frames = decoder
-                .into_frames()
-                .collect_frames()
-                .map_err(|err| decode_error(path, err))?;
-            return frames
-                .into_iter()
-                .map(|frame| {
-                    let image = DynamicImage::ImageRgba8(frame.into_buffer());
-                    matte(rotate(image, orientation).to_rgba8(), background)
-                })
-                .collect();
+/// The first frame of the first file that has one.
+pub fn first_frame(files: &[PathBuf], background: [u8; 3]) -> Result<Option<Frame>> {
+    for file in files {
+        let mut frames = Frames::new(file, background)?;
+        if let Some(frame) = frames.next() {
+            return frame.map(Some);
         }
     }
+    Ok(None)
+}
 
-    let image = reader.decode().map_err(|err| decode_error(path, err))?;
-    Ok(vec![matte(
-        rotate(image, orientation).to_rgba8(),
-        background,
-    )?])
+/// Frames from one file, decoded one at a time.
+///
+/// An animated GIF or WebP yields every frame in order; any other file yields
+/// one. The caller holds one frame; the decoder keeps its own buffers.
+pub struct Frames {
+    inner: Inner,
+    path: PathBuf,
+    background: [u8; 3],
+    orientation: u32,
+}
+
+enum Inner {
+    Animated(image::Frames<'static>),
+    Still(Option<Frame>),
+}
+
+impl Frames {
+    pub fn new(path: &Path, background: [u8; 3]) -> Result<Frames> {
+        let orientation = orientation(path);
+        let reader = image::ImageReader::open(path)
+            .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?
+            .with_guessed_format()
+            .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?;
+        let format = reader.format();
+
+        let mut frames = Frames {
+            inner: Inner::Still(None),
+            path: path.to_path_buf(),
+            background,
+            orientation,
+        };
+        if format == Some(ImageFormat::Gif) {
+            let file = File::open(path)
+                .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?;
+            let decoder = image::codecs::gif::GifDecoder::new(BufReader::new(file))
+                .map_err(|err| decode_error(path, err))?;
+            frames.inner = Inner::Animated(decoder.into_frames());
+            return Ok(frames);
+        }
+        if format == Some(ImageFormat::WebP) {
+            let file = File::open(path)
+                .map_err(|err| Error::io(format!("cannot read {}: {err}", path.display())))?;
+            let decoder = image::codecs::webp::WebPDecoder::new(BufReader::new(file))
+                .map_err(|err| decode_error(path, err))?;
+            if decoder.has_animation() {
+                frames.inner = Inner::Animated(decoder.into_frames());
+                return Ok(frames);
+            }
+        }
+
+        let image = reader.decode().map_err(|err| decode_error(path, err))?;
+        let frame = matte(rotate(image, orientation).to_rgba8(), background)?;
+        frames.inner = Inner::Still(Some(frame));
+        Ok(frames)
+    }
+}
+
+impl Iterator for Frames {
+    type Item = Result<Frame>;
+
+    fn next(&mut self) -> Option<Result<Frame>> {
+        match &mut self.inner {
+            Inner::Animated(frames) => frames.next().map(|frame| {
+                let frame = frame.map_err(|err| decode_error(&self.path, err))?;
+                let image = DynamicImage::ImageRgba8(frame.into_buffer());
+                matte(rotate(image, self.orientation).to_rgba8(), self.background)
+            }),
+            Inner::Still(slot) => slot.take().map(Ok),
+        }
+    }
 }
 
 fn decode_error(path: &Path, err: image::ImageError) -> Error {

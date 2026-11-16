@@ -1,13 +1,14 @@
 //! The stills plan: holds, crossfades and Ken Burns windows, streamed out.
 //!
-//! Sources are decoded once. Finished frames are never held: the plan is a
-//! function of the frame index, and every frame goes straight to the sink.
+//! Sources are decoded one frame at a time and finished frames are never held:
+//! the peak is the canvas, the pair a crossfade blends and the twelve palette
+//! samples. A GIF palette pass reads its sources a second time.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anikit_core::{
-    Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, OutputStream, OutputSummary,
-    Result, StreamOptions, check_canvas, check_frames, stream_output,
+    Dither, Error, Frame, FrameSink, MIN_DELAY_MS, OutputFormat, OutputSummary, Result,
+    StreamOptions, check_canvas, check_frames, stream_output,
 };
 use anikit_time::FramePlan;
 
@@ -52,15 +53,10 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
     let format = OutputFormat::from_path(out)?;
     format.require_frames()?;
     let files = decode::scan_folder(folder, out)?;
-    let mut stills = Vec::new();
-    for file in &files {
-        stills.extend(decode::load(file, options.bg)?);
-    }
-    if stills.is_empty() {
-        return Err(Error::invalid(format!("no images in {}", folder.display())));
-    }
+    let first = decode::first_frame(&files, options.bg)?
+        .ok_or_else(|| Error::invalid(format!("no images in {}", folder.display())))?;
 
-    let size = fit::canvas_size(options.width, options.height, &stills[0])?;
+    let size = fit::canvas_size(options.width, options.height, &first)?;
     check_canvas(size.0, size.1)?;
     let fps = options.fps as f64;
     let hold_count = ((options.hold * fps).round() as u32).max(1);
@@ -69,33 +65,32 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
     } else {
         ((options.transition * fps).round()).max(0.0) as u32
     };
-    let transitions = if stills.len() > 1 { trans_count } else { 0 };
+    let still_count = source_frame_count(&files, options.bg)?;
+    let transitions = if still_count > 1 { trans_count } else { 0 };
     let per_image = hold_count + transitions;
-    let count = stills.len() as u64 * per_image as u64;
+    let count = still_count * per_image as u64;
     check_frames(count)?;
-    let count = count as u32;
-    let plan = FramePlan::uniform(count as usize, fps)?;
-
-    let scene = Scene {
-        options,
-        size,
-        hold_count,
-    };
+    let count = count as usize;
+    let plan = FramePlan::uniform(count, fps)?;
 
     // The palette pass is GIF only; APNG stores truecolor frames (part 12).
+    // It keeps the sampled frames and discards the rest.
+    let slides = Slides {
+        count: still_count,
+        per_image,
+        transitions,
+        size,
+    };
+
     let mut samples = Vec::new();
     if format == OutputFormat::Gif {
-        let picks = 12u32.min(count);
-        samples = (0..picks)
-            .map(|i| {
-                let index = if count <= 12 {
-                    i
-                } else {
-                    (i as f64 * (count - 1) as f64 / (picks - 1) as f64).round() as u32
-                };
-                frame_at(&scene, &stills, index, per_image, transitions)
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let picks = picks(count);
+        compose(&files, options, &slides, &first, &mut |index, frame, _| {
+            if picks.contains(&index) {
+                samples.push(frame.clone());
+            }
+            Ok(())
+        })?;
     }
 
     let mut stream = stream_output(
@@ -112,45 +107,185 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
         },
     )?;
 
-    let mut first: Option<Frame> = None;
-    let mut push = |stream: &mut OutputStream, index: u32, frame: &Frame| -> Result<()> {
-        if first.is_none() {
-            first = Some(frame.clone());
-        }
-        let pts = plan
-            .presentation_us(index as usize)
-            .ok_or_else(|| Error::invalid(format!("frame {index} is outside the plan")))?;
-        stream.push(index, pts, frame)
-    };
+    let mut first_out: Option<Frame> = None;
+    compose(
+        &files,
+        options,
+        &slides,
+        &first,
+        &mut |index, frame, push| {
+            if !push {
+                return Ok(());
+            }
+            if first_out.is_none() {
+                first_out = Some(frame.clone());
+            }
+            let pts = plan
+                .presentation_us(index)
+                .ok_or_else(|| Error::invalid(format!("frame {index} is outside the plan")))?;
+            stream.push(index as u32, pts, frame)
+        },
+    )?;
+    let summary = stream.finish()?;
+    let first = first_out.ok_or_else(|| Error::invalid("no frames were rendered"))?;
+    Ok(Rendered { summary, first })
+}
 
-    for i in 0..stills.len() {
-        let base = scene.base(&stills[i])?;
-        let motion = direction(i);
-        let start = i as u32 * per_image;
-        match &base {
-            Base::Still(frame) => push(&mut stream, start, frame)?,
-            Base::Zoom(_) => {
-                for k in 0..hold_count {
-                    let frame = scene.frame(&base, k, motion)?;
-                    push(&mut stream, start + k, &frame)?;
+/// The palette sample indices, spread over the plan.
+fn picks(count: usize) -> Vec<usize> {
+    if count <= 12 {
+        (0..count).collect()
+    } else {
+        (0..12)
+            .map(|index| (index as f64 * (count - 1) as f64 / 11.0).round() as usize)
+            .collect()
+    }
+}
+
+/// Decoded stills across a folder, one frame at a time.
+struct Stills<'a> {
+    files: &'a [PathBuf],
+    next_file: usize,
+    current: Option<decode::Frames>,
+    background: [u8; 3],
+}
+
+impl<'a> Stills<'a> {
+    fn new(files: &'a [PathBuf], background: [u8; 3]) -> Stills<'a> {
+        Stills {
+            files,
+            next_file: 0,
+            current: None,
+            background,
+        }
+    }
+}
+
+impl Iterator for Stills<'_> {
+    type Item = Result<Frame>;
+
+    fn next(&mut self) -> Option<Result<Frame>> {
+        loop {
+            if let Some(frames) = &mut self.current
+                && let Some(frame) = frames.next()
+            {
+                return Some(frame);
+            }
+            if self.next_file >= self.files.len() {
+                return None;
+            }
+            let path = &self.files[self.next_file];
+            self.next_file += 1;
+            match decode::Frames::new(path, self.background) {
+                Ok(frames) => self.current = Some(frames),
+                Err(error) => {
+                    self.current = None;
+                    return Some(Err(error));
                 }
             }
         }
-        if transitions > 0 {
-            let next = (i + 1) % stills.len();
-            let next_base = scene.base(&stills[next])?;
-            let last = scene.frame(&base, hold_count - 1, motion)?;
-            let first_next = scene.frame(&next_base, 0, direction(next))?;
-            for j in 0..transitions {
-                let mix = (j + 1) as f32 / (transitions + 1) as f32;
-                let frame = fit::blend(&last, &first_next, mix)?;
-                push(&mut stream, start + hold_count + j, &frame)?;
-            }
+    }
+}
+
+/// How many source frames a folder holds, without keeping any of them.
+fn source_frame_count(files: &[PathBuf], background: [u8; 3]) -> Result<u64> {
+    let mut total = 0u64;
+    for path in files {
+        if decode::is_static(path) {
+            total += 1;
+            continue;
+        }
+        let mut frames = decode::Frames::new(path, background)?;
+        for frame in frames.by_ref() {
+            frame?;
+            total += 1;
         }
     }
-    let summary = stream.finish()?;
-    let first = first.ok_or_else(|| Error::invalid("no frames were rendered"))?;
-    Ok(Rendered { summary, first })
+    Ok(total)
+}
+
+/// The shape of a slideshow plan: frames per still, the transition length and
+/// the canvas it renders into.
+struct Slides {
+    count: u64,
+    per_image: u32,
+    transitions: u32,
+    size: (u32, u32),
+}
+
+/// Emit every conceptual output frame in order, holding only the pair a
+/// transition needs.
+fn compose(
+    files: &[PathBuf],
+    options: &Options,
+    slides: &Slides,
+    first: &Frame,
+    sink: &mut impl FnMut(usize, &Frame, bool) -> Result<()>,
+) -> Result<()> {
+    let hold_count = slides.per_image - slides.transitions;
+    let scene = Scene {
+        options,
+        size: slides.size,
+        hold_count,
+    };
+    let mut stills = Stills::new(files, options.bg);
+    // The first still is passed in, so the iterator starts after it.
+    let _ = stills.next();
+    let mut current = first.clone();
+    let mut index = 0usize;
+    for image in 0..slides.count {
+        let next = if image + 1 < slides.count {
+            Some(
+                stills
+                    .next()
+                    .transpose()?
+                    .ok_or_else(|| Error::invalid("an image disappeared while it was read"))?,
+            )
+        } else if slides.transitions > 0 {
+            Some(first.clone())
+        } else {
+            None
+        };
+        let image = image as usize;
+        let base = scene.base(&current)?;
+        let motion = direction(image);
+        match &base {
+            Base::Still(frame) => {
+                sink(index, frame, true)?;
+                for offset in 1..hold_count as usize {
+                    sink(index + offset, frame, false)?;
+                }
+                index += hold_count as usize;
+            }
+            Base::Zoom(_) => {
+                for k in 0..hold_count {
+                    let frame = scene.frame(&base, k, motion)?;
+                    sink(index, &frame, true)?;
+                    index += 1;
+                }
+            }
+        }
+        if let Some(next) = &next {
+            let next_base = scene.base(next)?;
+            let last = scene.frame(&base, hold_count - 1, motion)?;
+            let first_next = scene.frame(
+                &next_base,
+                0,
+                direction((image + 1) % slides.count as usize),
+            )?;
+            for j in 0..slides.transitions {
+                let mix = (j + 1) as f32 / (slides.transitions + 1) as f32;
+                let frame = fit::blend(&last, &first_next, mix)?;
+                sink(index, &frame, true)?;
+                index += 1;
+            }
+        }
+        if let Some(next) = next {
+            current = next;
+        }
+    }
+    debug_assert_eq!(index as u64, slides.count * slides.per_image as u64);
+    Ok(())
 }
 
 /// Build one animation from stills that hold for their recorded delays.
@@ -170,18 +305,16 @@ pub fn write_timed(
     let format = OutputFormat::from_path(out)?;
     format.require_frames()?;
     let files = decode::scan_folder(folder, out)?;
-    let mut stills = Vec::new();
-    for file in &files {
-        stills.extend(decode::load(file, options.bg)?);
-    }
-    if stills.len() != delays.len() {
+    let count = source_frame_count(&files, options.bg)?;
+    if count != delays.len() as u64 {
         return Err(Error::invalid(format!(
-            "the timing has {} delays for {} images",
-            delays.len(),
-            stills.len()
+            "the timing has {} delays for {count} images",
+            delays.len()
         )));
     }
-    let size = fit::canvas_size(options.width, options.height, &stills[0])?;
+    let first = decode::first_frame(&files, options.bg)?
+        .ok_or_else(|| Error::invalid(format!("no images in {}", folder.display())))?;
+    let size = fit::canvas_size(options.width, options.height, &first)?;
     check_canvas(size.0, size.1)?;
     // The format floor applies on rebuild: a source delay of 0 or 10 ms is
     // written as 20 ms, and the total grows with it.
@@ -197,14 +330,18 @@ pub fn write_timed(
     // The palette pass is GIF only, as on every route (part 03).
     let mut samples = Vec::new();
     if format == OutputFormat::Gif {
-        let count = stills.len();
         let picks: Vec<usize> = if count <= 12 {
-            (0..count).collect()
+            (0..count as usize).collect()
         } else {
-            (0..12).map(|index| index * (count - 1) / 11).collect()
+            (0..12)
+                .map(|index| index * (count as usize - 1) / 11)
+                .collect()
         };
-        for index in picks {
-            samples.push(fit_still(&stills[index], size, options)?);
+        for (seen, still) in Stills::new(&files, options.bg).enumerate() {
+            let still = still?;
+            if picks.contains(&seen) {
+                samples.push(fit_still(&still, size, options)?);
+            }
         }
     }
 
@@ -222,18 +359,18 @@ pub fn write_timed(
         },
     )?;
 
-    let mut first: Option<Frame> = None;
+    let mut first_out: Option<Frame> = None;
     let mut pts_ms = 0u64;
-    for (index, still) in stills.iter().enumerate() {
-        let frame = fit_still(still, size, options)?;
-        if first.is_none() {
-            first = Some(frame.clone());
+    for (seen, still) in Stills::new(&files, options.bg).enumerate() {
+        let frame = fit_still(&still?, size, options)?;
+        if first_out.is_none() {
+            first_out = Some(frame.clone());
         }
-        stream.push(index as u32, pts_ms * 1000, &frame)?;
-        pts_ms += raised[index] as u64;
+        stream.push(seen as u32, pts_ms * 1000, &frame)?;
+        pts_ms += raised[seen] as u64;
     }
     let summary = stream.finish()?;
-    let first = first.ok_or_else(|| Error::invalid("no frames were rendered"))?;
+    let first = first_out.ok_or_else(|| Error::invalid("no frames were rendered"))?;
     Ok(Rendered { summary, first })
 }
 
@@ -309,29 +446,6 @@ impl Scene<'_> {
             }
         }
     }
-}
-
-/// The frame at a plan index, used for the palette samples.
-fn frame_at(
-    scene: &Scene,
-    stills: &[Frame],
-    index: u32,
-    per_image: u32,
-    transitions: u32,
-) -> Result<Frame> {
-    let image = (index / per_image) as usize;
-    let k = index % per_image;
-    let base = scene.base(&stills[image])?;
-    if k < scene.hold_count {
-        return scene.frame(&base, k, direction(image));
-    }
-    let next = (image + 1) % stills.len();
-    let next_base = scene.base(&stills[next])?;
-    let last = scene.frame(&base, scene.hold_count - 1, direction(image))?;
-    let first = scene.frame(&next_base, 0, direction(next))?;
-    let j = k - scene.hold_count;
-    let mix = (j + 1) as f32 / (transitions + 1) as f32;
-    fit::blend(&last, &first, mix)
 }
 
 #[cfg(test)]
