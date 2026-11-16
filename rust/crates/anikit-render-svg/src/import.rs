@@ -611,7 +611,7 @@ fn invert(value: &Transform) -> Option<Transform> {
 }
 
 /// Parse an SVG transform list: matrix, translate, scale, rotate, skewX, skewY.
-fn parse_transform_list(text: &str) -> Result<Transform> {
+pub(crate) fn parse_transform_list(text: &str) -> Result<Transform> {
     let mut result = Transform::IDENTITY;
     let bytes = text.as_bytes();
     let mut pos = 0usize;

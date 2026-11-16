@@ -7,12 +7,15 @@
 //! a restart is the loop seam, which is what the last frame's delay does in the
 //! GIF and APNG writers (part 12).
 
+use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::Path;
 
 use anikit_core::{Error, OutputSummary, Result, temp_path};
 use anikit_time::{FramePlan, LoopMode};
-use anikit_tween::{Plan, Value};
+use anikit_tween::{Plan, Transform, Value};
+
+use crate::import::parse_transform_list;
 
 /// One property and the element id it belongs to, in plan order.
 pub(crate) struct TargetRef<'a> {
@@ -45,7 +48,8 @@ pub(crate) fn write_svg(
         .rfind("</svg>")
         .ok_or_else(|| Error::invalid("the drawing has no closing </svg> tag"))?;
 
-    let style = stylesheet(plan, frames, targets, total_ms)?;
+    let authored = authored_transforms(svg, targets)?;
+    let style = stylesheet(plan, frames, targets, total_ms, &authored)?;
     let mut exported = String::with_capacity(svg.len() + style.len() + 32);
     exported.push_str(&svg[..close]);
     exported.push_str("<style id=\"anikit\">\n");
@@ -72,6 +76,7 @@ fn stylesheet(
     frames: &FramePlan,
     targets: &[TargetRef<'_>],
     total_ms: u32,
+    authored: &HashMap<String, Transform>,
 ) -> Result<String> {
     // Element order follows the first target, so the output is deterministic.
     let mut elements: Vec<(&str, Vec<usize>)> = Vec::new();
@@ -106,6 +111,10 @@ fn stylesheet(
         style.push_str("}\n");
 
         for index in list {
+            let base = authored
+                .get(*element)
+                .copied()
+                .unwrap_or(Transform::IDENTITY);
             let _ = write!(style, "@keyframes anikit-{index}{{");
             for frame in 0..frames.len() {
                 let pts = frames
@@ -115,7 +124,10 @@ fn stylesheet(
                     .property_value(*index, pts)
                     .ok_or_else(|| Error::invalid("property is outside the plan"))?;
                 style.push_str(&percent(pts, total_ms));
-                style.push_str(&declaration(targets[*index].slot, value)?);
+                style.push_str(&declaration(
+                    targets[*index].slot,
+                    compose(targets[*index].slot, value, &base),
+                )?);
             }
             // The last sample needs an explicit 100 percent key, or the
             // animation interpolates back to the authored value over the last
@@ -127,11 +139,157 @@ fn stylesheet(
                 .property_value(*index, last)
                 .ok_or_else(|| Error::invalid("property is outside the plan"))?;
             style.push_str("100%");
-            style.push_str(&declaration(targets[*index].slot, value)?);
+            style.push_str(&declaration(
+                targets[*index].slot,
+                compose(targets[*index].slot, value, &base),
+            )?);
             style.push_str("}\n");
         }
     }
     Ok(style)
+}
+
+/// Compose the timeline matrix with the element's authored transform.
+///
+/// The capture writes the timeline on a wrapper around the element, so the
+/// authored transform applies first: the export uses timeline * authored.
+fn compose(slot: u16, value: Value, authored: &Transform) -> Value {
+    match value {
+        Value::Transform(matrix) if slot == 0 => Value::Transform(matrix.mul(authored)),
+        other => other,
+    }
+}
+
+/// The authored transform of every target element.
+///
+/// This is not an XML parser: it walks start tags, skips comments, CDATA and
+/// declarations, and reads one attribute value at a time. An id that is absent
+/// from the drawing fails before a file is written.
+fn authored_transforms(svg: &str, targets: &[TargetRef<'_>]) -> Result<HashMap<String, Transform>> {
+    let mut wanted: Vec<&str> = Vec::new();
+    for target in targets {
+        if !wanted.contains(&target.element) {
+            wanted.push(target.element);
+        }
+    }
+    let mut found = HashMap::with_capacity(wanted.len());
+    let mut rest = svg;
+    while let Some(at) = rest.find('<') {
+        rest = &rest[at..];
+        if rest.starts_with("<!--") {
+            let Some(end) = rest.find("-->") else { break };
+            rest = &rest[end + 3..];
+            continue;
+        }
+        if rest.starts_with("<![CDATA[") {
+            let Some(end) = rest.find("]]>") else { break };
+            rest = &rest[end + 3..];
+            continue;
+        }
+        if rest.starts_with("<!") || rest.starts_with("<?") {
+            let Some(end) = rest.find('>') else { break };
+            rest = &rest[end + 1..];
+            continue;
+        }
+        let Some(end) = tag_end(rest) else { break };
+        let tag = &rest[1..end];
+        rest = &rest[end + 1..];
+        let Some(id) = attribute(tag, "id") else {
+            continue;
+        };
+        if !wanted.contains(&id) || found.contains_key(id) {
+            continue;
+        }
+        let transform = match attribute(tag, "transform") {
+            Some(text) => parse_transform_list(text).map_err(|error| {
+                Error::invalid(format!("the transform on #{id} cannot be read: {error}"))
+            })?,
+            None => Transform::IDENTITY,
+        };
+        found.insert(id.to_string(), transform);
+    }
+    for id in wanted {
+        if !found.contains_key(id) {
+            return Err(Error::invalid(format!(
+                "the drawing has no element with id \"{id}\""
+            )));
+        }
+    }
+    Ok(found)
+}
+
+/// The end of a start tag, ignoring `>` inside a quoted value.
+fn tag_end(text: &str) -> Option<usize> {
+    let mut quote = None;
+    for (index, ch) in text.char_indices() {
+        match quote {
+            Some(open) if ch == open => quote = None,
+            Some(_) => {}
+            None => match ch {
+                '"' | '\'' => quote = Some(ch),
+                '>' => return Some(index),
+                _ => {}
+            },
+        }
+    }
+    None
+}
+
+/// One attribute value from a start tag, without its quotes.
+fn attribute<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+    let bytes = tag.as_bytes();
+    let mut pos = 0;
+    while pos < bytes.len() && !bytes[pos].is_ascii_whitespace() {
+        pos += 1;
+    }
+    while pos < bytes.len() {
+        while pos < bytes.len() && bytes[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        let start = pos;
+        while pos < bytes.len()
+            && (bytes[pos].is_ascii_alphanumeric()
+                || matches!(bytes[pos], b'-' | b'_' | b':' | b'.'))
+        {
+            pos += 1;
+        }
+        if start == pos {
+            pos += 1;
+            continue;
+        }
+        let key = &tag[start..pos];
+        while pos < bytes.len() && bytes[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        if pos >= bytes.len() || bytes[pos] != b'=' {
+            continue;
+        }
+        pos += 1;
+        while pos < bytes.len() && bytes[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        if pos >= bytes.len() {
+            return None;
+        }
+        let quote = bytes[pos];
+        if quote != b'"' && quote != b'\'' {
+            return None;
+        }
+        pos += 1;
+        let value_start = pos;
+        while pos < bytes.len() && bytes[pos] != quote {
+            pos += 1;
+        }
+        if pos >= bytes.len() {
+            return None;
+        }
+        let value = &tag[value_start..pos];
+        pos += 1;
+        if key == name {
+            return Some(value);
+        }
+    }
+    None
 }
 
 fn selector(element: &str) -> String {
@@ -285,6 +443,121 @@ mod tests {
         ));
         assert!(text.contains("animation:anikit-0 1000ms linear infinite"));
         assert!(!dir.join("out.tmp.svg").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_authored_transform_is_composed_under_the_timeline() {
+        let dir = scratch("authored");
+        let out = dir.join("out.svg");
+        let drawing = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"120\" height=\"80\"><rect id=\"box\" transform=\"translate(30 0)\" x=\"0\" y=\"0\" width=\"10\" height=\"10\"/></svg>";
+        write_svg(
+            drawing,
+            &out,
+            &plan(LoopMode::Cycle),
+            &FramePlan::uniform(4, 4.0).unwrap(),
+            &[TargetRef {
+                element: "box",
+                slot: 0,
+            }],
+            120,
+            80,
+        )
+        .unwrap();
+        let text = std::fs::read_to_string(&out).unwrap();
+        assert!(
+            text.contains(
+                "0%{transform:matrix(1.000000,0.000000,0.000000,1.000000,30.000000,0.000000)}"
+            ),
+            "the authored transform is the start"
+        );
+        assert!(
+            text.contains(
+                "75%{transform:matrix(1.000000,0.000000,0.000000,1.000000,75.000000,0.000000)}"
+            ),
+            "the timeline is composed left of the authored transform"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_missing_target_is_refused_before_writing() {
+        let dir = scratch("missing-target");
+        let out = dir.join("out.svg");
+        let err = write_svg(
+            DRAWING,
+            &out,
+            &plan(LoopMode::Cycle),
+            &FramePlan::uniform(2, 2.0).unwrap(),
+            &[TargetRef {
+                element: "not-there",
+                slot: 0,
+            }],
+            120,
+            80,
+        )
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("no element with id \"not-there\""),
+            "{err}"
+        );
+        assert!(!out.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_id_inside_a_comment_is_ignored() {
+        let dir = scratch("comment");
+        let out = dir.join("out.svg");
+        let drawing = "<!-- <rect id=\"box\" transform=\"translate(99 0)\"/> --><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"120\" height=\"80\"><rect id=\"box\" transform=\"translate(5 0)\" x=\"0\" y=\"0\" width=\"10\" height=\"10\"/></svg>";
+        write_svg(
+            drawing,
+            &out,
+            &plan(LoopMode::Cycle),
+            &FramePlan::uniform(2, 2.0).unwrap(),
+            &[TargetRef {
+                element: "box",
+                slot: 0,
+            }],
+            120,
+            80,
+        )
+        .unwrap();
+        let text = std::fs::read_to_string(&out).unwrap();
+        assert!(
+            text.contains(
+                "0%{transform:matrix(1.000000,0.000000,0.000000,1.000000,5.000000,0.000000)}"
+            ),
+            "the element's transform, not the commented one"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_single_quoted_id_is_found() {
+        let dir = scratch("quotes");
+        let out = dir.join("out.svg");
+        let drawing = "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='80'><rect id='box' transform='translate(7 0)' x='0' y='0' width='10' height='10'/></svg>";
+        write_svg(
+            drawing,
+            &out,
+            &plan(LoopMode::Cycle),
+            &FramePlan::uniform(2, 2.0).unwrap(),
+            &[TargetRef {
+                element: "box",
+                slot: 0,
+            }],
+            120,
+            80,
+        )
+        .unwrap();
+        let text = std::fs::read_to_string(&out).unwrap();
+        assert!(
+            text.contains(
+                "0%{transform:matrix(1.000000,0.000000,0.000000,1.000000,7.000000,0.000000)}"
+            ),
+            "single quotes carry the transform too"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

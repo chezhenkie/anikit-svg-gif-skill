@@ -344,6 +344,97 @@ fn pingpong_doubles_the_plan_and_mirrors_the_second_half() {
 }
 
 #[test]
+fn an_authored_transform_survives_the_export() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
+    if anikit_render_svg::discover(None).is_err() {
+        eprintln!("skipping: no Chromium based browser installed");
+        return;
+    }
+    let dir = scratch("tween-authored");
+    std::fs::write(
+        dir.join("art.svg"),
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#ffffff"/><rect id="box" transform="translate(30 0)" x="0" y="0" width="10" height="10" fill="#c82020"/></svg>"##,
+    )
+    .unwrap();
+    let scene = r##"{
+        "version": 1,
+        "canvas": {"w": 120, "h": 80, "bg": "#ffffff", "fps": 2},
+        "timing": {"loop": "once", "rate": 1},
+        "tracks": [
+            {"id": "move", "kind": "svg.transform", "src": "art.svg#box",
+             "keys": [
+                {"t": 0, "translate": [0, 0]},
+                {"t": 1000, "translate": [20, 0]}
+             ]}
+        ]
+    }"##;
+    let input = dir.join("scene.json");
+    std::fs::write(&input, scene).unwrap();
+
+    let drawn = dir.join("drawn.gif");
+    let output = run(&[
+        "tween",
+        input.to_str().unwrap(),
+        "-o",
+        drawn.to_str().unwrap(),
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let svg = dir.join("drawn.svg");
+    let output = run(&[
+        "tween",
+        input.to_str().unwrap(),
+        "-o",
+        svg.to_str().unwrap(),
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = std::fs::read_to_string(&svg).unwrap();
+    assert!(
+        text.contains(
+            "0%{transform:matrix(1.000000,0.000000,0.000000,1.000000,30.000000,0.000000)}"
+        ),
+        "the export starts on the authored transform"
+    );
+
+    let played = dir.join("played.gif");
+    let output = run(&[
+        "vector",
+        svg.to_str().unwrap(),
+        "-o",
+        played.to_str().unwrap(),
+        "--duration",
+        "1",
+        "--fps",
+        "2",
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let captured = decoded(&drawn);
+    let replayed = decoded(&played);
+    assert_eq!(captured.len(), 2);
+    assert_eq!(replayed.len(), 2);
+    for index in 0..2 {
+        let drawn_centre = box_centre(&captured[index].0);
+        let played_centre = box_centre(&replayed[index].0);
+        assert!(
+            (drawn_centre - played_centre).abs() < 2.0,
+            "frame {index}: captured at {drawn_centre}, export plays at {played_centre}"
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn an_svg_export_needs_no_browser_and_plays() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     let dir = scratch("tween-svg");
