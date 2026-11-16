@@ -10,9 +10,9 @@ An animation maker with a keyframe engine at its centre: text frames, image fold
 
 | text frames | image folder | SVG animation | keyframes |
 |---|---|---|---|
-| [<img src="demo-ascii.gif" width="190" alt="Animated ASCII loading bar">](demo-ascii.gif) | [<img src="demo-pics.gif" width="190" alt="Crossfade between three image cards">](demo-pics.gif) | [<img src="demo-svg.gif" width="190" alt="Rotating group from an SVG">](demo-svg.gif) | [<img src="demo-tween.gif" width="190" alt="Three dots bobbing on springs">](demo-tween.gif) |
+| [<img src="demo-ascii.gif" width="190" alt="Animated ASCII loading bar">](demo-ascii.gif) | [<img src="demo-pics.gif" width="190" alt="The same dune ridge crossfading through dawn, noon and night">](demo-pics.gif) | [<img src="demo-svg.gif" width="190" alt="A glowing heart beating beside a scrolling ECG trace">](demo-svg.gif) | [<img src="demo-tween.gif" width="190" alt="An orrery of three planets and a comet orbiting a pulsing sun">](demo-tween.gif) |
 
-The keyframe sample is also written as [APNG](demo-tween.apng) and as an [animated SVG](demo-tween.svg); the SVG plays in a browser without a script.
+The image sample is one dune ridge at three times of day, the SVG sample is an authored pulse monitor, and the keyframe sample is an orrery on a JSON timeline. The keyframe sample is also written as [APNG](demo-tween.apng) and as an [animated SVG](demo-tween.svg); the SVG plays in a browser without a script.
 
 ## Kinetic studies
 
