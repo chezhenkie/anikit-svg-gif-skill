@@ -14,6 +14,16 @@ An animation maker with a keyframe engine at its centre: text frames, image fold
 
 The keyframe sample is also written as [APNG](demo-tween.apng) and as an [animated SVG](demo-tween.svg); the SVG plays in a browser without a script.
 
+## Kinetic studies
+
+| Gravity | Momentum |
+|:---:|:---:|
+| [<img src="demo-kinetic-drop.gif" width="190" alt="Two balls falling and bouncing with decaying heights">](demo-kinetic-drop.gif) | [<img src="demo-kinetic-cradle.gif" width="190" alt="Five balls exchanging an impulse in a cradle">](demo-kinetic-cradle.gif) |
+| Ballistic | Follow-through |
+| [<img src="demo-kinetic-leap.gif" width="190" alt="An outlined box leaping between two ledges">](demo-kinetic-leap.gif) | [<img src="demo-kinetic-wave.gif" width="190" alt="A damped pulse travelling through hanging rods">](demo-kinetic-wave.gif) |
+
+The four are white line work on black, generated with the other samples by `tools/make_docs.py`.
+
 ## Reading order
 
 1. [Specsheet overview](specsheet/00-overview.md): the rules, and the list of parts.
