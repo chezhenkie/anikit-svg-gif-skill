@@ -72,6 +72,7 @@ The route reports, with one `FAIL` line and no output:
 - A CSS drawing with a transform and an opacity animation imports to two tracks at the expected times, canvas and fps. Every sampled transform matches the matrix the drawing asks for, and the scene renders through the tween route with the element moving.
 - A SMIL drawing with `animate` and `animateTransform` imports the same way, including a static transform attribute that the wrapper must divide out.
 - A scene exported by the tween route is imported back: track count, duration, loop mode and sampled values match the source plan, and the imported scene plays through the tween route.
+- Rendering an imported scene does not replay the source drawing's animation: a drawing whose animation starts 40 px from its own position renders with the box at the sampled 40, not at 80.
 - A drawing with no animation, an animated element without an id, a non-zero transform origin, a `none` colour and an unsupported fps each fail with one line and leave no output.
 - A drawing whose only animation is `x` or `d` is reported as not importable.
 

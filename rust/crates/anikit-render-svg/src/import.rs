@@ -917,6 +917,16 @@ mod tests {
 <rect id="box" x="0" y="0" width="20" height="20" fill="#ff0000"/>
 </svg>"##;
 
+    /// A drawing whose animation starts away from the element's own position, so a
+    /// replay of the source animation lands 40 px to the right of the sampled spot.
+    const OFFSET_DRAWING: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+<style>
+@keyframes slide { from { transform: translateX(40px); } to { transform: translateX(60px); } }
+#box { animation: slide 1s linear infinite; }
+</style>
+<rect id="box" x="0" y="0" width="20" height="20" fill="#ff0000"/>
+</svg>"##;
+
     #[test]
     fn a_css_drawing_imports_its_motion() {
         let _browser = browser_lock();
@@ -1204,7 +1214,11 @@ mod tests {
             let mut sum = 0.0f64;
             let mut count = 0.0f64;
             for (index, pixel) in canvas.iter().enumerate() {
-                let red = pixel[0] > 200 && pixel[1] < 70 && pixel[2] < 70;
+                // The fade track makes the box partially transparent over the matte,
+                // so a red pixel is red dominant rather than a fixed channel value.
+                let red = pixel[0] > 200
+                    && i32::from(pixel[1]) + 80 < i32::from(pixel[0])
+                    && i32::from(pixel[2]) + 80 < i32::from(pixel[0]);
                 if red {
                     sum += (index % screen_w) as f64;
                     count += 1.0;
@@ -1215,6 +1229,56 @@ mod tests {
         assert!(centres.len() >= 2);
         let last = *centres.last().unwrap();
         assert!(last > centres[0] + 20.0, "the box should move: {centres:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_rendered_import_does_not_replay_the_source_animation() {
+        let _browser = browser_lock();
+        if discover(None).is_err() {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        }
+        let dir = scratch("no-replay");
+        let input = dir.join("art.svg");
+        std::fs::write(&input, OFFSET_DRAWING).unwrap();
+        let scene_path = dir.join("scene.json");
+        write_import(&input, &scene_path, &options()).unwrap();
+        let out = dir.join("out.gif");
+        crate::write_tween(
+            &scene_path,
+            &out,
+            &crate::TweenOptions {
+                colors: 255,
+                dither: anikit_core::Dither::None,
+                loop_count: 0,
+                browser: None,
+            },
+        )
+        .unwrap();
+
+        let bytes = std::fs::read(&out).unwrap();
+        let mut options = gif::DecodeOptions::new();
+        options.set_color_output(gif::ColorOutput::RGBA);
+        let mut decoder = options.read_info(&bytes[..]).unwrap();
+        let frame = decoder.read_next_frame().unwrap().unwrap();
+        let width = frame.width as usize;
+        let mut left: Option<i32> = None;
+        for y in 0..frame.height as usize {
+            for x in 0..width {
+                let at = (y * width + x) * 4;
+                let pixel = &frame.buffer[at..at + 4];
+                if pixel[3] > 0 && pixel[0] > 200 && pixel[1] < 70 && pixel[2] < 70 {
+                    let at = x as i32 + frame.left as i32;
+                    left = Some(left.map_or(at, |best| best.min(at)));
+                }
+            }
+        }
+        let left = left.expect("the box should be drawn");
+        assert!(
+            (left - 40).abs() <= 2,
+            "the box starts at x={left}, expected the sampled 40, so the source animation must not replay"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

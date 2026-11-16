@@ -154,7 +154,7 @@ The route follows part 03 like the other three.
 
 One SVG is wrapped in one page at the canvas size, exactly as the vector route wraps it: the drawing fills the page viewport, and with a `viewBox` its content is fitted and centred by `preserveAspectRatio`, with `bg` filling the rest. The page loads once. Fonts are awaited, every animation clock is paused at its start, and the drawing's own CSS, SMIL or WAAPI animation is never captured; the timeline is the only motion.
 
-For every target element the setup script inserts an empty `g` immediately before it and moves the element into that `g`. The wrapper has no other attributes, so the picture does not change before the first frame. Per frame:
+For every target element the page carries a rule that sets `animation` and `transition` to `none` with priority before it loads, so the element's own clocks never start. The setup script then inserts an empty `g` immediately before the element and moves the element into that `g`; it also cancels any remaining animation object and removes the element's SMIL animation children, which covers a script driven animation. A scene imported from that drawing therefore cannot apply the source motion a second time, and no compositor layer from a started clock survives. Static attributes stay, so the sampled matrix still composes with the element's authored transform. The wrapper has no other attributes, so the picture does not change before the first frame. Per frame:
 
 - `svg.transform` writes `transform="matrix(a,b,c,d,e,f)"` on the wrapper, in user units, about the wrapper's origin. The matrix sits on the parent side, so it composes with authored transforms instead of replacing them, and the track moves the element in its parent's axes. This is why no `transform-origin` rule is involved: the transform attribute has no ambiguity under a shifted view box.
 - `svg.opacity`, `svg.fill`, `svg.stroke` and `svg.stroke-width` write inline styles on the element itself.
@@ -176,7 +176,7 @@ A failed run prints one `FAIL` line, exits 1 and writes nothing. The route repor
 - the drawing has no element with that id, or the id names the root;
 - a mask field, or a path, raster or grid kind, is asked for.
 
-The browser and its temporary profile are removed on success and on failure. The drawing's own animations are paused, not sampled.
+The browser and its temporary profile are removed on success and on failure. The drawing's own animations are paused, and a target's own animation is switched off rather than paused, so no frame carries it.
 
 ## 11.6 Tests
 

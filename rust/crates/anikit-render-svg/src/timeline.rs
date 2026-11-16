@@ -93,10 +93,14 @@ pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Resul
         });
     }
 
+    // The captured page never starts a clock on a target, so its own animation
+    // cannot run beside the timeline or leave a compositor layer behind.
+    let page_svg = quiet_svg(&svg, &scene.targets);
+
     let exe = discover(options.browser.as_deref())?;
     let temp = write_page(
         &scene.drawing,
-        &svg,
+        &page_svg,
         scene.width,
         scene.height,
         scene.background,
@@ -984,6 +988,37 @@ fn parse_scalar_track(items: &[Json], path: &str) -> Result<Track<f64>> {
 // Page state
 // ---------------------------------------------------------------------------
 
+/// The drawing with the targets' own animations switched off before the page
+/// loads. A rule inserted here is part of the page, not of the exported SVG.
+fn quiet_svg(svg: &str, targets: &[Target]) -> String {
+    let mut ids: Vec<&str> = Vec::new();
+    for target in targets {
+        if !ids.contains(&target.element.as_str()) {
+            ids.push(target.element.as_str());
+        }
+    }
+    if ids.is_empty() {
+        return svg.to_string();
+    }
+    let Some(at) = svg.rfind("</svg>") else {
+        return svg.to_string();
+    };
+    let mut style = String::with_capacity(64 + ids.len() * 64);
+    style.push_str("<style id=\"anikit-tween\">");
+    for id in ids {
+        let _ = write!(
+            style,
+            "[id=\"{id}\"]{{animation:none !important;transition:none !important;}}"
+        );
+    }
+    style.push_str("</style>");
+    let mut page = String::with_capacity(svg.len() + style.len());
+    page.push_str(&svg[..at]);
+    page.push_str(&style);
+    page.push_str(&svg[at..]);
+    page
+}
+
 /// The setup script: wrap every target in an empty group and keep the handles.
 fn setup_script(targets: &[Target]) -> String {
     let mut ids: Vec<&str> = Vec::new();
@@ -1013,6 +1048,13 @@ fn setup_script(targets: &[Target]) -> String {
            const el = document.getElementById(id);\
            if (!el) { throw new Error('element not found: #' + id); }\
            if (!el.ownerSVGElement) { throw new Error('src must name an element inside the drawing: #' + id); }\
+           if (el.getAnimations) { el.getAnimations().forEach((a) => a.cancel()); }\
+           el.style.setProperty('animation', 'none', 'important');\
+           el.style.setProperty('transition', 'none', 'important');\
+           const smil = ['animate', 'animateTransform', 'animateMotion', 'animateColor', 'set'];\
+           for (const child of Array.from(el.children)) {\
+             if (smil.includes(child.localName)) { child.remove(); }\
+           }\
            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');\
            el.parentNode.insertBefore(g, el);\
            g.appendChild(el);\
@@ -1337,12 +1379,31 @@ mod tests {
         assert!(setup.contains("const ids = [\"box\"]"));
         assert!(setup.contains("{e:0,slot:0}"));
         assert!(setup.contains("{e:0,slot:2}"));
+        assert!(setup.contains(".getAnimations().forEach((a) => a.cancel())"));
+        assert!(setup.contains(".setProperty('animation', 'none', 'important')"));
+        assert!(setup.contains("'animateTransform'"));
         let mut values = vec![Value::Number(0.0); scene.plan.len()];
         scene.plan.sample_into(0, &mut values);
         let frame = frame_script(&scene.targets, &values);
         assert!(frame.contains("setAttribute('transform','matrix(1.000000,0.000000,0.000000,1.000000,0.000000,0.000000)')"));
         assert!(frame.contains(".style.opacity='1.0000'"));
         assert!(frame.contains(".style.fill='#c82020'"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_page_switches_off_the_targets_own_animation() {
+        let (dir, scene) = parsed("quiet");
+        let svg = std::fs::read_to_string(&scene.drawing).unwrap();
+        let page = quiet_svg(&svg, &scene.targets);
+        assert!(page.contains("<style id=\"anikit-tween\">"));
+        assert_eq!(
+            page.matches("[id=\"box\"]{animation:none !important;transition:none !important;}")
+                .count(),
+            1
+        );
+        assert!(page.find("<style id=\"anikit-tween\">").unwrap() < page.rfind("</svg>").unwrap());
+        assert_eq!(quiet_svg("<svg/>", &scene.targets), "<svg/>");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
