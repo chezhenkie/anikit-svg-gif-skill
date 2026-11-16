@@ -1,6 +1,6 @@
 """Generate the sample GIFs used by the README.
 
-Creates fixtures under scratch/docs and writes the three demo GIFs into docs/.
+Creates fixtures under scratch/docs and writes the four demo GIFs into docs/.
 Run from the repository root, after building the binary:
 
     python tools/make_docs.py
@@ -8,6 +8,7 @@ Run from the repository root, after building the binary:
 The binary is taken from ANIKIT, then agent-skill/bin, then a local cargo build.
 Only the standard library is used, so no Python packages are needed.
 """
+import json
 import os
 import pathlib
 import shutil
@@ -20,7 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 WORK = ROOT / "scratch" / "docs"
 ESC = chr(27)
-SAMPLES = ("demo-ascii.gif", "demo-pics.gif", "demo-svg.gif")
+SAMPLES = ("demo-ascii.gif", "demo-pics.gif", "demo-svg.gif", "demo-tween.gif")
 
 
 def binary():
@@ -134,6 +135,41 @@ def svg_sample():
         "--duration", 2, "--fps", 12, "--background", "#0b0d12")
 
 
+def tween_sample():
+    svg = WORK / "dots.svg"
+    svg.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" '
+        'viewBox="0 0 480 270">'
+        '<rect width="480" height="270" fill="#0b0d12"/>'
+        '<circle id="dot-a" cx="150" cy="160" r="24" fill="#ff7a66"/>'
+        '<circle id="dot-b" cx="240" cy="160" r="24" fill="#7aa2ff"/>'
+        '<circle id="dot-c" cx="330" cy="160" r="24" fill="#45c2b0"/>'
+        '</svg>', encoding="ascii")
+    spring = {"stiffness": 400, "damping": 32, "mass": 1, "settle": 560}
+    tracks = []
+    for name, start in zip("abc", (0, 100, 200)):
+        tracks.append({
+            "id": "dot-%s" % name,
+            "kind": "svg.transform",
+            "src": "dots.svg#dot-%s" % name,
+            "keys": [
+                {"t": start, "translate": [0, 0], "easing": {"spring": spring}},
+                {"t": start + 600, "translate": [0, -56], "easing": "hold"},
+                {"t": start + 900, "translate": [0, -56], "easing": {"spring": spring}},
+                {"t": start + 1500, "translate": [0, 0]},
+            ],
+        })
+    scene = {
+        "version": 1,
+        "canvas": {"w": 480, "h": 270, "bg": "#0b0d12", "fps": 25},
+        "timing": {"loop": "cycle", "rate": 1},
+        "tracks": tracks,
+    }
+    scene_path = WORK / "dots.json"
+    scene_path.write_text(json.dumps(scene, indent=2) + "\n", encoding="ascii")
+    run("tween", scene_path, "-o", DOCS / "demo-tween.gif")
+
+
 def main():
     global BIN
     BIN = binary()
@@ -145,6 +181,7 @@ def main():
     ascii_sample()
     pics_sample()
     svg_sample()
+    tween_sample()
     for name in SAMPLES:
         path = DOCS / name
         print("%s  %.1f KB" % (name, path.stat().st_size / 1024.0))

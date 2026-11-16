@@ -8,9 +8,9 @@ An animation maker and translator with a keyframe engine at its centre: text fra
 
 ## Samples
 
-| text frames | image folder | SVG animation |
-|---|---|---|
-| [<img src="demo-ascii.gif" width="260" alt="Animated ASCII loading bar">](demo-ascii.gif) | [<img src="demo-pics.gif" width="260" alt="Crossfade between three image cards">](demo-pics.gif) | [<img src="demo-svg.gif" width="260" alt="Rotating group from an SVG">](demo-svg.gif) |
+| text frames | image folder | SVG animation | keyframes |
+|---|---|---|---|
+| [<img src="demo-ascii.gif" width="190" alt="Animated ASCII loading bar">](demo-ascii.gif) | [<img src="demo-pics.gif" width="190" alt="Crossfade between three image cards">](demo-pics.gif) | [<img src="demo-svg.gif" width="190" alt="Rotating group from an SVG">](demo-svg.gif) | [<img src="demo-tween.gif" width="190" alt="Three dots bobbing on springs">](demo-tween.gif) |
 
 ## Reading order
 
