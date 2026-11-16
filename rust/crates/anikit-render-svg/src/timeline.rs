@@ -59,6 +59,13 @@ pub fn write_tween(timeline: &Path, out: &Path, options: &TweenOptions) -> Resul
     let scene = Scene::parse(&text, base, &name)?;
 
     let count = frame_count(scene.duration_us, scene.fps)?;
+    // Pingpong plays the plan forward and back, so its plan spans two durations
+    // and the time map mirrors the second half.
+    let count = if scene.plan.timing().loop_mode == LoopMode::PingPong {
+        count.saturating_mul(2)
+    } else {
+        count
+    };
     let plan = FramePlan::uniform(count, scene.fps as f64)?;
     let svg = std::fs::read_to_string(&scene.drawing).map_err(|error| {
         Error::io(format!(

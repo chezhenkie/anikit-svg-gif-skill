@@ -258,6 +258,92 @@ fn two_runs_are_byte_identical() {
 }
 
 #[test]
+fn pingpong_doubles_the_plan_and_mirrors_the_second_half() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
+    if anikit_render_svg::discover(None).is_err() {
+        eprintln!("skipping: no Chromium based browser installed");
+        return;
+    }
+    let dir = scratch("tween-pingpong");
+    let source = std::fs::read_to_string(fixture().join("input/scene.json")).unwrap();
+    let ping = source.replace("\"loop\": \"once\"", "\"loop\": \"pingpong\"");
+    assert_ne!(ping, source, "the fixture must carry a loop field");
+    std::fs::copy(fixture().join("input/art.svg"), dir.join("art.svg")).unwrap();
+    let input = dir.join("scene.json");
+
+    let mut outputs = Vec::new();
+    for (text, name) in [(&source, "once.gif"), (&ping, "ping.gif")] {
+        std::fs::write(&input, text).unwrap();
+        let out = dir.join(name);
+        let output = run(&[
+            "tween",
+            input.to_str().unwrap(),
+            "-o",
+            out.to_str().unwrap(),
+        ]);
+        assert!(
+            output.status.success(),
+            "stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        outputs.push(out);
+    }
+    let once = inspect_file(&outputs[0]).unwrap();
+    let mirrored = inspect_file(&outputs[1]).unwrap();
+    assert_eq!(once.frames, 10);
+    assert_eq!(mirrored.frames, 20);
+    assert_eq!(mirrored.total_ms, 2000);
+    assert_ne!(
+        std::fs::read(&outputs[0]).unwrap(),
+        std::fs::read(&outputs[1]).unwrap()
+    );
+
+    let frames = decoded(&outputs[1]);
+    assert_eq!(frames.len(), 20);
+    let end = box_centre(&frames[10].0);
+    assert!(
+        (end - 80.0).abs() < 2.0,
+        "the duration is the end pose: {end}"
+    );
+    let middle = box_centre(&frames[15].0);
+    assert!(
+        (middle - 50.0).abs() < 2.0,
+        "the second half mirrors: {middle}"
+    );
+    let back = box_centre(&frames[19].0);
+    assert!(
+        (back - 26.0).abs() < 2.0,
+        "the plan returns to the start: {back}"
+    );
+
+    std::fs::write(&input, &ping).unwrap();
+    let svg = dir.join("ping.svg");
+    let output = run(&[
+        "tween",
+        input.to_str().unwrap(),
+        "-o",
+        svg.to_str().unwrap(),
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = std::fs::read_to_string(&svg).unwrap();
+    assert!(
+        text.contains("animation:anikit-0 2000ms linear infinite"),
+        "the export spans two durations"
+    );
+    assert!(
+        text.contains(
+            "50%{transform:matrix(1.000000,0.000000,0.000000,1.000000,60.000000,0.000000)}"
+        ),
+        "the middle of the export is the end pose"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn an_svg_export_needs_no_browser_and_plays() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     let dir = scratch("tween-svg");
