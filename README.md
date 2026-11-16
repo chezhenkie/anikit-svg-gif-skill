@@ -97,7 +97,7 @@ Ask for the animation and name the input. The agent picks the route, runs one co
 | OpenCode | `@animated-gif` |
 | Codex | `$animated-gif` |
 | Pi | `/skill:animated-gif` |
-| OMP | `/skill:animated-gif` |
+| OMP | `anikit` |
 
 Codex also lists installed skills with `/skills`.
 
