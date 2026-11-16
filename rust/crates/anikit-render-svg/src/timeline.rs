@@ -1415,6 +1415,18 @@ mod tests {
     }
 
     #[test]
+    fn a_rate_that_cannot_map_a_time_is_refused() {
+        let dir = scratch("rate");
+        // Two seconds, so 1e308 times the duration leaves the float range.
+        let long = SCENE.replace("\"t\": 1000", "\"t\": 2000");
+        let huge = long.replace("\"rate\": 1", "\"rate\": 1e308");
+        let error = Scene::parse(&huge, &dir, "scene.json").unwrap_err();
+        assert!(error.to_string().contains("timing.rate"), "{error}");
+        assert!(error.to_string().contains("1e308"), "{error}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn a_second_file_is_rejected() {
         let dir = scratch("two-files");
         std::fs::write(

@@ -37,6 +37,23 @@ impl Timing {
         Ok(())
     }
 
+    /// A finite rate whose product with the duration stays finite, so a
+    /// mapped time always lands on a real number of microseconds.
+    pub fn check(&self, duration_us: u64) -> Result<()> {
+        self.validate()?;
+        let seconds = duration_us as f64 / 1e6;
+        if seconds > 0.0 {
+            let limit = f64::MAX / seconds;
+            if self.rate.abs() > limit {
+                return Err(Error::invalid(format!(
+                    "timing.rate {:e} is too large for a {seconds} s scene; keep |rate| at or below {limit:e}",
+                    self.rate
+                )));
+            }
+        }
+        Ok(())
+    }
+
     /// Map a presentation time onto the local time in `0..=duration_us`.
     ///
     /// A zero duration is a still image and maps to zero. A negative rate
@@ -102,6 +119,19 @@ mod tests {
     fn half_rate_doubles_local_time() {
         let timing = Timing::new(LoopMode::Cycle, 0.5);
         assert_eq!(timing.map(500_000, D), 250_000);
+    }
+
+    #[test]
+    fn an_extreme_rate_is_refused_for_its_duration() {
+        let huge = Timing::new(LoopMode::Cycle, 1e308);
+        assert!(huge.validate().is_ok(), "finiteness alone accepts it");
+        let err = huge.check(2_000_000).unwrap_err();
+        assert!(err.to_string().contains("timing.rate"), "{err}");
+        assert!(err.to_string().contains("1e308"), "{err}");
+        assert!(Timing::new(LoopMode::Cycle, 2.0).check(2_000_000).is_ok());
+        assert!(Timing::new(LoopMode::Cycle, 0.0).check(2_000_000).is_ok());
+        assert!(Timing::new(LoopMode::Cycle, -2.0).check(2_000_000).is_ok());
+        assert!(huge.check(0).is_ok(), "a still image maps no time");
     }
 
     #[test]

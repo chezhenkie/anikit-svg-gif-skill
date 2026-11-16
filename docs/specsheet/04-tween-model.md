@@ -17,7 +17,7 @@ pub struct Timing { pub loop_mode: LoopMode, pub rate: f64 }
 pub enum LoopMode { Once, Cycle, PingPong }
 ```
 
-- `rate` and `loop_mode` are applied by a time map before `sample`, so `sample(t)` stays a pure function of `t` in `0..duration`.
+- `rate` and `loop_mode` are applied by a time map before `sample`, so `sample(t)` stays a pure function of `t` in `0..duration`. The rate is finite and `|rate| * duration` must stay inside the float range, so a mapped time is always a real number of microseconds; the error names `timing.rate` and the largest rate the scene's duration allows.
 - Ping-pong is the triangle map over the duration; reverse playback is `rate = -1`; neither is data in a track.
 - The frame plan owns the frame count and the presentation times. A plan that carries the loop end can drop a repeated seam frame with `FramePlan::without_last`; the tween route's count stops one frame before the end, so it has no duplicate to drop.
 

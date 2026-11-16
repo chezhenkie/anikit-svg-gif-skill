@@ -71,7 +71,7 @@ impl Timeline {
     /// Resolve the whole timeline. Fails on an id, order, kind or operation
     /// that cannot produce a defined value.
     pub fn prepare(&self) -> Result<Plan> {
-        self.timing.validate()?;
+        self.timing.check(self.duration_us)?;
         let mut property_ids = HashSet::new();
         for property in &self.properties {
             if !property_ids.insert(property.id) {
