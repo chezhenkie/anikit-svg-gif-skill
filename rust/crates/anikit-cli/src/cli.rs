@@ -1023,6 +1023,10 @@ mod tests {
     use super::*;
     use anikit_core::inspect_file;
 
+    /// Browser tests take this lock so one test binary does not start several
+    /// Chromium processes at once on a small runner.
+    static BROWSER: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     fn scratch(name: &str) -> PathBuf {
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/test-tmp/cli")
@@ -1367,6 +1371,7 @@ mod tests {
 
     #[test]
     fn import_writes_a_timeline() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
         if anikit_render_svg::discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -1450,6 +1455,7 @@ mod tests {
 
     #[test]
     fn vector_route_writes_an_apng() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
         if anikit_render_svg::discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;

@@ -18,6 +18,9 @@ mod decode;
 const BIN: &str = env!("CARGO_BIN_EXE_anikit");
 const WIDTH: usize = 120;
 
+/// Tests that start a browser take this lock, one browser at a time.
+static BROWSER: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 fn fixture() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tween")
 }
@@ -99,6 +102,7 @@ fn frame_hash(rgba: &[u8]) -> String {
 
 #[test]
 fn tween_fixture_matches_the_recorded_structure() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     if anikit_render_svg::discover(None).is_err() {
         eprintln!("skipping: no Chromium based browser installed");
         return;
@@ -155,6 +159,7 @@ fn tween_fixture_matches_the_recorded_structure() {
 
 #[test]
 fn stroke_and_stroke_width_are_drawn() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     if anikit_render_svg::discover(None).is_err() {
         eprintln!("skipping: no Chromium based browser installed");
         return;
@@ -223,6 +228,7 @@ fn stroke_and_stroke_width_are_drawn() {
 
 #[test]
 fn two_runs_are_byte_identical() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     if anikit_render_svg::discover(None).is_err() {
         eprintln!("skipping: no Chromium based browser installed");
         return;
@@ -253,6 +259,7 @@ fn two_runs_are_byte_identical() {
 
 #[test]
 fn an_svg_export_needs_no_browser_and_plays() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     let dir = scratch("tween-svg");
     let out = dir.join("out.svg");
     let input = fixture().join("input/scene.json");
@@ -312,6 +319,7 @@ fn an_svg_export_needs_no_browser_and_plays() {
 
 #[test]
 fn a_missing_element_reports_its_id_and_writes_nothing() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     if anikit_render_svg::discover(None).is_err() {
         eprintln!("skipping: no Chromium based browser installed");
         return;

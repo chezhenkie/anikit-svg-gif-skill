@@ -19,6 +19,9 @@ mod decode;
 const BIN: &str = env!("CARGO_BIN_EXE_anikit");
 const WIDTH: u32 = 120;
 
+/// Tests that start a browser take this lock, one browser at a time.
+static BROWSER: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 fn fixture() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/vector")
 }
@@ -110,6 +113,7 @@ fn frame_hash(rgba: &[u8]) -> String {
 
 #[test]
 fn vector_fixture_matches_the_recorded_structure() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     // The capture needs a browser; without one there is nothing to compare.
     if anikit_render_svg::discover(None).is_err() {
         eprintln!("skipping: no Chromium based browser installed");
@@ -195,6 +199,7 @@ fn a_missing_input_reports_fail_and_writes_nothing() {
 
 #[test]
 fn a_preset_without_a_target_reports_the_selector() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     if anikit_render_svg::discover(None).is_err() {
         eprintln!("skipping: no Chromium based browser installed");
         return;

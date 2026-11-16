@@ -902,6 +902,12 @@ mod tests {
             .unwrap_or_else(|| panic!("no track {id}"))
     }
 
+    fn browser_lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_lock::BROWSER
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+    }
+
     const CSS_DRAWING: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 80 40">
 <style>
 @keyframes slide { from { transform: translateX(0px); } to { transform: translateX(40px); } }
@@ -913,6 +919,7 @@ mod tests {
 
     #[test]
     fn a_css_drawing_imports_its_motion() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -954,6 +961,7 @@ mod tests {
 
     #[test]
     fn a_smil_drawing_imports_its_motion() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -980,6 +988,7 @@ mod tests {
 
     #[test]
     fn a_drawing_without_animation_is_refused() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -1000,6 +1009,7 @@ mod tests {
 
     #[test]
     fn an_animated_element_without_an_id_is_refused() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -1022,6 +1032,7 @@ mod tests {
 
     #[test]
     fn a_non_zero_transform_origin_is_refused() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -1044,6 +1055,7 @@ mod tests {
 
     #[test]
     fn an_exported_scene_imports_back() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -1108,6 +1120,7 @@ mod tests {
 
     #[test]
     fn an_animation_outside_the_five_is_not_imported() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -1131,6 +1144,7 @@ mod tests {
 
     #[test]
     fn an_imported_scene_renders_through_the_tween_route() {
+        let _browser = browser_lock();
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;

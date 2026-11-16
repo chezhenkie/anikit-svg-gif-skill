@@ -117,7 +117,21 @@ pub struct Browser {
 
 impl Browser {
     /// Start the browser headless and wait for its debugging port.
+    ///
+    /// A launch can lose the race for resources when several browsers start at
+    /// once; a second attempt with a fresh profile covers that. A browser that
+    /// cannot run at all fails both times.
     pub fn launch(exe: &Path) -> Result<Browser> {
+        match Self::start(exe) {
+            Ok(browser) => Ok(browser),
+            Err(first) => {
+                std::thread::sleep(Duration::from_millis(500));
+                Self::start(exe).map_err(|_| first)
+            }
+        }
+    }
+
+    fn start(exe: &Path) -> Result<Browser> {
         let profile = unique("profile");
         let log = unique("browser.log");
         let _ = std::fs::remove_dir_all(&profile);

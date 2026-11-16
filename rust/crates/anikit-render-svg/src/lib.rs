@@ -415,8 +415,16 @@ fn decode_png(png: &[u8], background: [u8; 3]) -> Result<Frame> {
 }
 
 #[cfg(test)]
+pub(crate) mod test_lock {
+    /// Tests that launch a browser take this lock, so one binary does not start
+    /// several Chromium processes at once on a small runner.
+    pub static BROWSER: std::sync::Mutex<()> = std::sync::Mutex::new(());
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_lock::BROWSER;
 
     fn options() -> Options {
         Options {
@@ -528,6 +536,7 @@ mod tests {
 
     #[test]
     fn a_captured_loop_moves_the_drawing() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
@@ -564,6 +573,7 @@ mod tests {
 
     #[test]
     fn an_html_page_is_captured_with_a_preset() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
         if discover(None).is_err() {
             eprintln!("skipping: no Chromium based browser installed");
             return;
