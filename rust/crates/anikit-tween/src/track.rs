@@ -1011,6 +1011,40 @@ mod tests {
     }
 
     #[test]
+    fn an_eased_move_slows_at_both_ends() {
+        let curve = number_track(vec![
+            Key::new(0, 0.0).ease(Ease::cubic(0.42, 0.0, 0.58, 1.0)),
+            Key::new(1_000_000, 100.0),
+        ])
+        .prepare()
+        .unwrap();
+        let mut previous = curve.sample(0);
+        let mut deltas = Vec::new();
+        for frame in 1..=10 {
+            let value = curve.sample(frame * 100_000);
+            deltas.push(value - previous);
+            previous = value;
+        }
+        let peak = deltas.iter().cloned().fold(0.0, f64::max);
+        assert!(deltas[0] <= 0.3 * peak, "first {} peak {peak}", deltas[0]);
+        assert!(deltas[9] <= 0.3 * peak, "last {} peak {peak}", deltas[9]);
+    }
+
+    #[test]
+    fn a_light_chain_is_at_rest_before_the_loop_point() {
+        let spring = Spring::new(100.0, 7.0, 1.0, 1_800_000);
+        let curve = number_track(vec![
+            Key::new(0, 0.0).ease(Ease::Spring(spring)),
+            Key::new(2_000_000, 100.0),
+        ])
+        .prepare()
+        .unwrap();
+        let tail = curve.sample(1_900_000);
+        let end = curve.sample(2_000_000);
+        assert!((end - tail).abs() < 0.5, "tail {tail} end {end}");
+    }
+
+    #[test]
     fn a_spring_segment_holds_after_it_settles() {
         let spring = Spring::new(100.0, 10.0, 1.0, 500_000);
         let curve = number_track(vec![

@@ -182,4 +182,14 @@ mod tests {
         let plan = FramePlan::from_delays(&[100, 100]);
         assert_eq!(plan.play(LoopMode::Once, 5).len(), 2);
     }
+
+    #[test]
+    fn without_last_drops_the_duplicate_seam_frame() {
+        let plan = FramePlan::from_delays(&[100, 100, 100]);
+        let trimmed = plan.without_last();
+        assert_eq!(trimmed.len(), 2);
+        assert_eq!(trimmed.total_ms(), 200);
+        let single = FramePlan::from_delays(&[100]);
+        assert_eq!(single.without_last().len(), 1);
+    }
 }

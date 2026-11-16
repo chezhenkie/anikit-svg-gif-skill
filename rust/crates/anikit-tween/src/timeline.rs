@@ -475,47 +475,41 @@ mod tests {
     }
 
     #[test]
-    fn weight_zero_is_identity_for_every_type() {
-        let properties = vec![
-            prop(0, Value::Number(5.0)),
-            prop(1, Value::Opacity(0.5)),
-            prop(2, Value::Transform(Transform::translate(3.0, 4.0))),
-            prop(3, Value::Color(Color::linear(0.2, 0.4, 0.6, 1.0))),
-        ];
-        let layer = Layer::new(LayerId(1), 1, Track::constant(0.0))
-            .binding(Binding::new(
-                PropId::new(0, 0),
-                Op::Add,
-                Track::constant(Value::Number(9.0)),
-            ))
-            .binding(Binding::new(
-                PropId::new(0, 1),
-                Op::Add,
-                Track::constant(Value::Opacity(0.4)),
-            ))
-            .binding(Binding::new(
-                PropId::new(0, 2),
-                Op::Add,
-                Track::constant(Value::Transform(Transform::translate(9.0, 9.0))),
-            ))
-            .binding(
-                Binding::new(
-                    PropId::new(0, 3),
-                    Op::Add,
-                    Track::constant(Value::Color(Color::linear(1.0, 0.0, 0.0, 1.0))),
-                )
-                .allow_color_add(),
-            );
-        let timeline = Timeline::new(D, Timing::default())
-            .properties(properties)
-            .layer(layer);
-        let plan = timeline.prepare().unwrap();
-        let mut out = [Value::Number(0.0); 4];
-        plan.sample_into(0, &mut out);
-        assert_eq!(out[0], Value::Number(5.0));
-        assert_eq!(out[1], Value::Opacity(0.5));
-        assert_eq!(out[2], Value::Transform(Transform::translate(3.0, 4.0)));
-        assert_eq!(out[3], Value::Color(Color::linear(0.2, 0.4, 0.6, 1.0)));
+    fn weight_zero_is_identity_for_every_type_and_operation() {
+        fn check(base: Value, layer: Value, ops: &[Op]) {
+            for op in ops {
+                let target = PropId::new(0, 0);
+                let mut binding = Binding::new(target, *op, Track::constant(layer));
+                if matches!(base, Value::Color(_)) && *op == Op::Add {
+                    binding = binding.allow_color_add();
+                }
+                let timeline = Timeline::new(D, Timing::default())
+                    .property(Property::new(target, Track::constant(base)))
+                    .layer(Layer::new(LayerId(1), 1, Track::constant(0.0)).binding(binding));
+                let plan = timeline.prepare().unwrap();
+                assert_eq!(plan.property_value(0, 0), Some(base), "{op:?} on {base:?}");
+            }
+        }
+        check(
+            Value::Number(5.0),
+            Value::Number(9.0),
+            &[Op::Replace, Op::Add, Op::Multiply, Op::Accumulate],
+        );
+        check(
+            Value::Opacity(0.5),
+            Value::Opacity(0.4),
+            &[Op::Replace, Op::Add, Op::Multiply, Op::Accumulate],
+        );
+        check(
+            Value::Transform(Transform::translate(3.0, 4.0)),
+            Value::Transform(Transform::translate(9.0, 9.0)),
+            &[Op::Replace, Op::Add, Op::Multiply, Op::Accumulate],
+        );
+        check(
+            Value::Color(Color::linear(0.2, 0.4, 0.6, 1.0)),
+            Value::Color(Color::linear(1.0, 0.0, 0.0, 1.0)),
+            &[Op::Replace, Op::Add, Op::Multiply],
+        );
     }
 
     #[test]
