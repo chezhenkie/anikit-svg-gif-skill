@@ -3,7 +3,7 @@
 //! Time and easing live in the track; a value only knows how to interpolate it
 //! and how to combine with another value of the same kind.
 
-use crate::track::Property;
+use crate::track::Lerp;
 
 /// A premultiplied colour in linear light.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -80,7 +80,7 @@ fn encode(value: f32) -> u8 {
     (srgb * 255.0).round().clamp(0.0, 255.0) as u8
 }
 
-impl Property for Color {
+impl Lerp for Color {
     fn zero() -> Color {
         Color::TRANSPARENT
     }
@@ -91,6 +91,10 @@ impl Property for Color {
         self.g += other.g * k;
         self.b += other.b * k;
         self.a += other.a * k;
+    }
+
+    fn is_finite(&self) -> bool {
+        self.r.is_finite() && self.g.is_finite() && self.b.is_finite() && self.a.is_finite()
     }
 }
 
@@ -250,7 +254,7 @@ impl Transform {
     }
 }
 
-impl Property for Transform {
+impl Lerp for Transform {
     fn zero() -> Transform {
         Transform::ZERO
     }
@@ -269,6 +273,34 @@ impl Property for Transform {
             return *self;
         }
         if t >= 1.0 {
+            return *other;
+        }
+        let a = self.decompose();
+        let b = other.decompose();
+        Transform::from_decomposed(&Decomposed {
+            tx: a.tx + (b.tx - a.tx) * t,
+            ty: a.ty + (b.ty - a.ty) * t,
+            rotation: a.rotation + (b.rotation - a.rotation) * t,
+            scale_x: a.scale_x + (b.scale_x - a.scale_x) * t,
+            scale_y: a.scale_y + (b.scale_y - a.scale_y) * t,
+            skew: a.skew + (b.skew - a.skew) * t,
+        })
+    }
+
+    fn is_finite(&self) -> bool {
+        self.m11.is_finite()
+            && self.m12.is_finite()
+            && self.m21.is_finite()
+            && self.m22.is_finite()
+            && self.tx.is_finite()
+            && self.ty.is_finite()
+    }
+
+    fn mix(&self, other: &Transform, t: f64) -> Transform {
+        if t == 0.0 {
+            return *self;
+        }
+        if t == 1.0 {
             return *other;
         }
         let a = self.decompose();
@@ -339,9 +371,29 @@ impl Value {
             other => *other,
         }
     }
+
+    /// The identity for a layer stack with no base: zero, transparent black or
+    /// the identity matrix, by kind.
+    pub fn neutral_like(&self) -> Value {
+        match self {
+            Value::Number(_) => Value::Number(0.0),
+            Value::Opacity(_) => Value::Opacity(0.0),
+            Value::Transform(_) => Value::Transform(Transform::IDENTITY),
+            Value::Color(_) => Value::Color(Color::TRANSPARENT),
+        }
+    }
+
+    pub fn is_finite(&self) -> bool {
+        match self {
+            Value::Number(value) => value.is_finite(),
+            Value::Opacity(value) => value.is_finite(),
+            Value::Transform(value) => value.is_finite(),
+            Value::Color(value) => value.is_finite(),
+        }
+    }
 }
 
-impl Property for Value {
+impl Lerp for Value {
     fn zero() -> Value {
         Value::Number(0.0)
     }
@@ -383,6 +435,20 @@ impl Property for Value {
             Value::Number(_) => Some(Value::Number(value)),
             Value::Opacity(_) => Some(Value::Opacity(value as f32)),
             _ => None,
+        }
+    }
+
+    fn is_finite(&self) -> bool {
+        Value::is_finite(self)
+    }
+
+    fn mix(&self, other: &Value, t: f64) -> Value {
+        match (self, other) {
+            (Value::Number(a), Value::Number(b)) => Value::Number(a.mix(b, t)),
+            (Value::Opacity(a), Value::Opacity(b)) => Value::Opacity(a.mix(b, t)),
+            (Value::Transform(a), Value::Transform(b)) => Value::Transform(a.mix(b, t)),
+            (Value::Color(a), Value::Color(b)) => Value::Color(a.mix(b, t)),
+            _ => *other,
         }
     }
 }

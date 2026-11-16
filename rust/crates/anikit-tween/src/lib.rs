@@ -8,11 +8,15 @@
 //! `sample` is total and allocation free.
 
 mod ease;
+mod layer;
 mod time;
+mod timeline;
 mod track;
 mod value;
 
 pub use ease::{Ease, EasePlan, Spring, SpringRest, StepAt};
+pub use layer::{AddMode, Binding, Layer, LayerId, Mask, Op, PropId, Window};
 pub use time::{LoopMode, Timing};
-pub use track::{Ballistic, Curve, Key, Motion, Property, Smooth, Track};
+pub use timeline::{Plan, PreparedProperty, Property, Timeline};
+pub use track::{Ballistic, Curve, Key, Lerp, Motion, Smooth, Track};
 pub use value::{Color, Decomposed, Transform, Value};

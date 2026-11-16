@@ -9,7 +9,7 @@ use anikit_core::{Error, Result};
 use crate::ease::{Ease, EasePlan};
 
 /// A typed value that can be interpolated and recombined.
-pub trait Property: Clone + PartialEq + core::fmt::Debug {
+pub trait Lerp: Clone + PartialEq + core::fmt::Debug {
     /// The additive zero used to combine weighted values.
     fn zero() -> Self;
 
@@ -22,6 +22,21 @@ pub trait Property: Clone + PartialEq + core::fmt::Debug {
             return self.clone();
         }
         if t >= 1.0 {
+            return other.clone();
+        }
+        let mut out = Self::zero();
+        out.add_scaled(self, 1.0 - t);
+        out.add_scaled(other, t);
+        out
+    }
+
+    /// Linear extrapolation for a layer weight, which may leave 0 to 1 when the
+    /// binding allows overshoot. Unlike `lerp`, this never clamps.
+    fn mix(&self, other: &Self, t: f64) -> Self {
+        if t == 0.0 {
+            return self.clone();
+        }
+        if t == 1.0 {
             return other.clone();
         }
         let mut out = Self::zero();
@@ -46,9 +61,14 @@ pub trait Property: Clone + PartialEq + core::fmt::Debug {
         let _ = value;
         None
     }
+
+    /// False when any component is NaN or infinite.
+    fn is_finite(&self) -> bool {
+        true
+    }
 }
 
-impl Property for f64 {
+impl Lerp for f64 {
     fn zero() -> f64 {
         0.0
     }
@@ -67,6 +87,10 @@ impl Property for f64 {
         }
     }
 
+    fn mix(&self, other: &f64, t: f64) -> f64 {
+        *self + (*other - *self) * t
+    }
+
     fn scalar(&self) -> Option<f64> {
         Some(*self)
     }
@@ -74,9 +98,13 @@ impl Property for f64 {
     fn with_scalar(&self, value: f64) -> Option<f64> {
         Some(value)
     }
+
+    fn is_finite(&self) -> bool {
+        f64::is_finite(*self)
+    }
 }
 
-impl Property for f32 {
+impl Lerp for f32 {
     fn zero() -> f32 {
         0.0
     }
@@ -95,12 +123,20 @@ impl Property for f32 {
         }
     }
 
+    fn mix(&self, other: &f32, t: f64) -> f32 {
+        *self + (*other - *self) * t as f32
+    }
+
     fn scalar(&self) -> Option<f64> {
         Some(*self as f64)
     }
 
     fn with_scalar(&self, value: f64) -> Option<f32> {
         Some(value as f32)
+    }
+
+    fn is_finite(&self) -> bool {
+        f32::is_finite(*self)
     }
 }
 
@@ -250,7 +286,7 @@ impl<T> Track<T> {
     }
 }
 
-impl<T: Property> Track<T> {
+impl<T: Lerp> Track<T> {
     pub fn prepare(&self) -> Result<Curve<T>> {
         self.prepare_named("track")
     }
@@ -295,6 +331,12 @@ impl<T: Property> Track<T> {
             if !first.same_kind(&key.value) {
                 return Err(Error::invalid(format!(
                     "{name}: a track cannot mix value kinds"
+                )));
+            }
+            if !key.value.is_finite() {
+                return Err(Error::invalid(format!(
+                    "{name}: key at {} has a value that is not finite",
+                    key.t_us
                 )));
             }
         }
@@ -499,14 +541,14 @@ impl<T: Property> Track<T> {
     }
 }
 
-fn difference<T: Property>(next: &T, previous: &T, k: f64) -> T {
+fn difference<T: Lerp>(next: &T, previous: &T, k: f64) -> T {
     let mut out = T::zero();
     out.add_scaled(next, k);
     out.add_scaled(previous, -k);
     out
 }
 
-fn scale<T: Property>(value: &T, k: f64) -> T {
+fn scale<T: Lerp>(value: &T, k: f64) -> T {
     let mut out = T::zero();
     out.add_scaled(value, k);
     out
@@ -539,7 +581,7 @@ enum SegmentKind<T> {
     Arc { control: T, ease: EasePlan },
 }
 
-impl<T: Property> Curve<T> {
+impl<T: Lerp> Curve<T> {
     pub fn start_us(&self) -> u64 {
         self.start_us
     }
