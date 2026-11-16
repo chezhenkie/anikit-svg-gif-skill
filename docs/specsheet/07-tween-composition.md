@@ -1,6 +1,6 @@
 # 07-tween-composition
 
-Status: decided and specified, not implemented. Evidence: docs/research/tween-composition.md. This part is the reason a shake or a camera move can be reused without rewriting the animation it sits on.
+Status: implemented for number, opacity, transform and colour. Path, raster and grid composition, partial colour bindings and spatial masks remain unimplemented. Evidence: docs/research/tween-composition.md. This part is the reason a shake or a camera move can be reused without rewriting the animation it sits on.
 
 ## 7.1 Purpose
 

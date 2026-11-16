@@ -1,6 +1,6 @@
 # 02-crate-split
 
-Status: implemented, except the tween crate. Package naming is settled in 09, row 7, and the browser libraries in row 19; the boundaries below are the ones the workspace uses.
+Status: implemented. Package naming is settled in 09, row 7, and the browser libraries in row 19; the boundaries below are the ones the workspace uses.
 
 ## 2.1 Crates
 

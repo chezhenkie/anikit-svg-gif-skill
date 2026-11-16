@@ -1,6 +1,6 @@
 # 10-kinetic-motion
 
-Status: specified, not implemented. Evidence and sources: docs/research/kinetic-motion.md. This part turns that report into rules the crate and the routes must satisfy.
+Status: implemented for ballistic and arc motion on scalar tracks; squash, stretch and friction are carried for the renderer. Evidence and sources: docs/research/kinetic-motion.md. This part turns that report into rules the crate and the routes must satisfy.
 
 ## 10.1 Why these rules
 

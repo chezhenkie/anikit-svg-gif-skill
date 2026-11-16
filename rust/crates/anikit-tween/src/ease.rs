@@ -601,6 +601,43 @@ mod tests {
     }
 
     #[test]
+    fn fixed_curve_values_are_bit_stable() {
+        // Pins the spring arithmetic and libm, and the bezier arithmetic, so a
+        // compiler that fuses a multiply and add without mul_add is caught.
+        let spring = Ease::Spring(Spring::new(100.0, 10.0, 1.0, 1_000_000))
+            .prepare(1_000_000)
+            .unwrap();
+        let spring_bits: Vec<u64> = [0.1, 0.25, 0.5, 0.75]
+            .iter()
+            .map(|u| spring.eval(*u).to_bits())
+            .collect();
+        assert_eq!(
+            spring_bits,
+            vec![
+                4599801916967423396,
+                4607287620995380719,
+                4607518344847940154,
+                4606949598080519966,
+            ]
+        );
+        let bezier = Ease::cubic(0.25, 0.1, 0.25, 1.0)
+            .prepare(1_000_000)
+            .unwrap();
+        let bezier_bits: Vec<u64> = [0.25, 0.5, 0.75]
+            .iter()
+            .map(|u| bezier.eval(*u).to_bits())
+            .collect();
+        assert_eq!(
+            bezier_bits,
+            vec![
+                4601030692525275409,
+                4605402626739936354,
+                4606826264939270625,
+            ]
+        );
+    }
+
+    #[test]
     fn spring_needs_a_settle_inside_its_segment() {
         let spring = Spring::new(100.0, 10.0, 1.0, 2_000_000);
         assert!(Ease::Spring(spring).prepare(1_000_000).is_err());

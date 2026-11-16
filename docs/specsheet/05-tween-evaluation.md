@@ -1,6 +1,6 @@
 # 05-tween-evaluation
 
-Status: specified, not implemented. Evidence: docs/research/tween-math-easing.md. All easing and interpolation happens inside one sample call, so its cost is the cost of a frame that carries values.
+Status: implemented, including the fixed-input test that pins the arithmetic on each target. Evidence: docs/research/tween-math-easing.md. All easing and interpolation happens inside one sample call, so its cost is the cost of a frame that carries values.
 
 ## 5.1 The easing set
 

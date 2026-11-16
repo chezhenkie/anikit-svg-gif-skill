@@ -1,6 +1,6 @@
 # 06-tween-properties
 
-Status: specified, not implemented. Evidence and costs: docs/research/tween-property-types.md.
+Status: implemented for matched-structure path morphs, raster plans and density grids. The flubber correspondence fallback, hole growth and arc normalisation remain unimplemented. Evidence and costs: docs/research/tween-property-types.md.
 
 ## 6.1 The type set
 

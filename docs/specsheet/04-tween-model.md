@@ -1,6 +1,6 @@
 # 04-tween-model
 
-Status: specified, not implemented. Evidence and comparisons: docs/research/tween-timeline-model.md. Open rows are cited as 09, row n.
+Status: implemented. Evidence and comparisons: docs/research/tween-timeline-model.md. Open rows are cited as 09, row n.
 
 ## 4.1 Scope
 
