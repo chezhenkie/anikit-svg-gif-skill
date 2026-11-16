@@ -44,7 +44,7 @@ A spring gains two fields, because a settle cannot be reproduced from stiffness 
 
 ## 10.3 Contact, bounce and settle
 
-- Every contact exists as a frame and is held. One frame at 25 fps, two for a heavy object, one or two at 12 fps. A contact of zero frames reads as a bounce off nothing, and it is the commonest single error in a tweened bounce.
+- Every contact reads as a held frame, but the plan has no contact-time hook yet: a 40 ms contact is one frame at 25 fps, and at a lower rate the author adds a hold key. A contact of zero frames reads as a bounce off nothing, and it is the commonest single error in a tweened bounce.
 - Successive bounce heights fall by the square of restitution and the intervals fall by restitution. A height ratio between 0.35 and 0.55 reads natural. Above 0.7 it looks mechanical; below 0.2 it looks like sand.
 - A GIF has no room for a full decay. A 100 px drop at restitution 0.55 runs 30 frames to rest, so cut to two bounces and a settle, or lower restitution to 0.4.
 - Squash preserves area in two dimensions: width = 1 / height. A 20 percent squash widens 25 percent. Contact squash is 15 to 25 percent, stretch at speed 15 to 30 percent.
@@ -113,9 +113,9 @@ Frames are at 25 fps; at 12 fps prefer the long end of each range.
 
 Tests that pin the behaviour:
 
-- A ballistic drop from 100 px at gravity 1400 reaches the plane within one frame of `sqrt(2h/g)`, and the plan contains a held contact frame.
+- A ballistic drop from 100 px at gravity 1400 reaches the plane within one frame of `sqrt(2h/g)`, and the plan carries a contact hold after each landing.
 - Bounce heights decay by `e^2` within 5 percent, and the intervals by `e`.
 - A settle reaches rest delta within the stated settle time, and never exceeds three visible overshoots.
 - An eased 100 px move over 10 frames has first and last deltas at most 30 percent of the middle delta.
 - A chain with damping 0.35 or above comes to rest inside the plan, and never rings at the loop point.
-- Overshoot measured from the evaluated curve matches the requested percentage, and is capped at 6 px.
+- Overshoot measured from the evaluated curve matches the requested percentage; the 6 px cap is not implemented yet.
