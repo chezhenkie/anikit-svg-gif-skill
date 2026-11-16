@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+### Changes
+
+* The tween route switches a target's own CSS, WAAPI or SMIL animation off before the page loads and cancels any remaining animation object, so a scene over an animated drawing renders each motion once. A scene imported from an animated SVG previously applied the source animation on top of the timeline.
+* An imported scene renders at its sampled values: the demo drawing stores 29 frames against the source's 28, where the earlier build stored 41 with the dots up to 56 pixels off.
+* The skill states the rule, and part 11, part 14 and decision row 26 record it.
+
 ## 0.4.0
 
 ### New features

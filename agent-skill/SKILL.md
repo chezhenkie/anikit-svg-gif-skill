@@ -3,7 +3,7 @@ name: animated-gif
 description: "Build animated GIFs and APNGs from ASCII text frames, a folder of images, an SVG or HTML animation, or a JSON timeline over a static SVG drawing, export a timeline as an animated SVG, import an animated SVG into that timeline, and split a GIF or APNG into frames with their timing, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, produce an APNG, animate ASCII art, turn photos into a slideshow GIF, animate an SVG, keyframe an SVG drawing, or extract frames and delays from an animation."
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # anikit
