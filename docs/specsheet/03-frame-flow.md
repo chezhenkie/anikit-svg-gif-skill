@@ -56,7 +56,7 @@ The encoder also holds one index canvas, one byte per pixel, to measure each del
 
 ## 3.6 Tests
 
-- A streaming run and a materialised run of the same plan produce byte-identical GIF files.
+- Two streaming runs of the same plan produce byte-identical GIF files. No materialised writer exists, so the test proves deterministic streaming rather than equality with a held frame list.
 - The palette pass and the render pass agree on frame count and loop duration.
 - A 1000-frame run keeps peak memory within a stated multiple of a 100-frame run.
 - A hold produces one frame with the summed delay, not repeated frames.

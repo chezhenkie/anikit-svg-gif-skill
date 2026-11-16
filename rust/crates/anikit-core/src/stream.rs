@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn a_stream_and_a_materialised_run_are_byte_identical() {
+    fn two_streaming_runs_are_byte_identical() {
         let dir = scratch("stream-determinism");
         let frames = [solid([10, 20, 30]), solid([40, 50, 60])];
         let mut first = stream_output(&dir.join("a.gif"), &frames, options(200)).unwrap();
