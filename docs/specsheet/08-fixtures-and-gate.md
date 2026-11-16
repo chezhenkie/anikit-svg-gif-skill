@@ -1,6 +1,6 @@
 # 08-fixtures-and-gate
 
-Status: every route has a test; text, images, vector and tween have a fixture folder. The Rust gate is the only gate and covers the workspace: core, time, all four render routes, the extract and import routes, the two frame writers and the SVG export, and the browser routes where a browser is installed.
+Status: every route has a test; text, images, vector and tween have a fixture folder. The Rust gate is the only gate and covers the workspace: core, time, all four render routes, the extract and import routes, the two frame writers and the SVG export, and the browser routes, which need an installed browser unless `ANIKIT_SKIP_BROWSER_TESTS=1` is set.
 
 ## 8.1 Fixtures
 
@@ -25,7 +25,7 @@ A fixture is compared structurally, never byte for byte against the Python outpu
 
 ## 8.2 Structural checks
 
-Every route is checked for the same facts, in both languages:
+Every route is checked for the same facts in the Rust gate:
 
 - Frame count and the sum of delays equal what the input asked for.
 - Canvas size equals the requested size, or the derived size where the height was omitted.
