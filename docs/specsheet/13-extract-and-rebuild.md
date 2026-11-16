@@ -8,6 +8,7 @@ Status: implemented. The extract route reads a GIF or APNG back into numbered PN
 
 - The input format is chosen by the extension. `.gif` is read as a GIF87a or GIF89a animation, `.png` and `.apng` as an animated PNG. Any other ending fails before the file is opened.
 - The input must exist and be a file. A GIF or PNG that is not an animation fails: a PNG without an `acTL` chunk is a still, not an APNG.
+- The header is checked before anything is allocated: a canvas side above 8192 px or an `acTL` frame count above 100000 fails with the value in the message, before a frame buffer or the delays vector is created.
 - `-o` names a folder, not a file. It defaults to `frames`. The folder must not exist yet; its parent is created when missing.
 - Frames are `frame-0001.png`, `frame-0002.png` and so on, numbered from one and zero padded to four digits. A five-digit count keeps five digits, and the natural sort of the folder still follows playback order.
 - Every PNG is full canvas and 8-bit RGB. Transparent source pixels are matted onto `--bg`, which defaults to `#000000`, so the frames are opaque like every other frame in the pipeline (09, row 10).

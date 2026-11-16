@@ -10,7 +10,7 @@ use std::fs::{self, File};
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-use anikit_core::{Error, Frame, Result};
+use anikit_core::{Error, Frame, Result, check_canvas, check_frames};
 use image::codecs::gif::GifDecoder;
 use image::metadata::LoopCount;
 use image::{AnimationDecoder, ImageDecoder};
@@ -337,6 +337,7 @@ fn read_gif(input: &Path, background: [u8; 3], writer: &mut FolderWriter) -> Res
     let decoder = GifDecoder::new(BufReader::new(file))
         .map_err(|err| Error::invalid(format!("cannot read {}: {err}", input.display())))?;
     let (width, height) = decoder.dimensions();
+    check_canvas(width, height)?;
     let loop_count = match decoder.loop_count() {
         LoopCount::Infinite => 0,
         LoopCount::Finite(count) => count.get().min(u16::MAX as u32) as u16,
@@ -344,6 +345,7 @@ fn read_gif(input: &Path, background: [u8; 3], writer: &mut FolderWriter) -> Res
     let mut delays = Vec::new();
     let mut matted = Frame::new(width, height)?;
     for frame in decoder.into_frames() {
+        check_frames(delays.len() as u64 + 1)?;
         let frame = frame
             .map_err(|err| Error::invalid(format!("cannot decode {}: {err}", input.display())))?;
         let (numerator, denominator) = frame.delay().numer_denom_ms();
@@ -395,6 +397,8 @@ fn read_apng(input: &Path, background: [u8; 3], writer: &mut FolderWriter) -> Re
             input.display()
         )));
     }
+    check_canvas(width, height)?;
+    check_frames(num_frames as u64)?;
     let (color, depth) = reader.output_color_type();
     if depth != BitDepth::Eight {
         return Err(Error::invalid(format!(
@@ -799,6 +803,64 @@ mod tests {
         assert_eq!(manifest.format, SourceFormat::Gif);
         assert_eq!(manifest.delays, vec![100, 250]);
         assert_eq!(manifest.loop_count, 1);
+    }
+
+    #[test]
+    fn a_huge_header_is_refused_before_a_frame() {
+        let dir = scratch("limits");
+        let gif = dir.join("huge.gif");
+        gif_source(&gif);
+        let mut bytes = fs::read(&gif).unwrap();
+        bytes[6..8].copy_from_slice(&65535u16.to_le_bytes());
+        bytes[8..10].copy_from_slice(&65535u16.to_le_bytes());
+        fs::write(&gif, &bytes).unwrap();
+        let err = extract(&gif, &dir.join("gif-frames"), [0, 0, 0]).unwrap_err();
+        assert!(err.to_string().contains("65535 x 65535"), "{err}");
+        assert!(err.to_string().contains("8192"), "{err}");
+        assert!(!dir.join("gif-frames").exists());
+
+        let apng = dir.join("huge.png");
+        apng_source(&apng);
+        // The png crate ignores an acTL count above 2^31-1, so the highest
+        // count it will report is 2^31-1; that is already far past the limit.
+        patch_apng_frames(&apng, i32::MAX as u32);
+        let err = extract(&apng, &dir.join("apng-frames"), [0, 0, 0]).unwrap_err();
+        assert!(err.to_string().contains("2147483647"), "{err}");
+        assert!(err.to_string().contains("100000"), "{err}");
+        assert!(!dir.join("apng-frames").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    fn crc32(bytes: &[u8]) -> u32 {
+        let mut crc = 0xffff_ffffu32;
+        for byte in bytes {
+            crc ^= *byte as u32;
+            for _ in 0..8 {
+                let mask = (crc & 1).wrapping_neg();
+                crc = (crc >> 1) ^ (0xedb8_8320 & mask);
+            }
+        }
+        !crc
+    }
+
+    /// Rewrite the acTL frame count and its checksum in a valid APNG.
+    fn patch_apng_frames(path: &Path, frames: u32) {
+        let mut bytes = fs::read(path).unwrap();
+        let mut at = 8;
+        while at + 8 <= bytes.len() {
+            let length =
+                u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])
+                    as usize;
+            if &bytes[at + 4..at + 8] == b"acTL" {
+                bytes[at + 8..at + 12].copy_from_slice(&frames.to_be_bytes());
+                let crc = crc32(&bytes[at + 4..at + 16]);
+                bytes[at + 16..at + 20].copy_from_slice(&crc.to_be_bytes());
+                fs::write(path, &bytes).unwrap();
+                return;
+            }
+            at += 12 + length;
+        }
+        panic!("no acTL chunk");
     }
 
     #[test]
