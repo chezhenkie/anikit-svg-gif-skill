@@ -107,7 +107,7 @@ impl ApngStream {
         let delay = target
             .saturating_sub(self.emitted_ms)
             .max(crate::time::MIN_DELAY_MS);
-        if delay >= 655_350 {
+        if delay > 655_350 {
             return Err(Error::invalid(format!(
                 "delay {delay} ms is too long for APNG"
             )));

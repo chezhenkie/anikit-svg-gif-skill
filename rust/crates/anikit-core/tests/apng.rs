@@ -99,6 +99,51 @@ fn truth_and_loop_count_come_from_the_control_chunk() {
 }
 
 #[test]
+fn the_longest_legal_delay_is_written_and_read() {
+    let dir = scratch("apng-max-delay");
+    let path = dir.join("long.apng");
+    let red = solid([255, 0, 0]);
+    let options = StreamOptions {
+        format: OutputFormat::Apng,
+        width: 4,
+        height: 3,
+        loop_count: 0,
+        colors: 255,
+        dither: Dither::None,
+        total_ms: 655_350,
+    };
+    let mut stream = stream_output(&path, &[], options).unwrap();
+    stream.push(0, 0, &red).unwrap();
+    let summary = stream.finish().unwrap();
+    assert_eq!(summary.total_ms, 655_350);
+    let info = inspect_apng_file(&path).unwrap();
+    assert_eq!(info.frames, 1);
+    assert_eq!(info.total_ms, 655_350);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_delay_past_the_maximum_is_refused() {
+    let dir = scratch("apng-too-long");
+    let path = dir.join("long.apng");
+    let red = solid([255, 0, 0]);
+    let options = StreamOptions {
+        format: OutputFormat::Apng,
+        width: 4,
+        height: 3,
+        loop_count: 0,
+        colors: 255,
+        dither: Dither::None,
+        total_ms: 655_360,
+    };
+    let mut stream = stream_output(&path, &[], options).unwrap();
+    stream.push(0, 0, &red).unwrap();
+    let err = stream.finish().unwrap_err();
+    assert!(err.to_string().contains("655360"), "{err}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn a_corrupt_chunk_is_caught_before_the_file_is_accepted() {
     let dir = scratch("apng-corrupt");
     let path = dir.join("out.png");
