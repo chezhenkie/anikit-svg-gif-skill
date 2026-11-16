@@ -55,6 +55,7 @@ The binary is produced by the `anikit-cli` package; the other packages are libra
 | target | artifact | notes |
 |---|---|---|
 | Windows x86_64 | anikit.exe | the installed skill path on Windows |
+| Windows arm | anikit.exe | the installed skill path on an arm Windows host |
 | Linux x86_64, glibc | anikit | glibc distributions |
 | Linux x86_64, musl | anikit | static, runs on Alpine and in scratch containers |
 | Linux arm, musl | anikit | static, same rules as x86_64 musl |
@@ -66,4 +67,4 @@ The text and images routes must build for every target with no system libraries 
 
 Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector and tween routes use it.
 
-The workflow builds Windows x86_64, Linux x86_64 static musl, Linux arm static musl and macOS arm, and attaches each under its asset name. A host with no matching asset is reported as unsupported.
+The workflow builds Windows x86_64, Windows arm, Linux x86_64 static musl, Linux arm static musl and macOS arm, and attaches each under its asset name. A host with no matching asset is reported as unsupported.

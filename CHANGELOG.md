@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.1
+
+### New features
+
+#### Windows arm
+
+* `anikit-windows-arm.exe`, built on the Windows arm runner.
+
+### Changes
+
+* CI builds the Windows arm binary and runs the text route to GIF and APNG and the tween route to SVG from it.
+* The release matrix carries five assets: Linux x86_64, Linux arm, Windows x86_64, Windows arm and macOS arm.
+
 ## 0.3.0
 
 ### New features

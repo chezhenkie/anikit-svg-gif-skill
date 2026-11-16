@@ -25,6 +25,10 @@ jobs:
             target: x86_64-pc-windows-msvc
             asset: anikit-windows-x86_64.exe
             binary: rust/target/x86_64-pc-windows-msvc/release/anikit.exe
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            asset: anikit-windows-arm.exe
+            binary: rust/target/aarch64-pc-windows-msvc/release/anikit.exe
           - os: macos-latest
             target: aarch64-apple-darwin
             asset: anikit-macos-arm

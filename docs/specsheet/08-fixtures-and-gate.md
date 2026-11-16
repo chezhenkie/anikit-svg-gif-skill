@@ -45,7 +45,7 @@ The Rust gate adds:
 - The hygiene checks ported from the Python gate: ASCII only, LF only, no secrets, no machine paths, and every markdown link resolving. They live in `rust/crates/anikit-cli/tests/repo_hygiene.rs`.
 - A memory check: a 1000-frame run stays within the stated multiple of a 100-frame run (part 03). The test is `tests/memory.rs` in `anikit-core` and reads the peak resident set from the operating system.
 
-The Rust gate runs in GitHub Actions on every push to `main` and every pull request (`.github/workflows/ci.yml`), on Linux x86_64, Linux arm, Windows and macOS arm. The arm and macOS jobs build the release binary, and the arm job runs the text and images routes from it. A developer machine is a convenience, not the gate: a release asset is only ever produced by `.github/workflows/release.yml` on a tag (09, row 20).
+The Rust gate runs in GitHub Actions on every push to `main` and every pull request (`.github/workflows/ci.yml`), on Linux x86_64, Linux arm, Windows x86_64, Windows arm and macOS arm. The arm jobs build the release binary; the Linux arm job runs the text and images routes from it, and the Windows arm job runs the text route to GIF and APNG and the tween route to SVG. A developer machine is a convenience, not the gate: a release asset is only ever produced by `.github/workflows/release.yml` on a tag (09, row 20).
 
 ## 8.4 Deletion order
 
