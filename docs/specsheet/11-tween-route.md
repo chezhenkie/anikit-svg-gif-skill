@@ -47,7 +47,7 @@ Root fields: `version` (1), `canvas`, `timing`, `tracks`, `layers`. Only `timing
 | `loop` | string | `once` | `once`, `cycle` or `pingpong`, the time map of 04.5 |
 | `rate` | number | `1.0` | finite; negative reverses time, zero freezes it |
 
-`loop` is the time map, not the GIF repeat count. The repeat count is `--loop`.
+`loop` is the time map, not the GIF repeat count. The repeat count is `--loop`. A negative `rate` mirrors time; under `once` it clamps to the start, so reverse playback belongs with `cycle` or `pingpong`.
 
 ### 11.2.2 Colour
 
