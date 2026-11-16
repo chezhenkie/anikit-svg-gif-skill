@@ -7,7 +7,7 @@
 //! the manifest agree.
 
 use std::fs::{self, File};
-use std::io::BufReader;
+use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use anikit_core::{Error, Frame, Result, check_canvas, check_frames};
@@ -399,6 +399,13 @@ fn read_apng(input: &Path, background: [u8; 3], writer: &mut FolderWriter) -> Re
     }
     check_canvas(width, height)?;
     check_frames(num_frames as u64)?;
+    let carried = count_animation_frames(input)?;
+    if carried > num_frames {
+        return Err(Error::invalid(format!(
+            "{} carries {carried} frames but its acTL declares {num_frames}",
+            input.display()
+        )));
+    }
     let (color, depth) = reader.output_color_type();
     if depth != BitDepth::Eight {
         return Err(Error::invalid(format!(
@@ -471,6 +478,39 @@ fn read_apng(input: &Path, background: [u8; 3], writer: &mut FolderWriter) -> Re
 
 fn decode_error(input: &Path, err: png::DecodingError) -> Error {
     Error::invalid(format!("cannot decode {}: {err}", input.display()))
+}
+
+/// Count the fcTL chunks a PNG carries, without decoding any pixels.
+///
+/// APNG's frame count lives in `acTL`, but the file may carry more or fewer
+/// frame chunks. The decoder stops at the declared count, so the chunk stream
+/// is walked here to catch a file that carries more.
+fn count_animation_frames(input: &Path) -> Result<u32> {
+    let mut file = BufReader::new(
+        File::open(input)
+            .map_err(|err| Error::io(format!("cannot read {}: {err}", input.display())))?,
+    );
+    let mut signature = [0u8; 8];
+    file.read_exact(&mut signature)
+        .map_err(|err| Error::invalid(format!("cannot read {}: {err}", input.display())))?;
+    let mut frames = 0u32;
+    loop {
+        let mut head = [0u8; 8];
+        file.read_exact(&mut head).map_err(|_| {
+            Error::invalid(format!("{} ends before its IEND chunk", input.display()))
+        })?;
+        let length = u32::from_be_bytes([head[0], head[1], head[2], head[3]]) as u64;
+        let kind = &head[4..8];
+        if kind == b"fcTL" {
+            frames = frames.saturating_add(1);
+        }
+        if kind == b"IEND" {
+            break;
+        }
+        file.seek(SeekFrom::Current((length + 4) as i64))
+            .map_err(|err| Error::invalid(format!("cannot read {}: {err}", input.display())))?;
+    }
+    Ok(frames)
 }
 
 fn delay_ms(numerator: u16, denominator: u16) -> u32 {
@@ -828,6 +868,42 @@ mod tests {
         assert!(err.to_string().contains("2147483647"), "{err}");
         assert!(err.to_string().contains("100000"), "{err}");
         assert!(!dir.join("apng-frames").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_apng_with_more_frames_than_actl_is_refused() {
+        let dir = scratch("actl-short");
+        let source = dir.join("source.apng");
+        let red = solid([255, 0, 0]);
+        let green = solid([0, 255, 0]);
+        let blue = solid([0, 0, 255]);
+        let options = StreamOptions {
+            format: OutputFormat::Apng,
+            width: 8,
+            height: 8,
+            loop_count: 0,
+            colors: 255,
+            dither: Dither::None,
+            total_ms: 300,
+        };
+        let mut stream = stream_output(&source, &[], options).unwrap();
+        stream.push(0, 0, &red).unwrap();
+        stream.push(1, 100_000, &green).unwrap();
+        stream.push(2, 200_000, &blue).unwrap();
+        stream.finish().unwrap();
+
+        let correct = dir.join("correct");
+        let info = extract(&source, &correct, [0, 0, 0]).unwrap();
+        assert_eq!(info.frames, 3);
+
+        patch_apng_frames(&source, 1);
+        let folder = dir.join("patched");
+        let err = extract(&source, &folder, [0, 0, 0]).unwrap_err();
+        assert!(err.to_string().contains("carries 3 frames"), "{err}");
+        assert!(err.to_string().contains("declares 1"), "{err}");
+        assert!(!folder.exists());
+        assert!(!dir.join("patched.tmp").exists());
         let _ = fs::remove_dir_all(&dir);
     }
 
