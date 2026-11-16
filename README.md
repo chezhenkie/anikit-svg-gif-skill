@@ -63,7 +63,7 @@ The skill payload is in `agent-skill/`. Clone the repository, download the asset
 
 ```sh
 git clone https://github.com/chezhenkie/anikit-svg-gif-skill.git
-gh release download v0.5.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
+gh release download v0.6.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
 chmod +x agent-skill/bin/anikit
 ```
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0
+
+### Changes
+
+* Tween path pairs whose subpath counts and closed flags match but whose curve counts differ resample by arc length instead of failing. Each subpath pair is sampled into a common polyline, a closed ring searches every start offset, the whole path reverses or not as one decision, and prepare reports `PathFidelity::Exact` or `Resampled { points }`. A subpath count or closed-flag mismatch still fails, and no route draws path tracks yet.
+* The fallback samples at a 4 px chord clamped to 32 and 1024 points and writes a straight cubic per chord from a warm buffer, so a matched curve count keeps the exact cubic morph. Part 06 and decision row 27 record the rule.
+* The sample block is rebuilt: a dune triptych for the image route, an authored pulse monitor for the vector route and an orrery for the tween route, all at 480x270, with loop seams fixed by choosing rates that divide the duration.
+* Four kinetic studies join the samples as white line work on black: a ball drop with decaying bounces, a Newton's cradle, a leap with a lagging antenna and a damped travelling wave, all generated from JSON timelines with computed physics.
+* `tools/make_docs.py` writes ten samples and needs a browser. The README and `docs/index.md` carry the same 2x2 sample block.
+* CI uses the Node 24 majors of checkout, upload-artifact and download-artifact. This release is the first to exercise the upload and download pair.
+* `REQUIREMENTS.md` records the hosts, per-route browser needs, input formats, build requirements, disk and memory, and limits. The README leads with the animation engine and the JSON timeline.
+
 ## 0.5.0
 
 ### Changes
