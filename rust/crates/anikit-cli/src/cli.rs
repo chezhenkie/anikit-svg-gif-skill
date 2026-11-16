@@ -223,6 +223,7 @@ fn ascii(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_ascii(args)?;
+    check_colors(args.colors)?;
     let canvas = match (args.width, args.height) {
         (Some(width), Some(height)) => Some((width, height)),
         (None, None) => None,
@@ -330,6 +331,7 @@ fn images(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_images(args)?;
+    check_colors(args.colors)?;
     check_preview(args.preview.as_deref(), &args.out)?;
     let rendered = if let Some(path) = &args.timing {
         let mut refused = Vec::new();
@@ -534,6 +536,7 @@ fn vector(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_vector(args)?;
+    check_colors(args.colors)?;
     check_preview(args.preview.as_deref(), &args.out)?;
     let options = VectorOptions {
         width: args.width,
@@ -571,6 +574,7 @@ fn tween(args: &[String]) -> Result<()> {
         return Ok(());
     }
     let args = parse_tween(args)?;
+    check_colors(args.colors)?;
     let format = OutputFormat::from_path(&args.out)?;
     if format == OutputFormat::Svg && args.preview.is_some() {
         return Err(Error::invalid("--preview needs a frame-based output"));
@@ -642,6 +646,17 @@ fn file_name(path: &Path) -> String {
     path.file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string())
+}
+
+/// The palette size is checked for every route that accepts the flag, so a
+/// value the GIF path refuses does not pass on APNG or the SVG export.
+fn check_colors(colors: usize) -> Result<()> {
+    if !(2..=255).contains(&colors) {
+        return Err(Error::invalid(format!(
+            "--colors must be between 2 and 255, got {colors}"
+        )));
+    }
+    Ok(())
 }
 
 /// The preview must not be the output file, which it would replace.
@@ -1335,6 +1350,34 @@ mod tests {
         .unwrap();
         assert!(preview.exists());
         assert_eq!(&std::fs::read(&out).unwrap()[..3], b"GIF");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_palette_size_is_checked_on_every_output() {
+        let dir = scratch("colors-check");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "ok\n").unwrap();
+        for ending in ["gif", "png"] {
+            let out = dir.join(format!("out.{ending}"));
+            for bad in ["1", "256"] {
+                let err = run(&args(&[
+                    "ascii",
+                    input.to_str().unwrap(),
+                    "-o",
+                    out.to_str().unwrap(),
+                    "--colors",
+                    bad,
+                ]))
+                .unwrap_err();
+                assert!(err.to_string().contains("--colors"), "{err}");
+                assert!(!out.exists());
+            }
+        }
+        assert!(check_colors(2).is_ok());
+        assert!(check_colors(255).is_ok());
+        assert!(check_colors(1).is_err());
+        assert!(check_colors(256).is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
