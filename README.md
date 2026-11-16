@@ -174,3 +174,5 @@ The suite covers the GIF and APNG writers, timing, the four exported fixtures an
 ## License
 
 MIT
+
+The binary links third-party crates under their own licences; `anikit --licences` prints the list with every licence text, and the same text is in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).

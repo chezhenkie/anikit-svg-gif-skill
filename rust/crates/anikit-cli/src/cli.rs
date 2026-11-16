@@ -30,6 +30,10 @@ routes:
   import   an animated SVG written as a JSON timeline
   extract  frames of a GIF or APNG written to a folder with a manifest
 
+other:
+  --licences  print the third-party notices
+  -h, --help  print this text
+
 ascii options:
   -o, --out PATH      output .gif or .png/.apng (default ascii.gif)
   --font PATH         monospace TrueType face to use instead of the bundled one
@@ -178,6 +182,9 @@ struct Import {
 }
 
 /// Run one command line.
+/// The third-party notices, embedded so every binary carries them.
+const NOTICES: &str = include_str!("../../../../THIRD-PARTY-NOTICES.txt");
+
 pub fn run(args: &[String]) -> Result<()> {
     let Some(command) = args.first() else {
         return Err(Error::invalid(
@@ -187,6 +194,10 @@ pub fn run(args: &[String]) -> Result<()> {
     match command.as_str() {
         "-h" | "--help" | "help" => {
             println!("{USAGE}");
+            Ok(())
+        }
+        "--licences" => {
+            print!("{NOTICES}");
             Ok(())
         }
         "ascii" => ascii(&args[1..]),
@@ -1380,6 +1391,15 @@ mod tests {
         assert!(check_colors(1).is_err());
         assert!(check_colors(256).is_err());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_embedded_notices_carry_the_licences_and_crates() {
+        assert!(NOTICES.contains("Apache License"));
+        assert!(NOTICES.contains("MIT License"));
+        assert!(NOTICES.contains("  png 0.18.1:"));
+        assert!(NOTICES.contains("  kamadak-exif 0.6.2: BSD-2-Clause"));
+        run(&args(&["--licences"])).unwrap();
     }
 
     #[test]

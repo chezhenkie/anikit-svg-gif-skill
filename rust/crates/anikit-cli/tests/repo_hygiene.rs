@@ -166,6 +166,44 @@ fn link_targets(text: &str) -> Vec<&str> {
 }
 
 #[test]
+fn the_third_party_notices_match_the_lock_file() {
+    let notices =
+        std::fs::read_to_string(root().join("THIRD-PARTY-NOTICES.txt")).expect("notices file");
+    let lock = std::fs::read_to_string(root().join("rust/Cargo.lock")).expect("Cargo.lock");
+    let mut resolved = std::collections::BTreeSet::new();
+    for line in lock.lines() {
+        if let Some(rest) = line.strip_prefix("name = \"") {
+            let name = rest.trim_end_matches('"');
+            if !name.starts_with("anikit-") {
+                resolved.insert(name.to_string());
+            }
+        }
+    }
+    let mut listed = std::collections::BTreeSet::new();
+    let mut inside = false;
+    for line in notices.lines() {
+        if line == "Crates:" {
+            inside = true;
+            continue;
+        }
+        if line == "(end)" {
+            break;
+        }
+        if inside {
+            if let Some(name) = line.trim_start().split_whitespace().next() {
+                listed.insert(name.to_string());
+            }
+        }
+    }
+    let missing: Vec<&String> = resolved.difference(&listed).collect();
+    assert!(missing.is_empty(), "missing from the notices: {missing:?}");
+    let stale: Vec<&String> = listed.difference(&resolved).collect();
+    assert!(stale.is_empty(), "listed but not resolved: {stale:?}");
+    assert!(notices.contains("Apache License"));
+    assert!(notices.contains("MIT License"));
+}
+
+#[test]
 fn the_skill_header_names_the_skill_and_a_version() {
     let text = std::fs::read_to_string(root().join("agent-skill/SKILL.md")).expect("SKILL.md");
     let mut lines = text.lines();
