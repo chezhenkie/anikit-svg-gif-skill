@@ -23,6 +23,8 @@ The import route has no fixture folder either. Its tests build a CSS drawing and
 
 A fixture is compared structurally, never byte for byte against the Python output: frame count, delays and size. Text and images record a per-frame `rust_hash`, FNV-1a 64 over the decoded RGBA canvas, from the ported code; any pixel change fails the comparison, and `ANIKIT_BLESS_FIXTURES=1` rewrites the hashes when the change is intended. The Python `hash=` stays in the manifest as provenance. Vector and tween record pixel hashes that the port reproduces, so those are compared directly. The Rust encoder may differ in compression as long as the decoded frames match.
 
+The vector manifest records the browser build beside its hashes, Chromium 146.0.7680.71, and the note that the port reproduces those pixels in later builds. A hash that moves on a new browser build is regenerated deliberately: the new build is recorded in the manifest beside the new hashes, and the comparison is never loosened to absorb the change.
+
 ## 8.2 Structural checks
 
 Every route is checked for the same facts in the Rust gate:
