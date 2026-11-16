@@ -26,7 +26,7 @@ Four studies on the rules in [kinetic-motion.md](agent-skill/references/kinetic-
 
 | Gravity | Momentum |
 |:---:|:---:|
-| [<img src="docs/demo-kinetic-drop.gif" width="190" alt="Two balls falling and bouncing with decaying heights">](docs/demo-kinetic-drop.gif) | [<img src="docs/demo-kinetic-cradle.gif" width="190" alt="Five balls exchanging an impulse in a cradle">](docs/demo-kinetic-cradle.gif) |
+| [<img src="docs/demo-kinetic-drop.gif" width="190" alt="A ball entering from the left and bouncing twice across the frame">](docs/demo-kinetic-drop.gif) | [<img src="docs/demo-kinetic-cradle.gif" width="190" alt="Five balls exchanging an impulse in a cradle">](docs/demo-kinetic-cradle.gif) |
 | Ballistic | Follow-through |
 | [<img src="docs/demo-kinetic-leap.gif" width="190" alt="An outlined box leaping between two ledges">](docs/demo-kinetic-leap.gif) | [<img src="docs/demo-kinetic-wave.gif" width="190" alt="A damped pulse travelling through hanging rods">](docs/demo-kinetic-wave.gif) |
 

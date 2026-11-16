@@ -18,7 +18,7 @@ The keyframe sample is also written as [APNG](demo-tween.apng) and as an [animat
 
 | Gravity | Momentum |
 |:---:|:---:|
-| [<img src="demo-kinetic-drop.gif" width="190" alt="Two balls falling and bouncing with decaying heights">](demo-kinetic-drop.gif) | [<img src="demo-kinetic-cradle.gif" width="190" alt="Five balls exchanging an impulse in a cradle">](demo-kinetic-cradle.gif) |
+| [<img src="demo-kinetic-drop.gif" width="190" alt="A ball entering from the left and bouncing twice across the frame">](demo-kinetic-drop.gif) | [<img src="demo-kinetic-cradle.gif" width="190" alt="Five balls exchanging an impulse in a cradle">](demo-kinetic-cradle.gif) |
 | Ballistic | Follow-through |
 | [<img src="demo-kinetic-leap.gif" width="190" alt="An outlined box leaping between two ledges">](demo-kinetic-leap.gif) | [<img src="demo-kinetic-wave.gif" width="190" alt="A damped pulse travelling through hanging rods">](demo-kinetic-wave.gif) |
 

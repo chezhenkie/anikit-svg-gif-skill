@@ -226,131 +226,90 @@ def r3(value):
     return round(value, 3)
 
 
-def drop_events(release, restitution, hold_first, hold_later, height, gravity=1400.0):
-    """Flights and contacts under gravity, times in milliseconds."""
-    events = [("hold", 0, release, height)]
-    t = release
-    t_fall = 1000.0 * math.sqrt(2 * height / gravity)
-    events.append(("fall", t, t + t_fall, height))
-    t += t_fall
-    events.append(("hold", t, t + hold_first, 0.0))
-    t += hold_first
-    apex = height * restitution ** 2
-    while apex > 1.0:
-        flight = 1000.0 * 2 * math.sqrt(2 * apex / gravity)
-        events.append(("bounce", t, t + flight, apex))
-        t += flight
-        events.append(("hold", t, t + hold_later, 0.0))
-        t += hold_later
-        apex *= restitution ** 2
-    events.append(("hold", t, 10 ** 9, 0.0))
-    return events
-
-
-def drop_height(events, t):
-    for kind, start, end, apex in events:
-        if start <= t < end:
-            if kind == "hold":
-                return apex
-            u = (t - start) / (end - start)
-            if kind == "fall":
-                return apex * (1 - u * u)
-            return apex * 4 * u * (1 - u)
-    return 0.0
-
-
-def contact_at(events, t):
-    return any(kind == "hold" and apex == 0 and start <= t < end
-               for kind, start, end, apex in events)
-
-
-def contacts(events):
-    return [start for kind, start, _, apex in events if kind == "hold" and apex == 0]
-
-
-def contact_start(events, t):
-    for kind, start, end, apex in events:
-        if kind == "hold" and apex == 0 and start <= t < end:
-            return start
-    return None
-
-
-def drop_track(name, radius, floor, top, events, squash, times):
-    keys = []
-    for index, t in enumerate(times):
-        start = contact_start(events, t)
-        after = index > 0 and contact_at(events, times[index - 1]) and start is None
-        if start is not None and t < start + 2 * 40:
-            sy = squash
-        elif start is not None:
-            sy = 1.0
-        elif after:
-            sy = 1.0 + (1.0 - squash) * 0.6
-        else:
-            sy = 1.0
-        sx = 1.0 / sy
-        height = drop_height(events, t)
-        if start is not None:
-            centre = floor - radius * sy
-        else:
-            centre = floor - radius - height
-        keys.append({"t": t, "translate": [0, r2(centre - top)],
-                     "scale": [round(sx, 4), round(sy, 4)], "easing": "linear"})
-    return {"id": name, "kind": "svg.transform", "src": "drop.svg#%s" % name, "keys": keys}
-
-
-def shock_tracks(name, impact_times, times):
-    base = {"src": "drop.svg#" + name}
-    opacity = []
-    scale = []
-    for t in times:
-        fade = 0.0
-        grow = 0.4
-        for impact in impact_times:
-            if impact <= t < impact + 260:
-                fade = max(fade, 0.9 * (1 - (t - impact) / 260.0))
-                grow = max(grow, 0.4 + 1.4 * (t - impact) / 260.0)
-        opacity.append({"t": t, "value": r3(fade)})
-        scale.append({"t": t, "scale": [r3(grow), r3(grow)]})
-    return [
-        dict(base, id=name + "-opacity", kind="svg.opacity", keys=opacity),
-        dict(base, id=name + "-scale", kind="svg.transform", keys=scale),
-    ]
-
-
 def kinetic_drop():
-    """Gravity, contact squash and bounce decay at two restitutions."""
-    duration = 2800
-    release = 200
+    """One ball entering left, two decaying bounces, exit right."""
+    duration = 1500
     floor = 232.0
-    radius = 32.0
-    height = 150.0
-    specs = [
-        ("ball-a", 150.0, 0.55, 80, 40, 0.78),
-        ("ball-b", 330.0, 0.35, 120, 40, 0.84),
-    ]
-    events = {n: drop_events(release, e, hf, hl, height) for n, _, e, hf, hl, _ in specs}
+    radius = 28.0
+    start = (-40.0, 60.0)
+    speed = 430.0
+    gravity = 1400.0
+    restitution = 0.55
+    drop = floor - radius - start[1]
+    t_fall = 1000.0 * math.sqrt(2 * drop / gravity)
+    speed_down = gravity * t_fall / 1000.0
+    bounce_one = speed_down * restitution
+    flight_one = 1000.0 * 2 * bounce_one / gravity
+    hold_one, hold_two = 80.0, 40.0
+    bounce_two = bounce_one * restitution
+    flight_two = 1000.0 * 2 * bounce_two / gravity
+    t1 = t_fall
+    t2 = t1 + hold_one + flight_one
+    t3 = t2 + hold_two + flight_two
+
+    def state(t):
+        x = start[0] + speed * t / 1000.0
+        if t < t1:
+            u = t / 1000.0
+            return x, start[1] + 0.5 * gravity * u * u, 0
+        if t < t1 + hold_one:
+            return x, floor - radius, 1
+        if t < t2:
+            u = (t - t1 - hold_one) / 1000.0
+            return x, floor - radius - (bounce_one * u - 0.5 * gravity * u * u), 0
+        if t < t2 + hold_two:
+            return x, floor - radius, 2
+        if t < t3:
+            u = (t - t2 - hold_two) / 1000.0
+            return x, floor - radius - (bounce_two * u - 0.5 * gravity * u * u), 0
+        return x, floor - radius, 0
+
+    x1 = start[0] + speed * t1 / 1000.0
+    x2 = start[0] + speed * t2 / 1000.0
     drawing = (
         '<line x1="36" y1="%s" x2="444" y2="%s" stroke="#ffffff" stroke-width="2.5" '
         'stroke-linecap="round"/>'
-        '<g id="stage">' % (floor, floor)
+        '<g transform="translate(%s,%s)"><circle id="ball" r="%s" fill="none" '
+        'stroke="#ffffff" stroke-width="3.5"/></g>'
+        '<g transform="translate(%s,%s)"><ellipse id="shock-one" rx="36" ry="9" '
+        'fill="none" stroke="#ffffff" stroke-width="2" opacity="0"/></g>'
+        '<g transform="translate(%s,%s)"><ellipse id="shock-two" rx="36" ry="9" '
+        'fill="none" stroke="#ffffff" stroke-width="2" opacity="0"/></g>'
+        % (floor, floor, start[0], start[1], radius, x1, floor - 2, x2, floor - 2)
     )
-    for name, x, _, _, _, _ in specs:
-        drawing += ('<g transform="translate(%s,50)"><circle id="%s" r="%s" fill="none" '
-                    'stroke="#ffffff" stroke-width="3.5"/></g>'
-                    % (x, name, radius))
-        drawing += ('<g transform="translate(%s,%s)"><ellipse id="%s-ring" rx="40" ry="9" '
-                    'fill="none" stroke="#ffffff" stroke-width="2" opacity="0"/></g>'
-                    % (x, floor - 2, name))
-    drawing += "</g>"
     times = kinetic_frames(duration)
-    tracks = []
-    for name, _, _, _, _, squash in specs:
-        tracks.append(drop_track(name, radius, floor, 50.0, events[name], squash, times))
-        tracks.extend(shock_tracks(name + "-ring", contacts(events[name]), times))
-    tracks.append({"id": "stage-fade", "kind": "svg.opacity", "src": "drop.svg#stage",
-                   "keys": [{"t": 0, "value": 0}, {"t": 200, "value": 1},
-                            {"t": 2560, "value": 1}, {"t": 2800, "value": 0}]})
+    keys = []
+    previous = 0
+    for t in times:
+        x, y, contact = state(t)
+        if contact:
+            sy = 0.78 if contact == 1 else 0.84
+        elif previous:
+            sy = 1.0 + (0.22 if previous == 1 else 0.16) * 0.6
+        else:
+            sy = 1.0
+        if contact:
+            y = floor - radius * sy
+        sx = 1.0 / sy
+        keys.append({"t": t, "translate": [r2(x - start[0]), r2(y - start[1])],
+                     "scale": [round(sx, 4), round(sy, 4)], "easing": "linear"})
+        previous = contact
+    tracks = [{"id": "ball", "kind": "svg.transform", "src": "drop.svg#ball", "keys": keys}]
+    for name, impact in (("shock-one", t1), ("shock-two", t2)):
+        opacity = []
+        scale = []
+        for t in times:
+            fade = 0.0
+            grow = 0.4
+            if impact <= t < impact + 260:
+                fade = 0.9 * (1 - (t - impact) / 260.0)
+                grow = 0.4 + 1.4 * (t - impact) / 260.0
+            opacity.append({"t": t, "value": r3(fade)})
+            scale.append({"t": t, "scale": [r3(grow), r3(grow)]})
+        tracks.append({"id": name + "-opacity", "kind": "svg.opacity",
+                       "src": "drop.svg#" + name, "keys": opacity})
+        tracks.append({"id": name + "-scale", "kind": "svg.transform",
+                       "src": "drop.svg#" + name, "keys": scale})
     kinetic_render("drop", drawing, kinetic_scene(duration, tracks))
 
 
