@@ -11,7 +11,7 @@
 
 ## Short description
 
-The skill is an animation maker and translator with a keyframe engine at its centre. Four kinds of input - text frames, an image folder, an SVG or HTML page, a static drawing with a JSON timeline - run through one pipeline: one palette sampled across the loop, delays on the 10 ms grid, identical frames merged, the file written under a temp name and verified before it replaces the target. GIF is the output that ships; the JSON timeline and the tween crate are the part the other directions build on.
+The skill is an animation maker with a keyframe engine at its centre. Four kinds of input - text frames, an image folder, an SVG or HTML page, a static drawing with a JSON timeline - run through one pipeline: one palette sampled across the loop, delays on the 10 ms grid, identical frames merged, the file written under a temp name and verified before it replaces the target. GIF is the output that ships; the JSON timeline and the tween crate are the part the other directions build on.
 
 The Rust binary keeps the commands and the visible behaviour, streams frames instead of holding them, and adds a tween crate so keyframes, easing and layered animation can be evaluated without a browser. The tween route is the first consumer: it evaluates the timeline and draws the result into an SVG page. Multi-format conversion between animated GIF, SVG animation and image folders follows the tween crate; it is not specified here beyond the rules it must obey.
 

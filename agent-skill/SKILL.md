@@ -8,7 +8,7 @@ metadata:
 
 # anikit
 
-One binary, four routes, one assembly core. Pick the route that matches the input.
+The binary has four routes and one assembly core; pick the route that matches the input.
 
 | Input | Command | Motion |
 |---|---|---|
