@@ -573,6 +573,33 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    #[test]
+    fn a_percentage_drawing_keeps_its_viewbox_ratio() {
+        let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
+        if discover(None).is_err() {
+            eprintln!("skipping: no Chromium based browser installed");
+            return;
+        }
+        let dir = scratch("percentage");
+        let input = dir.join("art.svg");
+        std::fs::write(
+            &input,
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 400 200"><rect width="400" height="200" fill="#ffffff"/></svg>"##,
+        )
+        .unwrap();
+        let out = dir.join("out.gif");
+        let rendered = write_animation(&input, &out, &options()).unwrap();
+        assert_eq!(
+            (rendered.summary.width, rendered.summary.height),
+            (400, 200)
+        );
+        let frames = decoded(&out);
+        assert_eq!(frames.len(), 1, "a static drawing merges its frames");
+        assert_eq!(rendered.summary.total_ms, 1000);
+        assert!(!dir.join("out.tmp.gif").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// A page with no intrinsic size, so the flags set the canvas.
     const PAGE: &str = r##"<!doctype html><html><head><meta charset="utf-8">
 <style>html,body{margin:0;padding:0;background:#ffffff}#box{width:40px;height:40px;margin:20px;background:#c02020}</style>

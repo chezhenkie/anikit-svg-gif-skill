@@ -40,13 +40,15 @@ impl Preset {
     }
 }
 
-/// The size an SVG declares, in the units it declares it.
+/// The size an SVG declares, in CSS pixels, with percentages unresolved.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct SvgSize {
     pub width: Option<f64>,
     pub height: Option<f64>,
     pub view_width: Option<f64>,
     pub view_height: Option<f64>,
+    pub width_percent: bool,
+    pub height_percent: bool,
 }
 
 /// Read width, height and viewBox from the root svg element.
@@ -75,8 +77,18 @@ pub fn svg_size(text: &str) -> Result<SvgSize> {
     let mut size = SvgSize::default();
     for (name, value) in attributes(tag) {
         match name.as_str() {
-            "width" => size.width = number(&value),
-            "height" => size.height = number(&value),
+            "width" => {
+                if let Some((number, percent)) = length(&value) {
+                    size.width = Some(number);
+                    size.width_percent = percent;
+                }
+            }
+            "height" => {
+                if let Some((number, percent)) = length(&value) {
+                    size.height = Some(number);
+                    size.height_percent = percent;
+                }
+            }
             "viewbox" => {
                 let parts: Vec<&str> = value
                     .split(|c: char| c == ',' || c.is_whitespace())
@@ -143,8 +155,30 @@ fn attributes(tag: &str) -> Vec<(String, String)> {
     out
 }
 
-/// A length as the frozen Python reads it: digits, then an optional fraction.
-fn number(value: &str) -> Option<f64> {
+/// A length in CSS pixels; a percentage stays as its number and is flagged.
+///
+/// Unitless numbers are pixels. The absolute units follow CSS: 96 px per inch,
+/// 2.54 cm per inch, 25.4 mm per inch, 12 pt per pica and 16 px per pica.
+fn length(value: &str) -> Option<(f64, bool)> {
+    let text = value.trim_start();
+    let (number, used) = number_at(text)?;
+    let unit = text[used..].trim().to_ascii_lowercase();
+    let pixels = match unit.as_str() {
+        "" | "px" => number,
+        "pt" => number * 4.0 / 3.0,
+        "pc" => number * 16.0,
+        "mm" => number * 96.0 / 25.4,
+        "cm" => number * 96.0 / 2.54,
+        "in" => number * 96.0,
+        "%" => return Some((number, true)),
+        _ => return None,
+    };
+    Some((pixels, false))
+}
+
+/// A number as the frozen Python reads it: digits, then an optional fraction.
+/// The returned count is the bytes it used.
+fn number_at(value: &str) -> Option<(f64, usize)> {
     let text = value.trim_start();
     let bytes = text.as_bytes();
     let mut digits = 0;
@@ -164,7 +198,7 @@ fn number(value: &str) -> Option<f64> {
             end = frac;
         }
     }
-    text[..end].parse().ok()
+    text[..end].parse().ok().map(|value| (value, end))
 }
 
 /// Python's round: halves go to the even side.
@@ -192,8 +226,30 @@ pub fn resolve_size(
         return Ok((width.unwrap_or(800), height.unwrap_or(600)));
     };
     let size = svg_size(text)?;
-    let base_w = size.width.or(size.view_width);
-    let base_h = size.height.or(size.view_height);
+    let view_w = size.view_width.filter(|value| *value > 0.0);
+    let view_h = size.view_height.filter(|value| *value > 0.0);
+    // A fixed length is in pixels; a percentage resolves against the viewBox
+    // side, then the other explicit side, then the 800x600 fallback.
+    let fixed_w = if size.width_percent { None } else { size.width };
+    let fixed_h = if size.height_percent {
+        None
+    } else {
+        size.height
+    };
+    let base_w = if size.width_percent {
+        size.width
+            .map(|value| value / 100.0 * view_w.or(fixed_h).unwrap_or(800.0))
+    } else {
+        fixed_w
+    };
+    let base_h = if size.height_percent {
+        size.height
+            .map(|value| value / 100.0 * view_h.or(fixed_w).unwrap_or(600.0))
+    } else {
+        fixed_h
+    };
+    let base_w = base_w.or(view_w);
+    let base_h = base_h.or(view_h);
     let scaled = |value: f64| (round_half_even(value) as i64).max(8) as u32;
     match (width, height) {
         (Some(width), Some(height)) => Ok((width, height)),
@@ -386,6 +442,39 @@ mod tests {
         let size = svg_size("<svg viewBox='0 0 10 10'></svg>").unwrap();
         assert_eq!(size.width, None);
         assert_eq!(size.view_width, Some(10.0));
+    }
+
+    #[test]
+    fn lengths_carry_units_and_percentages() {
+        let size = svg_size("<svg width='10cm' height='1in'></svg>").unwrap();
+        assert!((size.width.unwrap() - 377.95).abs() < 0.01);
+        assert_eq!(size.height, Some(96.0));
+        let size = svg_size("<svg width='100%' height='50%' viewBox='0 0 400 200'></svg>").unwrap();
+        assert_eq!(size.width, Some(100.0));
+        assert!(size.width_percent);
+        assert!(size.height_percent);
+    }
+
+    #[test]
+    fn a_percentage_resolves_against_the_viewbox() {
+        let svg = Some("<svg width='100%' height='100%' viewBox='0 0 400 200'></svg>");
+        assert_eq!(resolve_size(svg, None, None).unwrap(), (400, 200));
+    }
+
+    #[test]
+    fn a_percentage_without_a_viewbox_uses_the_other_side() {
+        let svg = Some("<svg width='50%' height='100'></svg>");
+        assert_eq!(resolve_size(svg, None, None).unwrap(), (50, 100));
+        let svg = Some("<svg width='200' height='25%'></svg>");
+        assert_eq!(resolve_size(svg, None, None).unwrap(), (200, 50));
+        let svg = Some("<svg width='50%' height='50%'></svg>");
+        assert_eq!(resolve_size(svg, None, None).unwrap(), (400, 300));
+    }
+
+    #[test]
+    fn centimetres_become_pixels() {
+        let svg = Some("<svg width='10cm' height='10cm'></svg>");
+        assert_eq!(resolve_size(svg, None, None).unwrap(), (378, 378));
     }
 
     #[test]
