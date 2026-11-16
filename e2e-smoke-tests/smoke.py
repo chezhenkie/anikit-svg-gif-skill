@@ -237,9 +237,11 @@ def main() -> int:
                 report.fail("import svg", "bad scene json")
             else:
                 report.ok("import svg", "3 tracks, 1.00 s, 120x80")
+                # The exported source holds its end pose for the last 100 ms, so
+                # the re-render merges the two identical tail frames.
                 case(report, "import render", binary,
                      ["tween", str(imported), "-o", str(out / "import.png")],
-                     out / "import.png", FRAMES, 25, (120, 80))
+                     out / "import.png", FRAMES, 24, (120, 80))
         else:
             report.skip("import svg", "tween svg missing")
             report.skip("import render", "tween svg missing")
