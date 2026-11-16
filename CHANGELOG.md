@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.0
+
+### Changes
+
+* Frame plans are built on cumulative time: the exact frame times `i * 1000 / fps` are snapped to the 10 ms grid and differenced, so a 12 fps plan alternates 80 and 90 ms and a 12-frame plan totals 1000 ms. The ASCII route uses the same rule, and the seam no longer depends on a rate that divides the duration.
+* The SVG export writes an explicit `100%` key that holds the last sample to the end, composes the timeline matrix left of each element's authored transform, and fails on a target id that is absent from the drawing.
+* A pingpong scene doubles its plan and its duration and keeps `infinite`, so the plan contains the mirrored half instead of relying on an alternating repeat.
+* The vector route captures at the resolved size times `--dpr`, so `--dpr 2` doubles both sides.
+* Import accepts fps 1, 2, 4, 5, 10, 20, 25 and 50, samples `animateMotion` through the element's current matrix, and reports `animateColor` as skipped because Chromium does not run it.
+* Every route checks the canvas (8 to 8192 px) and the frame count (up to 100000) before rendering. Extract checks the source header before allocating and refuses an APNG with more frame controls than its animation control declares.
+* The images route streams its sources one frame at a time, keeps at most 12 palette samples, and holds only the pair a crossfade blends, so peak memory follows the canvas rather than the input length.
+* The page never gets local file access, so a script in the drawing cannot read another local file. The browser starts with its own sandbox and is restarted with `--no-sandbox` only when it exits before opening its port. Temporary profile, page and log paths are drawn at random and created exclusively, and an Edge install on `PATH` is found.
+* GIF readback requires the trailer. A zero delay is refused, the APNG writer accepts the longest delay the field holds, removes its temp file when setup fails, and the time sums saturate or fail rather than wrap.
+* `--preview` cannot replace the output file, `--colors` is checked on every route, and a comma colour accepts spaces around its parts.
+* `anikit --licences` prints the third-party notices, which are also in `THIRD-PARTY-NOTICES.txt` and embedded in every binary.
+* The tween parser refuses `friction`, `squash` and `stretch` as not implemented, refuses a rate that cannot map the scene duration, and refuses a `contactHold` that overflows the plan.
+* A browser test fails when the host has no browser; `ANIKIT_SKIP_BROWSER_TESTS=1` turns those tests into a printed skip. CI runs clippy and the tests on the Windows arm job as well.
+* The ten samples are regenerated with the new timing; the dune triptych runs 5.36 s.
+
 ## 0.6.0
 
 ### Changes
