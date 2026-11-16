@@ -538,6 +538,10 @@ mod tests {
         opts.width = Some(9000);
         let err = write_animation(&input, &out, &opts).unwrap_err();
         assert!(err.to_string().contains("8192"), "{err}");
+        opts = options();
+        opts.duration = 1e9;
+        let err = write_animation(&input, &out, &opts).unwrap_err();
+        assert!(err.to_string().contains("100000"), "{err}");
         let huge = dir.join("huge.svg");
         std::fs::write(
             &huge,

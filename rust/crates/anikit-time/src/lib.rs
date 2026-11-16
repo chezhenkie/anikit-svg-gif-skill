@@ -2,7 +2,7 @@
 //!
 //! Time only. This crate holds no pixels and no property values.
 
-use anikit_core::{Error, MIN_DELAY_MS, Result, snap_total};
+use anikit_core::{Error, MIN_DELAY_MS, Result, check_frames, snap_total};
 
 /// The highest frame rate a GIF plays reliably.
 pub const MAX_FPS: f64 = 50.0;
@@ -44,6 +44,7 @@ impl FramePlan {
         if count == 0 {
             return Err(Error::time("frame count must be greater than 0"));
         }
+        check_frames(count as u64)?;
         let mut delays = Vec::with_capacity(count);
         let mut starts = Vec::with_capacity(count);
         let mut previous = 0u32;
@@ -179,6 +180,14 @@ mod tests {
         assert_eq!(plan.delays(), &[70, 60, 70]);
         assert_eq!(plan.presentation_us(1), Some(70_000));
         assert_eq!(plan.total_ms(), 200);
+    }
+
+    #[test]
+    fn the_frame_count_is_capped() {
+        assert!(FramePlan::uniform(250, 25.0).is_ok());
+        assert!(FramePlan::uniform(100_000, 50.0).is_ok());
+        let err = FramePlan::uniform(100_001, 50.0).unwrap_err();
+        assert!(err.to_string().contains("100001"), "{err}");
     }
 
     #[test]

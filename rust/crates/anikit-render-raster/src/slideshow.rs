@@ -7,7 +7,7 @@ use std::path::Path;
 
 use anikit_core::{
     Dither, Error, Frame, FrameSink, OutputFormat, OutputStream, OutputSummary, Result,
-    StreamOptions, check_canvas, stream_output,
+    StreamOptions, check_canvas, check_frames, stream_output,
 };
 use anikit_time::FramePlan;
 
@@ -71,7 +71,9 @@ pub fn write_slideshow(folder: &Path, out: &Path, options: &Options) -> Result<R
     };
     let transitions = if stills.len() > 1 { trans_count } else { 0 };
     let per_image = hold_count + transitions;
-    let count = stills.len() as u32 * per_image;
+    let count = stills.len() as u64 * per_image as u64;
+    check_frames(count)?;
+    let count = count as u32;
     let plan = FramePlan::uniform(count as usize, fps)?;
 
     let scene = Scene {

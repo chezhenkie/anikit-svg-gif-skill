@@ -144,7 +144,7 @@ The duration is the largest key time over base tracks, binding tracks and weight
 
 The route follows part 03 like the other three.
 
-- `count = max(2, ceil(duration_s * fps))`, doubled when `loop` is `pingpong`, then `FramePlan::uniform(count, fps)` gives the 10 ms grid and the presentation times. The last frame starts on the last grid point before the duration and holds to it. The vector route rounds the count.
+- `count = max(2, ceil(duration_s * fps))`, doubled when `loop` is `pingpong`, then `FramePlan::uniform(count, fps)` gives the 10 ms grid and the presentation times. The last frame starts on the last grid point before the duration and holds to it. A plan above 100000 frames fails before a browser starts. The vector route rounds the count.
 - The palette pass captures up to 12 frames spread across the plan for GIF only; APNG renders each frame once. The stream then starts.
 - Each frame samples every property into one reused buffer at the frame's presentation time, which the plan maps through loop mode and rate. The result is written into the page, captured as a PNG, matted onto `bg` and pushed at that same presentation time.
 - `--colors`, `--dither` and `--loop` behave as on the other routes for GIF; `--colors` and `--dither` have no effect on APNG, and `--loop` sets the APNG play count. `--preview` writes the first captured frame and is refused for an SVG export (part 12).
