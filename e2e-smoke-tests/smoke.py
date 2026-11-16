@@ -178,6 +178,9 @@ def main() -> int:
         case(report, "vector gif", binary, ["vector", str(vector), "-o", str(out / "vector.gif"),
                                             "--duration", "1", "--fps", "10"],
              out / "vector.gif", FRAMES, 10, (120, 80))
+        case(report, "vector dpr 2", binary, ["vector", str(vector), "-o", str(out / "vector-dpr.gif"),
+                                              "--duration", "1", "--fps", "10", "--dpr", "2"],
+             out / "vector-dpr.gif", FRAMES, 10, (240, 160))
         case(report, "tween gif", binary, ["tween", str(scene), "-o", str(out / "tween.gif")],
              out / "tween.gif", FRAMES, 10, (120, 80))
         case(report, "tween apng", binary, ["tween", str(scene), "-o", str(out / "tween.apng")],

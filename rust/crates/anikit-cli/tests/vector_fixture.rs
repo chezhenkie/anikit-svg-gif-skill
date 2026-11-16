@@ -180,6 +180,47 @@ fn vector_fixture_matches_the_recorded_structure() {
 }
 
 #[test]
+fn a_device_pixel_ratio_doubles_the_canvas() {
+    let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
+    if anikit_render_svg::discover(None).is_err() {
+        eprintln!("skipping: no Chromium based browser installed");
+        return;
+    }
+    let dir = scratch("vector-dpr");
+    let out = dir.join("out.gif");
+    let input = fixture().join("input/animation.svg");
+    let output = run(&[
+        "vector",
+        input.to_str().unwrap(),
+        "-o",
+        out.to_str().unwrap(),
+        "--duration",
+        "1",
+        "--fps",
+        "10",
+        "--dpr",
+        "2",
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("240 x 160"),
+        "stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let info = inspect_file(&out).unwrap();
+    assert_eq!((info.width, info.height), (240, 160));
+    assert_eq!(info.frames, 10);
+    assert_eq!(info.total_ms, 1000);
+    let (width, height, _) = decode::canvases(&out);
+    assert_eq!((width, height), (240, 160));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn a_missing_input_reports_fail_and_writes_nothing() {
     let dir = scratch("vector-failure");
     let out = dir.join("nope.gif");

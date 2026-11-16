@@ -81,6 +81,10 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
     if width < 8 || height < 8 {
         return Err(Error::invalid("width and height must be at least 8"));
     }
+    // The page stays at the logical size; the screenshot and the output carry
+    // one pixel per device pixel, so dpr 2 doubles both sides.
+    let canvas_width = width.saturating_mul(options.dpr);
+    let canvas_height = height.saturating_mul(options.dpr);
 
     let fps = options.fps as f64;
     let count = (page::round_half_even(options.duration * fps) as i64).max(2) as usize;
@@ -133,8 +137,8 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
         &samples,
         StreamOptions {
             format,
-            width,
-            height,
+            width: canvas_width,
+            height: canvas_height,
             loop_count: options.loop_count,
             colors: options.colors,
             dither: options.dither,
