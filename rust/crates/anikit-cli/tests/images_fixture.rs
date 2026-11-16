@@ -26,7 +26,10 @@ fn scratch(name: &str) -> PathBuf {
     dir
 }
 
-fn manifest() -> (HashMap<String, String>, Vec<(u32, String)>) {
+/// One recorded frame: its delay, the Python hash and the Rust baseline hash.
+type Recorded = (u32, String, String);
+
+fn manifest() -> (HashMap<String, String>, Vec<Recorded>) {
     let text = std::fs::read_to_string(fixture().join("manifest.txt")).expect("manifest");
     let mut keys = HashMap::new();
     let mut frames = Vec::new();
@@ -34,19 +37,26 @@ fn manifest() -> (HashMap<String, String>, Vec<(u32, String)>) {
         if let Some(rest) = line.strip_prefix("frame ") {
             let mut delay = 0u32;
             let mut hash = String::new();
+            let mut rust_hash = String::new();
             for field in rest.split_whitespace().skip(1) {
                 if let Some(value) = field.strip_prefix("delay_ms=") {
                     delay = value.parse().expect("frame delay");
+                } else if let Some(value) = field.strip_prefix("rust_hash=") {
+                    rust_hash = value.to_string();
                 } else if let Some(value) = field.strip_prefix("hash=") {
                     hash = value.to_string();
                 }
             }
-            frames.push((delay, hash));
+            frames.push((delay, hash, rust_hash));
         } else if let Some((key, value)) = line.split_once('=') {
             keys.insert(key.to_string(), value.to_string());
         }
     }
     (keys, frames)
+}
+
+fn blessing() -> bool {
+    std::env::var("ANIKIT_BLESS_FIXTURES").is_ok_and(|value| value == "1")
 }
 
 fn run(args: &[&str]) -> Output {
@@ -98,9 +108,21 @@ fn images_fixture_matches_the_recorded_structure() {
     let (width, height, decoded) = decode::canvases(&out);
     assert_eq!((width as u32, height as u32), (320, 180), "canvas");
     assert_eq!(decoded.len(), frames.len());
+    let mut hashes = Vec::with_capacity(decoded.len());
     for (index, (buffer, delay)) in decoded.iter().enumerate() {
         assert_eq!(*delay, frames[index].0, "frame {index} delay");
         assert!(!buffer.is_empty());
+        hashes.push(decode::canvas_hash(buffer));
+    }
+    if blessing() {
+        decode::bless(&fixture().join("manifest.txt"), &hashes);
+    } else {
+        for (index, hash) in hashes.iter().enumerate() {
+            assert_eq!(
+                *hash, frames[index].2,
+                "frame {index} differs from the Rust baseline; rerun with ANIKIT_BLESS_FIXTURES=1 if the change is intended"
+            );
+        }
     }
     assert_ne!(decoded[0].0, decoded[1].0, "frames must differ");
     assert!(!dir.join("out.tmp.gif").exists());

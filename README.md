@@ -160,7 +160,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-The suite covers the GIF and APNG writers, timing, the six routes against exported fixtures, delta compositing, extraction and rebuild, the SVG export and import, and a memory check that streams 1000 frames. `.github/workflows/ci.yml` runs it on Linux and Windows, builds static musl binaries for x86_64 and arm, builds the Windows arm and macOS arm targets, and runs `e2e-smoke-tests/smoke.py` against each built binary. A release asset is only ever produced by `.github/workflows/release.yml` on a version tag.
+The suite covers the GIF and APNG writers, timing, the four exported fixtures and the extract and import routes, delta compositing, extraction and rebuild, the SVG export and import, and a memory check that streams 1000 frames. `.github/workflows/ci.yml` runs it on Linux and Windows, builds static musl binaries for x86_64 and arm, builds the Windows arm and macOS arm targets, and runs `e2e-smoke-tests/smoke.py` against each built binary. A release asset is only ever produced by `.github/workflows/release.yml` on a version tag.
 
 ## Limits
 

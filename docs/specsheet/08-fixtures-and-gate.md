@@ -1,6 +1,6 @@
 # 08-fixtures-and-gate
 
-Status: all six routes are covered. The Rust gate is the only gate and covers the workspace: core, time, all four render routes, the extract and import routes, the two frame writers and the SVG export, and the browser routes where a browser is installed.
+Status: every route has a test; text, images, vector and tween have a fixture folder. The Rust gate is the only gate and covers the workspace: core, time, all four render routes, the extract and import routes, the two frame writers and the SVG export, and the browser routes where a browser is installed.
 
 ## 8.1 Fixtures
 
@@ -21,7 +21,7 @@ The extract route has no fixture folder. Its tests build a GIF and an APNG from 
 
 The import route has no fixture folder either. Its tests build a CSS drawing and a SMIL drawing, import both, and check time, tracks and sampled values; the tween route's SVG export is imported back and compared with the source plan (part 14).
 
-A fixture is compared structurally, never byte for byte against the Python output: frame count, delays, size, and per-frame pixel hashes. The Rust encoder is allowed to differ in compression as long as the decoded frames match.
+A fixture is compared structurally, never byte for byte against the Python output: frame count, delays and size. Text and images record a per-frame `rust_hash`, FNV-1a 64 over the decoded RGBA canvas, from the ported code; any pixel change fails the comparison, and `ANIKIT_BLESS_FIXTURES=1` rewrites the hashes when the change is intended. The Python `hash=` stays in the manifest as provenance. Vector and tween record pixel hashes that the port reproduces, so those are compared directly. The Rust encoder may differ in compression as long as the decoded frames match.
 
 ## 8.2 Structural checks
 

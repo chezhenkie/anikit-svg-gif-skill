@@ -56,3 +56,40 @@ pub fn canvases(path: &Path) -> (u16, u16, Vec<(Vec<u8>, u32)>) {
     }
     (width, height, out)
 }
+
+/// FNV-1a 64 over the decoded RGBA canvas, as sixteen lowercase hex digits.
+///
+/// Tests compare this with the recorded `rust_hash`. It needs no dependency and
+/// is stable across platforms because it only reads the decoded bytes.
+pub fn canvas_hash(rgba: &[u8]) -> String {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for byte in rgba {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{hash:016x}")
+}
+
+/// Replace the `rust_hash=` field of every frame line in a manifest.
+pub fn bless(manifest: &Path, hashes: &[String]) {
+    let text = std::fs::read_to_string(manifest).expect("read manifest");
+    let mut out = String::with_capacity(text.len() + hashes.len() * 20);
+    let mut frame = 0;
+    for line in text.lines() {
+        if line.starts_with("frame ") {
+            let mut line = line.to_string();
+            if let Some(at) = line.find(" rust_hash=") {
+                line.truncate(at);
+            }
+            line.push_str(" rust_hash=");
+            line.push_str(&hashes[frame]);
+            frame += 1;
+            out.push_str(&line);
+        } else {
+            out.push_str(line);
+        }
+        out.push('\n');
+    }
+    assert_eq!(frame, hashes.len(), "manifest frame count");
+    std::fs::write(manifest, out).expect("write manifest");
+}
