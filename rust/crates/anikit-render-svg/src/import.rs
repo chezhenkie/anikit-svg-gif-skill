@@ -946,8 +946,7 @@ mod tests {
     #[test]
     fn a_css_drawing_imports_its_motion() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("css");
@@ -981,8 +980,7 @@ mod tests {
     #[test]
     fn a_twenty_five_fps_import_closes_on_the_duration() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("fps-25");
@@ -1018,8 +1016,7 @@ mod tests {
     #[test]
     fn an_animate_motion_drawing_imports_its_transform() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("motion");
@@ -1048,8 +1045,7 @@ mod tests {
     #[test]
     fn an_animate_color_drawing_reports_the_unsupported_colour() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("colour");
@@ -1084,8 +1080,7 @@ mod tests {
     #[test]
     fn a_smil_drawing_imports_its_motion() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("smil");
@@ -1111,8 +1106,7 @@ mod tests {
     #[test]
     fn a_drawing_without_animation_is_refused() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("still");
@@ -1132,8 +1126,7 @@ mod tests {
     #[test]
     fn an_animated_element_without_an_id_is_refused() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("no-id");
@@ -1155,8 +1148,7 @@ mod tests {
     #[test]
     fn a_non_zero_transform_origin_is_refused() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("origin");
@@ -1178,8 +1170,7 @@ mod tests {
     #[test]
     fn an_exported_scene_imports_back() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("roundtrip");
@@ -1243,8 +1234,7 @@ mod tests {
     #[test]
     fn an_animation_outside_the_five_is_not_imported() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("outside");
@@ -1267,8 +1257,7 @@ mod tests {
     #[test]
     fn an_imported_scene_renders_through_the_tween_route() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("render");
@@ -1347,8 +1336,7 @@ mod tests {
     #[test]
     fn a_rendered_import_does_not_replay_the_source_animation() {
         let _browser = browser_lock();
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::test_support::browser().is_none() {
             return;
         }
         let dir = scratch("no-replay");

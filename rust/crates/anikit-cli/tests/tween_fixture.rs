@@ -15,6 +15,9 @@ use sha2::{Digest, Sha256};
 #[path = "../../../testsupport/decode.rs"]
 mod decode;
 
+#[path = "../../../testsupport/browser.rs"]
+mod browser_support;
+
 const BIN: &str = env!("CARGO_BIN_EXE_anikit");
 const WIDTH: usize = 120;
 
@@ -103,8 +106,7 @@ fn frame_hash(rgba: &[u8]) -> String {
 #[test]
 fn tween_fixture_matches_the_recorded_structure() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("tween-fixture");
@@ -160,8 +162,7 @@ fn tween_fixture_matches_the_recorded_structure() {
 #[test]
 fn stroke_and_stroke_width_are_drawn() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("tween-stroke");
@@ -229,8 +230,7 @@ fn stroke_and_stroke_width_are_drawn() {
 #[test]
 fn two_runs_are_byte_identical() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("tween-determinism");
@@ -260,8 +260,7 @@ fn two_runs_are_byte_identical() {
 #[test]
 fn pingpong_doubles_the_plan_and_mirrors_the_second_half() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("tween-pingpong");
@@ -346,8 +345,7 @@ fn pingpong_doubles_the_plan_and_mirrors_the_second_half() {
 #[test]
 fn an_authored_transform_survives_the_export() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("tween-authored");
@@ -540,8 +538,7 @@ fn an_svg_export_needs_no_browser_and_plays() {
 #[test]
 fn a_missing_element_reports_its_id_and_writes_nothing() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("tween-missing-element");

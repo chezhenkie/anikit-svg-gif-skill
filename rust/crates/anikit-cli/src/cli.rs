@@ -1669,8 +1669,7 @@ mod tests {
     #[test]
     fn import_writes_a_timeline() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-        if anikit_render_svg::discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::browser_support::browser().is_none() {
             return;
         }
         let dir = scratch("import-route");
@@ -1791,8 +1790,7 @@ mod tests {
     #[test]
     fn vector_route_writes_an_apng() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-        if anikit_render_svg::discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if crate::browser_support::browser().is_none() {
             return;
         }
         let dir = scratch("vector-apng");

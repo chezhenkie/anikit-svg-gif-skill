@@ -3,6 +3,10 @@
 mod cli;
 mod png;
 
+#[cfg(test)]
+#[path = "../../../testsupport/browser.rs"]
+mod browser_support;
+
 use std::process::ExitCode;
 
 fn main() -> ExitCode {

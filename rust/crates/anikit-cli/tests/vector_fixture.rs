@@ -16,6 +16,9 @@ use sha2::{Digest, Sha256};
 #[path = "../../../testsupport/decode.rs"]
 mod decode;
 
+#[path = "../../../testsupport/browser.rs"]
+mod browser_support;
+
 const BIN: &str = env!("CARGO_BIN_EXE_anikit");
 const WIDTH: u32 = 120;
 
@@ -115,8 +118,7 @@ fn frame_hash(rgba: &[u8]) -> String {
 fn vector_fixture_matches_the_recorded_structure() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
     // The capture needs a browser; without one there is nothing to compare.
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("vector-fixture");
@@ -182,8 +184,7 @@ fn vector_fixture_matches_the_recorded_structure() {
 #[test]
 fn a_device_pixel_ratio_doubles_the_canvas() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("vector-dpr");
@@ -241,8 +242,7 @@ fn a_missing_input_reports_fail_and_writes_nothing() {
 #[test]
 fn a_preset_without_a_target_reports_the_selector() {
     let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-    if anikit_render_svg::discover(None).is_err() {
-        eprintln!("skipping: no Chromium based browser installed");
+    if browser_support::browser().is_none() {
         return;
     }
     let dir = scratch("vector-selector");

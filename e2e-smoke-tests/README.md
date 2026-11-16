@@ -10,3 +10,5 @@ python e2e-smoke-tests/smoke.py path/to/anikit --full --out /tmp/smoke
 The default run covers the routes that need no browser: ASCII to GIF and APNG, an image folder to GIF, and a tween scene to SVG. `--full` adds the vector and tween browser routes, then chains extract, the timed image rebuild and import back into the tween route. Output goes to a temp folder that is removed on success, or to `--out`. A run ends with a PASS or FAIL line per case and exits 1 when any case failed.
 
 Python 3 with the standard library only, so the same script runs against a static musl asset, a Windows build and macOS.
+
+The workspace test suite fails a browser test when the host has no browser, and `ANIKIT_SKIP_BROWSER_TESTS=1` turns those tests into a printed skip instead. The smoke script has its own switch: `--full` is a request for the browser cases, so it reports a missing browser as a failure rather than skipping it.

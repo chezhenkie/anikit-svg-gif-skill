@@ -428,6 +428,50 @@ pub(crate) mod test_lock {
 }
 
 #[cfg(test)]
+pub(crate) mod test_support {
+    use std::path::PathBuf;
+
+    use anikit_core::Error;
+
+    /// The browser for a test, or None when a skip was asked for.
+    pub(crate) fn browser() -> Option<PathBuf> {
+        let found = crate::discover(None);
+        let skip = std::env::var("ANIKIT_SKIP_BROWSER_TESTS").as_deref() == Ok("1");
+        choose(found, skip)
+    }
+
+    /// Fail on a missing browser, unless the run asked for a skip.
+    ///
+    /// A host without a browser must not look green; the switch is the only
+    /// way to turn these tests into a printed skip.
+    pub(crate) fn choose(found: anikit_core::Result<PathBuf>, skip: bool) -> Option<PathBuf> {
+        match found {
+            Ok(path) => Some(path),
+            Err(error) => {
+                if skip {
+                    eprintln!("skipping browser test: {error}");
+                    return None;
+                }
+                panic!(
+                    "no browser for this test: {error}; set ANIKIT_SKIP_BROWSER_TESTS=1 to skip it"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_missing_browser_fails_unless_a_skip_is_asked_for() {
+        assert!(choose(Err(Error::io("no browser")), true).is_none());
+        assert_eq!(
+            choose(Ok(PathBuf::from("a browser")), false),
+            Some(PathBuf::from("a browser"))
+        );
+        let failed = std::panic::catch_unwind(|| choose(Err(Error::io("no browser")), false));
+        assert!(failed.is_err(), "a missing browser must fail the test");
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_lock::BROWSER;
@@ -559,8 +603,7 @@ mod tests {
     #[test]
     fn the_setup_pauses_every_clock_at_zero() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-        let Ok(exe) = discover(None) else {
-            eprintln!("skipping: no Chromium based browser installed");
+        let Some(exe) = test_support::browser() else {
             return;
         };
         let dir = scratch("clocks");
@@ -592,8 +635,7 @@ mod tests {
     #[test]
     fn a_page_cannot_read_a_local_file() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-        let Ok(exe) = discover(None) else {
-            eprintln!("skipping: no Chromium based browser installed");
+        let Some(exe) = test_support::browser() else {
             return;
         };
         let dir = scratch("file-access");
@@ -618,8 +660,7 @@ mod tests {
     #[test]
     fn a_captured_loop_moves_the_drawing() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if test_support::browser().is_none() {
             return;
         }
         let dir = scratch("capture");
@@ -650,8 +691,7 @@ mod tests {
     #[test]
     fn a_percentage_drawing_keeps_its_viewbox_ratio() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if test_support::browser().is_none() {
             return;
         }
         let dir = scratch("percentage");
@@ -682,8 +722,7 @@ mod tests {
     #[test]
     fn an_html_page_is_captured_with_a_preset() {
         let _browser = BROWSER.lock().unwrap_or_else(|poison| poison.into_inner());
-        if discover(None).is_err() {
-            eprintln!("skipping: no Chromium based browser installed");
+        if test_support::browser().is_none() {
             return;
         }
         let dir = scratch("html-preset");
