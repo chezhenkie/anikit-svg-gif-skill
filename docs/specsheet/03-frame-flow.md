@@ -23,7 +23,7 @@ pub trait FrameSink {
 
 - `push` takes a presentation time, not a duration. The writer derives the delay from the difference between consecutive `pts_us`, so cumulative rounding stays in one place and a dropped frame cannot corrupt the grid.
 - `index` is the frame's position in the plan. It lets the writer skip a frame that repeats the previous one and add its delay to the run, which is the merge rule.
-- Held frames are detected in the plan and never rendered. A hold of one second at 12 fps is one frame with a 1000 ms delay, not twelve identical frames.
+- Held frames reach the writer in more than one way. A still hold is pushed once with the summed delay, a zoom hold renders every frame because the picture changes, and identical consecutive frames are merged by the writer either way. Not every route detects a hold in the plan.
 
 The sink is the only writer. A route that already holds its frames, such as the text route, renders twelve palette samples, starts the stream, then draws each frame, pushes it at its cumulative presentation time and drops it. There is no second path with its own merge or rounding rule. `stream_output` returns either writer; a route never calls the GIF encoder or the APNG encoder directly.
 
