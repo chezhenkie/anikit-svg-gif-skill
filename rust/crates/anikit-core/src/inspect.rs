@@ -42,9 +42,13 @@ pub fn inspect(bytes: &[u8]) -> Result<OutputInfo> {
     let mut frames = 0u32;
     let mut total_ms = 0u32;
     let mut delay_ms = 0u32;
+    let mut trailer_seen = false;
     while pos < bytes.len() {
         match bytes[pos] {
-            0x3B => break,
+            0x3B => {
+                trailer_seen = true;
+                break;
+            }
             0x21 => {
                 if pos + 1 >= bytes.len() {
                     return Err(Error::verify("truncated extension block"));
@@ -86,6 +90,10 @@ pub fn inspect(bytes: &[u8]) -> Result<OutputInfo> {
                 return Err(Error::verify(format!("unexpected block 0x{other:02X}")));
             }
         }
+    }
+
+    if !trailer_seen {
+        return Err(Error::verify("GIF has no trailer"));
     }
 
     Ok(OutputInfo {

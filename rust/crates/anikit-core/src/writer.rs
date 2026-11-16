@@ -89,4 +89,27 @@ mod tests {
         assert!(!temp.exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn a_gif_without_its_trailer_is_refused() {
+        let dir = scratch("writer-trailer");
+        let temp = dir.join("cut.tmp.gif");
+        let target = dir.join("cut.gif");
+        let palette = Palette::from_colors(vec![[0, 0, 0], [255, 255, 255]]).unwrap();
+        let mut encoder = GifEncoder::new(File::create(&temp).unwrap(), 2, 2, &palette, 0).unwrap();
+        encoder.write_frame(&[0, 1, 1, 0], 100).unwrap();
+        let summary = encoder.finish().unwrap();
+
+        let bytes = std::fs::read(&temp).unwrap();
+        assert_eq!(
+            *bytes.last().unwrap(),
+            0x3B,
+            "the writer ends with the trailer"
+        );
+        std::fs::write(&temp, &bytes[..bytes.len() - 1]).unwrap();
+        let err = verify_and_rename(&temp, &target, &summary, OutputFormat::Gif).unwrap_err();
+        assert!(err.to_string().contains("trailer"), "{err}");
+        assert!(!target.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
