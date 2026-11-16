@@ -24,7 +24,7 @@ This split is what makes the two-pass frame flow in part 03 possible: the palett
 
 ## 6.3 Paths
 
-- Commands are normalised to absolute cubics, so line, quadratic and arc segments become one form.
+- Commands are normalised to absolute cubics, so line and quadratic segments become one form. Arc commands have no representation in the path model yet; that is the arc normalisation gap named above.
 - A pair with the same subpath count, the same closed flags and the same per-subpath curve count interpolates corresponding cubics. That mode is exact and stays the first choice.
 - A pair that differs only in curve counts takes the correspondence fallback (09, row 27). Each subpath pair is flattened and sampled by arc length into a common polyline: the count is `ceil(longest perimeter / 4 px)`, clamped to 32 and 1024, so the polyline stays within about a pixel of the authored outline at normal drawing sizes.
 - A closed subpath tries every start offset and keeps the one with the least squared travel. An open subpath keeps its authored ends and is not rotated, because the ends of a stroke are placed on purpose.

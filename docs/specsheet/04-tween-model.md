@@ -19,7 +19,7 @@ pub enum LoopMode { Once, Cycle, PingPong }
 
 - `rate` and `loop_mode` are applied by a time map before `sample`, so `sample(t)` stays a pure function of `t` in `0..duration`.
 - Ping-pong is the triangle map over the duration; reverse playback is `rate = -1`; neither is data in a track.
-- The frame plan owns the frame count and the presentation times. A cycle drops the duplicate final frame in the plan, not in the model.
+- The frame plan owns the frame count and the presentation times. A plan that carries the loop end can drop a repeated seam frame with `FramePlan::without_last`; the tween route's count stops one frame before the end, so it has no duplicate to drop.
 
 ## 4.3 Tracks and keys
 

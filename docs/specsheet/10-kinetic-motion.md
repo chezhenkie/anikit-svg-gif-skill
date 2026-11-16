@@ -13,7 +13,7 @@ The research changed four things about how the tween crate is designed.
 
 ## 10.2 Motion vocabulary
 
-A segment produces a value over a span of time. Easing is the default case; three more kinds exist.
+A segment produces a value over a span of time. Easing is the default case; two more kinds exist.
 
 ```rust
 pub enum Motion {

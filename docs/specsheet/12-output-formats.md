@@ -12,7 +12,7 @@ Status: implemented. GIF, APNG and SVG export. The format is chosen by the outpu
 
 There is no default extension: the command line defaults are `.gif`, but an output path with any other ending fails with `output must end in .gif, .png, .apng or .svg`. A frame-based route that is given `.svg` fails before rendering, with `SVG output is only written by the tween route`.
 
-The choice is made before the palette pass. GIF builds the palette from up to twelve samples; APNG and SVG never build one, so they also never dither. `--colors` and `--dither` are accepted on every route and have no effect on APNG or SVG.
+The choice is made before the palette pass. GIF builds the palette from up to twelve samples; APNG and SVG never build one, so they also never dither. `--colors` and `--dither` are accepted on every frame route and have no effect on APNG or SVG.
 
 The extract route is not governed by this part: it writes numbered PNG frames and a manifest to a folder, and the folder is not an animation. Part 13 fixes that output.
 

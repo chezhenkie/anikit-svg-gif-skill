@@ -46,7 +46,7 @@ pub enum AddMode { Append, Prepend }
 
 Prepare resolves the stack into either a single prepared track or one contiguous range of prepared layers. A property with zero or one contributing `Replace` binding takes the single path, which is the current code path with no per-frame cost. Everything else takes the stacked path, where sampling walks the range, skips closed windows and zero weights, and pays for the mix only when the weight is strictly between 0 and 1.
 
-Prepare also folds constants: a `Replace` binding with a constant value and weight 1 replaces the base, and a constant `Add` or `Multiply` folds into one layer. A binding to a missing element fails at prepare, never at render.
+Prepare folds the stack below a full-weight, unwindowed `Replace` binding: that binding becomes the base and the layers under it are not sampled. A constant `Add` or `Multiply` binding stays a layer and is sampled each frame. A binding to a missing element fails at prepare, never at render.
 
 ## 7.4 Per-type rules
 
@@ -64,7 +64,7 @@ Prepare also folds constants: a `Replace` binding with a constant value and weig
 
 ## 7.5 Partial bindings and masks
 
-A binding may own part of a property. A transform layer may supply translation only; append puts that translation on the base's rotated and scaled axes, which is what a shake wants, and prepend keeps it in screen space, which a camera move wants and CSS cannot express. A colour layer may supply alpha only, as a slot that leaves RGB untouched. Any other partial binding is rejected.
+Partial bindings are not implemented; when they land, a binding may own part of a property. A transform layer may supply translation only; append puts that translation on the base's rotated and scaled axes, which is what a shake wants, and prepend keeps it in screen space, which a camera move wants and CSS cannot express. A colour layer may supply alpha only, as a slot that leaves RGB untouched. Any other partial binding is rejected.
 
 Three masks exist, and they are different things:
 

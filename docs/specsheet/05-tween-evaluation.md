@@ -30,7 +30,7 @@ The solver follows WebKit's `UnitBezier`: Newton-Raphson from the current estima
 Springs are evaluated in closed form from the damped oscillator equation, not integrated step by step.
 
 - Semi-implicit Euler is not usable for seeking: at 60 fps it is off by about 7 percent of travel at a natural frequency of 10, and it diverges at 100. Both were measured.
-- Settle time is computed at prepare from the damping ratio and the distance threshold, and it fixes the segment length and the frame count.
+- Settle time is authored on the spring and checked at prepare: it must be greater than zero and no longer than the segment, and the spring must be within `rest_delta` and `rest_speed` there. A spring that is still moving fails the prepare.
 - Initial velocity is part of the key, so a spring can start with a flick.
 - Baked `linear()` output is an export concern only; the crate never bakes to evaluate.
 

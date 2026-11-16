@@ -51,7 +51,7 @@ The output is the canonical object of 11.2 with these values:
 - `src` is the drawing path relative to the scene file, with forward slashes, plus `#<element>`. When no relative path exists, the absolute path is written.
 - Keys sit at every frame time in whole milliseconds, plus one final key at the loop end that repeats the last sample. That key holds the last value through the unrendered tail of the loop, as the SVG export does.
 - Every key except the final hold carries `"easing": "linear"`: the samples already contain the source easing, so a segment between two samples must not curve. `smooth` is absent.
-- Colours are `#rrggbb`, numbers are written with up to six decimals and no trailing zeros, and the order of tracks follows the page order of their elements.
+- Colours are `#rrggbb`, numbers are rounded to six decimals, and the order of tracks follows the page order of their elements.
 - `layers` is always empty: the route records the composited result, not the source's own layers.
 
 ## 14.6 Errors

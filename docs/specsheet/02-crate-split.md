@@ -46,7 +46,7 @@ The same graph as a picture: docs/ascii-crate-flow.txt.
 
 ## 2.4 Binary and subcommands
 
-One binary, `anikit` (`anikit.exe` on Windows), because the routes share the core and a second executable would duplicate the writer and the error contract. The text, images and vector subcommands keep the names of `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`; `tween`, `import` and `extract` are new in the Rust binary.
+One binary, `anikit` (`anikit.exe` on Windows), because the routes share the core and a second executable would duplicate the writer and the error contract. The text, images and vector subcommands carry the three Python routes under the names `ascii`, `images` and `vector`; `tween`, `import` and `extract` are new in the Rust binary.
 
 The binary is produced by the `anikit-cli` package; the other packages are libraries and ship no executable. The skill's invocation table in README.md is updated in the same change that introduces the binary.
 
@@ -61,7 +61,7 @@ The binary is produced by the `anikit-cli` package; the other packages are libra
 | Linux arm, musl | anikit | static, same rules as x86_64 musl |
 | macOS arm | anikit | Apple silicon, no special flags |
 
-The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector and tween routes depend on an installed Chromium, and on musl that is the distribution package, because the Playwright build is linked against glibc and will not start.
+The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector and tween routes depend on an installed Chromium; on musl the distribution package is the only source of one.
 
 ## 2.6 Delivery
 
