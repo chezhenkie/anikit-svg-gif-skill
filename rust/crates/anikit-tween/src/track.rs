@@ -743,22 +743,28 @@ impl BallisticPlan {
             }
             let hit_s = time_to_plane(p, v, a, plane)?;
             let dur_us = (hit_s * 1e6).round().max(1.0) as u64;
+            let end_us = t_us
+                .checked_add(dur_us)
+                .ok_or_else(|| Error::invalid("ballistic flight overflows the plan time"))?;
             phases.push(Phase {
                 start_us: t_us,
-                end_us: t_us + dur_us,
+                end_us,
                 kind: PhaseKind::Flight { p0: p, v0: v, a },
             });
-            t_us += dur_us;
+            t_us = end_us;
             let impact = v + a * hit_s;
             p = plane;
             contacts.push(t_us);
             if ballistic.contact_hold_us > 0 {
+                let end_us = t_us.checked_add(ballistic.contact_hold_us).ok_or_else(|| {
+                    Error::invalid("ballistic contactHold overflows the plan time")
+                })?;
                 phases.push(Phase {
                     start_us: t_us,
-                    end_us: t_us + ballistic.contact_hold_us,
+                    end_us,
                     kind: PhaseKind::Hold { p: plane },
                 });
-                t_us += ballistic.contact_hold_us;
+                t_us = end_us;
             }
             let rebound =
                 (-impact * ballistic.restitution).clamp(-ballistic.max_speed, ballistic.max_speed);
@@ -1089,6 +1095,18 @@ mod tests {
         // The contact is held, so the value is the plane on both sides.
         assert_eq!(curve.sample(contacts[0]), 100.0);
         assert_eq!(curve.sample(contacts[0] + 20_000), 100.0);
+    }
+
+    #[test]
+    fn a_contact_hold_beyond_the_plan_time_is_refused() {
+        let drop = Ballistic::drop(100.0).contact_hold(u64::MAX);
+        let err = number_track(vec![
+            Key::new(0, 0.0).motion(Motion::Ballistic(drop)),
+            Key::new(1_000_000, 100.0),
+        ])
+        .prepare()
+        .unwrap_err();
+        assert!(err.to_string().contains("contactHold"), "{err}");
     }
 
     #[test]

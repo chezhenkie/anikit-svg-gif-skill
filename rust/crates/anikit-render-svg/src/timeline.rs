@@ -796,7 +796,7 @@ fn parse_motion(value: &Json, path: &str) -> Result<Motion> {
             if ms < 0 {
                 return Err(err(&hold_path, "must be 0 or more"));
             }
-            motion.contact_hold_us = ms as u64 * 1000;
+            motion.contact_hold_us = microseconds(value, &hold_path)?;
         }
         Ok(Motion::Ballistic(motion))
     } else {
@@ -1481,6 +1481,18 @@ mod tests {
         assert!(matches!(arc, Motion::Arc { .. }));
         assert!(parse_easing(&serde_json::json!({"bezier": [0.4, 0.0]}), "easing").is_err());
         assert!(parse_motion(&serde_json::json!({"ballistic": {}, "arc": {}}), "motion").is_err());
+    }
+
+    #[test]
+    fn a_huge_contact_hold_is_refused_with_its_field() {
+        let huge = serde_json::json!({"ballistic": {"plane": 0, "contactHold": i64::MAX}});
+        let err = parse_motion(&huge, "scene.tracks[0].motion").unwrap_err();
+        let text = err.to_string();
+        assert!(text.contains("contactHold"), "{text}");
+        assert!(text.contains("too large"), "{text}");
+        let held = serde_json::json!({"ballistic": {"plane": 0, "contactHold": 40}});
+        let motion = parse_motion(&held, "motion").unwrap();
+        assert!(matches!(motion, Motion::Ballistic(value) if value.contact_hold_us == 40_000));
     }
 
     #[test]
