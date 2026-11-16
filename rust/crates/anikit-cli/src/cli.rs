@@ -1087,7 +1087,8 @@ fn parse_color(text: &str) -> Result<[u8; 3]> {
         let parts: Result<Vec<u8>> = body
             .split(',')
             .map(|part| {
-                part.parse::<u8>()
+                part.trim()
+                    .parse::<u8>()
                     .map_err(|_| Error::invalid(format!("invalid colour: {text}")))
             })
             .collect();
@@ -1382,6 +1383,31 @@ mod tests {
     }
 
     #[test]
+    fn a_spaced_triplet_paints_the_same_pixel() {
+        let dir = scratch("spaced-bg");
+        let input = dir.join("frames.txt");
+        std::fs::write(&input, "ok\n").unwrap();
+        let tight = dir.join("tight.gif");
+        let spaced = dir.join("spaced.gif");
+        for (out, bg) in [(&tight, "1,2,3"), (&spaced, "1, 2, 3")] {
+            run(&args(&[
+                "ascii",
+                input.to_str().unwrap(),
+                "-o",
+                out.to_str().unwrap(),
+                "--bg",
+                bg,
+            ]))
+            .unwrap();
+        }
+        assert_eq!(
+            std::fs::read(&tight).unwrap(),
+            std::fs::read(&spaced).unwrap()
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn one_file_has_one_identity() {
         let dir = scratch("same-path");
         let file = dir.join("out.gif");
@@ -1449,8 +1475,11 @@ mod tests {
         assert_eq!(parse_color("#e6edf6").unwrap(), [0xe6, 0xed, 0xf6]);
         assert_eq!(parse_color("#abc").unwrap(), [0xaa, 0xbb, 0xcc]);
         assert_eq!(parse_color("1,2,3").unwrap(), [1, 2, 3]);
+        assert_eq!(parse_color("1, 2, 3").unwrap(), [1, 2, 3]);
+        assert_eq!(parse_color(" 10 , 20 , 30 ").unwrap(), [10, 20, 30]);
         assert!(parse_color("#12345").is_err());
         assert!(parse_color("1,2").is_err());
+        assert!(parse_color("1,2,3,4").is_err());
         assert!(parse_color("nope").is_err());
     }
 
