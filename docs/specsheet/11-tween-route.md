@@ -109,7 +109,7 @@ The last key's easing is ignored, because it starts no segment.
 {"t": 0, "value": 0, "motion": {"arc": {"bend": 0.1, "easing": "ease-in-out"}}}
 ```
 
-Ballistic fields: `plane` required; `gravity` 1400 px/s^2, `v0` 0 px/s, `restitution` 0.5, `friction` 0.3, `minBounce` 1.0 px, `maxSpeed` 1000 px/s, `contactHold` 40 ms, `squash` 0.2, `stretch` 0.15. The segment ignores the next key's value while it runs and ends at `plane`; prepare refuses a next key that differs from the plane by more than 0.5 px.
+Ballistic fields: `plane` required; `gravity` 1400 px/s^2, `v0` 0 px/s, `restitution` 0.5, `minBounce` 1.0 px, `maxSpeed` 1000 px/s, `contactHold` 40 ms. `friction`, `squash` and `stretch` are refused with "not implemented" until a renderer draws them. The segment ignores the next key's value while it runs and ends at `plane`; prepare refuses a next key that differs from the plane by more than 0.5 px.
 
 Arc fields: `bend` required, a fraction of the chord; `easing` optional, default `linear`.
 

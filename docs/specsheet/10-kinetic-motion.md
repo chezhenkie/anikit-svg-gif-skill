@@ -1,6 +1,6 @@
 # 10-kinetic-motion
 
-Status: implemented for ballistic and arc motion on scalar tracks; squash, stretch and friction are carried for the renderer. Evidence and sources: docs/research/kinetic-motion.md. This part turns that report into rules the crate and the routes must satisfy.
+Status: implemented for ballistic and arc motion on scalar tracks. Friction, squash and stretch are not implemented, and a scene that names one is refused until a renderer draws the deformation. Evidence and sources: docs/research/kinetic-motion.md. This part turns that report into rules the crate and the routes must satisfy.
 
 ## 10.1 Why these rules
 
@@ -36,12 +36,9 @@ Ballistic fields, all compiled at prepare:
 | `v0` | px/s | initial velocity, signed | 0 |
 | `plane` | px | value at which contact occurs | required |
 | `restitution` | 0 to 1 | speed ratio kept at contact | 0.5 |
-| `friction` | 0 to 1 | horizontal loss per contact | 0.3 |
 | `min_bounce` | px | stop when the rebound is below this | 1.0 |
 | `max_speed` | px/s | terminal speed cap | 1000 |
 | `contact_hold_us` | us | hold at the plane after contact | 40000 |
-| `squash` | fraction | height lost at contact | 0.2 |
-| `stretch` | fraction | length gained at peak speed | 0.15 |
 
 A spring gains two fields, because a settle cannot be reproduced from stiffness and damping alone: `rest_delta` in pixels (0.5) and `rest_speed` in px/s (2). The explicit settle time stays, and it is capped at 1.5 times the visual duration.
 

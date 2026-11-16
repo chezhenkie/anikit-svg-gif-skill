@@ -164,12 +164,9 @@ pub struct Ballistic {
     pub v0: f64,
     pub plane: f64,
     pub restitution: f64,
-    pub friction: f64,
     pub min_bounce: f64,
     pub max_speed: f64,
     pub contact_hold_us: u64,
-    pub squash: f64,
-    pub stretch: f64,
 }
 
 impl Ballistic {
@@ -180,12 +177,9 @@ impl Ballistic {
             v0: 0.0,
             plane,
             restitution: 0.5,
-            friction: 0.3,
             min_bounce: 1.0,
             max_speed: 1000.0,
             contact_hold_us: 40_000,
-            squash: 0.2,
-            stretch: 0.15,
         }
     }
 
@@ -700,11 +694,8 @@ impl BallisticPlan {
             ballistic.v0,
             ballistic.plane,
             ballistic.restitution,
-            ballistic.friction,
             ballistic.min_bounce,
             ballistic.max_speed,
-            ballistic.squash,
-            ballistic.stretch,
         ];
         if values.iter().any(|value| !value.is_finite()) {
             return Err(Error::invalid("ballistic parameters must be finite"));
@@ -714,9 +705,6 @@ impl BallisticPlan {
         }
         if !(0.0..=1.0).contains(&ballistic.restitution) {
             return Err(Error::invalid("ballistic restitution must be in 0 to 1"));
-        }
-        if !(0.0..=1.0).contains(&ballistic.friction) {
-            return Err(Error::invalid("ballistic friction must be in 0 to 1"));
         }
         if ballistic.min_bounce < 0.0 {
             return Err(Error::invalid("ballistic min_bounce must be 0 or more"));

@@ -764,6 +764,14 @@ fn parse_motion(value: &Json, path: &str) -> Result<Motion> {
         allowed(map, &["ballistic"], path)?;
         let at = format!("{path}.ballistic");
         let map = object(map.get("ballistic").expect("ballistic was checked"), &at)?;
+        for name in ["friction", "squash", "stretch"] {
+            if map.contains_key(name) {
+                return Err(err(
+                    &format!("{at}.{name}"),
+                    format!("{name} is not implemented"),
+                ));
+            }
+        }
         allowed(
             map,
             &[
@@ -771,12 +779,9 @@ fn parse_motion(value: &Json, path: &str) -> Result<Motion> {
                 "gravity",
                 "v0",
                 "restitution",
-                "friction",
                 "minBounce",
                 "maxSpeed",
                 "contactHold",
-                "squash",
-                "stretch",
             ],
             &at,
         )?;
@@ -785,11 +790,8 @@ fn parse_motion(value: &Json, path: &str) -> Result<Motion> {
         motion.gravity = maybe_number(map, "gravity", &at, motion.gravity)?;
         motion.v0 = maybe_number(map, "v0", &at, motion.v0)?;
         motion.restitution = maybe_number(map, "restitution", &at, motion.restitution)?;
-        motion.friction = maybe_number(map, "friction", &at, motion.friction)?;
         motion.min_bounce = maybe_number(map, "minBounce", &at, motion.min_bounce)?;
         motion.max_speed = maybe_number(map, "maxSpeed", &at, motion.max_speed)?;
-        motion.squash = maybe_number(map, "squash", &at, motion.squash)?;
-        motion.stretch = maybe_number(map, "stretch", &at, motion.stretch)?;
         if let Some(value) = map.get("contactHold") {
             let hold_path = format!("{at}.contactHold");
             let ms = integer(value, &hold_path)?;
@@ -1493,6 +1495,28 @@ mod tests {
         assert!(matches!(arc, Motion::Arc { .. }));
         assert!(parse_easing(&serde_json::json!({"bezier": [0.4, 0.0]}), "easing").is_err());
         assert!(parse_motion(&serde_json::json!({"ballistic": {}, "arc": {}}), "motion").is_err());
+    }
+
+    #[test]
+    fn a_ballistic_field_without_a_renderer_is_refused() {
+        for name in ["friction", "squash", "stretch"] {
+            let value: serde_json::Value = serde_json::from_str(&format!(
+                "{{\"ballistic\": {{\"plane\": 0, \"{name}\": 0.2}}}}"
+            ))
+            .unwrap();
+            let err = parse_motion(&value, "motion").unwrap_err();
+            let text = err.to_string();
+            assert!(text.contains(name), "{text}");
+            assert!(text.contains("not implemented"), "{text}");
+        }
+        let all = serde_json::json!({"ballistic": {"plane": 0, "friction": 0.2, "squash": 0.2, "stretch": 0.1}});
+        let err = parse_motion(&all, "motion").unwrap_err();
+        assert!(err.to_string().contains("friction"), "{err}");
+        let plain = serde_json::json!({"ballistic": {"plane": 100, "restitution": 0.4}});
+        assert!(matches!(
+            parse_motion(&plain, "motion").unwrap(),
+            Motion::Ballistic(_)
+        ));
     }
 
     #[test]
