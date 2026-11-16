@@ -189,10 +189,8 @@ fn the_third_party_notices_match_the_lock_file() {
         if line == "(end)" {
             break;
         }
-        if inside {
-            if let Some(name) = line.trim_start().split_whitespace().next() {
-                listed.insert(name.to_string());
-            }
+        if inside && let Some(name) = line.split_whitespace().next() {
+            listed.insert(name.to_string());
         }
     }
     let missing: Vec<&String> = resolved.difference(&listed).collect();

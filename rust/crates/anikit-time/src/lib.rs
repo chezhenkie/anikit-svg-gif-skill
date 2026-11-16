@@ -117,39 +117,6 @@ impl FramePlan {
     pub fn presentation_us(&self, index: usize) -> Option<u64> {
         self.starts.get(index).map(|ms| *ms as u64 * 1000)
     }
-
-    /// Drop the final frame when it repeats the first, which a cycle does not need.
-    pub fn without_last(&self) -> FramePlan {
-        if self.delays.len() <= 1 {
-            return self.clone();
-        }
-        FramePlan::from_delays(&self.delays[..self.delays.len() - 1])
-    }
-
-    /// Presentation times for a repeated play, in microseconds.
-    pub fn play(&self, mode: LoopMode, repeats: usize) -> Vec<u64> {
-        let repeats = repeats.max(1);
-        let mut order: Vec<usize> = Vec::new();
-        for _ in 0..repeats {
-            match mode {
-                LoopMode::Once => order.extend(0..self.len()),
-                LoopMode::Cycle => order.extend(0..self.len()),
-                LoopMode::PingPong => {
-                    order.extend(0..self.len());
-                    if self.len() > 2 {
-                        order.extend((1..self.len() - 1).rev());
-                    }
-                }
-            }
-            if mode == LoopMode::Once {
-                break;
-            }
-        }
-        order
-            .into_iter()
-            .filter_map(|i| self.presentation_us(i))
-            .collect()
-    }
 }
 
 /// Snap a delay onto the grid, at least one unit and never below the minimum.
@@ -219,28 +186,5 @@ mod tests {
         assert_eq!(plan.len(), 2);
         assert_eq!(plan.delays()[0], 4_294_967_290);
         assert_eq!(plan.total_ms(), u32::MAX);
-    }
-
-    #[test]
-    fn pingpong_does_not_repeat_the_endpoints() {
-        let plan = FramePlan::from_delays(&[100, 100, 100]);
-        let times = plan.play(LoopMode::PingPong, 1);
-        assert_eq!(times, vec![0, 100_000, 200_000, 100_000]);
-    }
-
-    #[test]
-    fn once_plays_a_single_pass() {
-        let plan = FramePlan::from_delays(&[100, 100]);
-        assert_eq!(plan.play(LoopMode::Once, 5).len(), 2);
-    }
-
-    #[test]
-    fn without_last_drops_the_duplicate_seam_frame() {
-        let plan = FramePlan::from_delays(&[100, 100, 100]);
-        let trimmed = plan.without_last();
-        assert_eq!(trimmed.len(), 2);
-        assert_eq!(trimmed.total_ms(), 200);
-        let single = FramePlan::from_delays(&[100]);
-        assert_eq!(single.without_last().len(), 1);
     }
 }
