@@ -6,7 +6,9 @@ use anikit_core::{
     Dither, Error, FrameSink, MIN_DELAY_MS, Result, StreamOptions, snap_delay, stream_gif,
 };
 use anikit_render_raster::{Fit, Mode, Options as SlideshowOptions, write_slideshow};
-use anikit_render_svg::{Options as VectorOptions, Preset, write_animation};
+use anikit_render_svg::{
+    Options as VectorOptions, Preset, TweenOptions, write_animation, write_tween,
+};
 use anikit_render_text::{Face, TextRenderer, layout, load_frames};
 
 use crate::png;
@@ -18,6 +20,7 @@ routes:
   ascii    text frames from a file or a directory of .txt files
   images   a folder of images
   vector   an SVG or HTML page captured in a browser
+  tween    an SVG drawing moved by a JSON timeline
 
 ascii options:
   -o, --out PATH      output GIF (default ascii.gif)
@@ -63,6 +66,14 @@ vector options:
   --colors N          palette size, 2 to 255 (default 255)
   --dither MODE       none or floyd (default none)
   --loop N            play count, 0 loops forever (default 0)
+  --preview PATH      write the first frame as a PNG
+
+tween options:
+  -o, --out PATH      output GIF (default tween.gif)
+  --browser PATH      Chromium based browser to drive
+  --colors N          palette size, 2 to 255 (default 255)
+  --dither MODE       none or floyd (default none)
+  --loop N            play count, 0 loops forever (default 0)
   --preview PATH      write the first frame as a PNG";
 
 /// Images route options, parsed from the same helpers as the text route.
@@ -103,11 +114,22 @@ struct Vector {
     preview: Option<PathBuf>,
 }
 
+/// Tween route options. The timeline owns size, fps and timing.
+struct Tween {
+    input: PathBuf,
+    out: PathBuf,
+    browser: Option<PathBuf>,
+    colors: usize,
+    dither: Dither,
+    loop_count: u16,
+    preview: Option<PathBuf>,
+}
+
 /// Run one command line.
 pub fn run(args: &[String]) -> Result<()> {
     let Some(command) = args.first() else {
         return Err(Error::invalid(
-            "missing route; expected ascii, images or vector",
+            "missing route; expected ascii, images, vector or tween",
         ));
     };
     match command.as_str() {
@@ -118,8 +140,9 @@ pub fn run(args: &[String]) -> Result<()> {
         "ascii" => ascii(&args[1..]),
         "images" => images(&args[1..]),
         "vector" => vector(&args[1..]),
+        "tween" => tween(&args[1..]),
         other => Err(Error::invalid(format!(
-            "unknown route {other}; expected ascii, images or vector"
+            "unknown route {other}; expected ascii, images, vector or tween"
         ))),
     }
 }
@@ -397,6 +420,34 @@ fn vector(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+fn tween(args: &[String]) -> Result<()> {
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        println!("{USAGE}");
+        return Ok(());
+    }
+    let args = parse_tween(args)?;
+    let options = TweenOptions {
+        colors: args.colors,
+        dither: args.dither,
+        loop_count: args.loop_count,
+        browser: args.browser,
+    };
+    let rendered = write_tween(&args.input, &args.out, &options)?;
+    if let Some(path) = &args.preview {
+        png::write_png(path, &rendered.first)?;
+        println!("{}  still frame", path.display());
+    }
+    println!(
+        "{}  {} frames, {:.2} s, {} x {}",
+        file_name(&args.out),
+        rendered.summary.frames,
+        rendered.summary.total_ms as f64 / 1000.0,
+        rendered.summary.width,
+        rendered.summary.height
+    );
+    Ok(())
+}
+
 fn file_name(path: &Path) -> String {
     path.file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -456,6 +507,59 @@ fn parse_vector(args: &[String]) -> Result<Vector> {
             }
             "--dpr" => {
                 parsed.dpr = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--browser" => {
+                parsed.browser = Some(PathBuf::from(take(args, &mut i, inline, name)?));
+            }
+            "--colors" => {
+                parsed.colors = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--dither" => {
+                parsed.dither = parse_dither(&take(args, &mut i, inline, name)?)?;
+            }
+            "--loop" => {
+                parsed.loop_count = number(&take(args, &mut i, inline, name)?, name)?;
+            }
+            "--preview" => {
+                parsed.preview = Some(PathBuf::from(take(args, &mut i, inline, name)?));
+            }
+            other if other.starts_with('-') => {
+                return Err(Error::invalid(format!("unknown option {other}")));
+            }
+            other => {
+                if input.is_some() {
+                    return Err(Error::invalid(format!("unexpected argument {other}")));
+                }
+                input = Some(PathBuf::from(other));
+            }
+        }
+        i += 1;
+    }
+    parsed.input = input.ok_or_else(|| Error::invalid("missing input"))?;
+    Ok(parsed)
+}
+
+fn parse_tween(args: &[String]) -> Result<Tween> {
+    let mut parsed = Tween {
+        input: PathBuf::new(),
+        out: PathBuf::from("tween.gif"),
+        browser: None,
+        colors: 255,
+        dither: Dither::None,
+        loop_count: 0,
+        preview: None,
+    };
+    let mut input: Option<PathBuf> = None;
+    let mut i = 0usize;
+    while i < args.len() {
+        let arg = args[i].as_str();
+        let (name, inline) = match arg.split_once('=') {
+            Some((name, value)) => (name, Some(value.to_string())),
+            None => (arg, None),
+        };
+        match name {
+            "-o" | "--out" => {
+                parsed.out = PathBuf::from(take(args, &mut i, inline, name)?);
             }
             "--browser" => {
                 parsed.browser = Some(PathBuf::from(take(args, &mut i, inline, name)?));

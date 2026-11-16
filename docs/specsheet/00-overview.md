@@ -2,18 +2,18 @@
 
 ## Header
 
-- Title: animated-gif skill - GIF building from text frames, image folders and SVG animation in one Rust binary.
-- Purpose: the reference for the skill and its binary: the three routes, the shared GIF core, the frame flow, and the tween crate that carries keyframes and layers. Specsheet and code together describe the system.
-- Stakeholders: the person and the agent invoking the skill, users of the public repository, and the runtime the vector route needs: an installed Chromium based browser.
-- Status: 0.2.0 ships one Rust binary, installed by the skill from a release asset. The Python payload is deleted; it stays at tag python-freeze as a reference for behaviour, not an authority. The Rust workspace carries core, time, all three routes and the tween crate; the tween crate implements parts 04 to 07 for number, opacity, transform and colour, and carries the path, raster and grid plans of part 06.
+- Title: animated-gif skill - GIF building from text frames, image folders, SVG animation and a JSON tween timeline in one Rust binary.
+- Purpose: the reference for the skill and its binary: the four routes, the shared GIF core, the frame flow, and the tween crate that carries keyframes and layers. Specsheet and code together describe the system.
+- Stakeholders: the person and the agent invoking the skill, users of the public repository, and the runtime the vector and tween routes need: an installed Chromium based browser.
+- Status: one Rust binary ships four routes. The Python payload is deleted; it stays at tag python-freeze as a reference for behaviour, not an authority. The Rust workspace carries core, time, all four routes and the tween crate; the tween crate implements parts 04 to 07 for number, opacity, transform and colour, and carries the path, raster and grid plans of part 06. The tween route is the crate's first consumer and renders an SVG drawing from the canonical JSON timeline.
 - Related documents: README.md (install and invocation), CHANGELOG.md (change list), docs/index.md (human manual), docs/research/ (evidence and analysis), LICENSE.
 - Evidence pin: behaviour claims cite the frozen payload at tag python-freeze (files under agent-skill/bin) and the Rust sources under rust/; measurements cite docs/research/. Cites name files, not commits.
 
 ## Short description
 
-The skill turns three kinds of input into one looping GIF: text frames drawn as monospace glyphs, a folder of images with sequence, crossfade or Ken Burns motion, and an SVG or HTML page captured through a browser at explicit times. Every route ends in the same core: one palette sampled across the loop, delays on the 10 ms grid, identical frames merged, the file written under a temp name and verified before it replaces the target.
+The skill turns four kinds of input into one looping GIF: text frames drawn as monospace glyphs, a folder of images with sequence, crossfade or Ken Burns motion, an SVG or HTML page captured through a browser at explicit times, and a static SVG drawing moved by a JSON timeline. Every route ends in the same core: one palette sampled across the loop, delays on the 10 ms grid, identical frames merged, the file written under a temp name and verified before it replaces the target.
 
-The Rust binary keeps the commands and the visible behaviour, streams frames instead of holding them, and adds a tween crate so keyframes, easing and layered animation can be evaluated without a browser. Multi-format conversion between animated GIF, SVG animation and image folders follows the tween crate; it is not specified here beyond the rules it must obey.
+The Rust binary keeps the commands and the visible behaviour, streams frames instead of holding them, and adds a tween crate so keyframes, easing and layered animation can be evaluated without a browser. The tween route is the first consumer: it evaluates the timeline and draws the result into an SVG page. Multi-format conversion between animated GIF, SVG animation and image folders follows the tween crate; it is not specified here beyond the rules it must obey.
 
 ## Table of contents
 
@@ -29,6 +29,7 @@ The Rust binary keeps the commands and the visible behaviour, streams frames ins
 | [08-fixtures-and-gate.md](08-fixtures-and-gate.md) | fixture export, structural checks, the gate, and the order Python files are deleted |
 | [09-decisions.md](09-decisions.md) | one row per open question, with the lean and the status |
 | [10-kinetic-motion.md](10-kinetic-motion.md) | motion that reads as physical: contact holds, weight cues, bounce decay, springs against beziers, defaults |
+| [11-tween-route.md](11-tween-route.md) | the tween route: JSON grammar, element state, frame count, errors and tests |
 
 ## Design rules
 

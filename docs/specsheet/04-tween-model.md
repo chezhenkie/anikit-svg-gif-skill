@@ -73,7 +73,7 @@ One file, absolute times in milliseconds, keys in order, easing on the outgoing 
 }
 ```
 
-`kind` selects the property type in part 06. `src` uses `file.svg#elementId`. A missing attribute inherits the previous key. `layers` is defined in part 07.
+`kind` selects the property type in part 06. `src` uses `file.svg#elementId`. A missing attribute inherits the previous key. `layers` is defined in part 07. Part 11 fixes the full grammar the tween route accepts, including the five kinds it draws, the easing and motion objects, and the layer syntax.
 
 ## 4.7 Invariants and tests
 

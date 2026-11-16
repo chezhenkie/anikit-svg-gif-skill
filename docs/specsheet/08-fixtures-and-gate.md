@@ -1,16 +1,17 @@
 # 08-fixtures-and-gate
 
-Status: all three routes have fixtures. The Rust gate is the only gate and covers the workspace: core, time, all three routes, and the vector route where a browser is installed.
+Status: all four routes have fixtures. The Rust gate is the only gate and covers the workspace: core, time, all four routes, and the browser routes where a browser is installed.
 
 ## 8.1 Fixtures
 
-The frozen Python exported one fixture set per route before its file was deleted. Each set holds the smallest input that exercises the route and the GIF it produced.
+The frozen Python exported one fixture set per route before its file was deleted. Each set holds the smallest input that exercises the route and the GIF it produced. The tween route did not exist before the port, so its reference is the first Rust run and its manifest is the record.
 
 | route | fixture input | what the manifest records |
 |---|---|---|
 | text | a three-frame file with a per-frame delay and one SGR colour | frame count, per-frame delay, size, palette size |
 | images | three images at different sizes, one with EXIF rotation | frame count, total duration, size, mode, fit |
 | vector | an SVG with a CSS animation and one SMIL animation | frame count, total duration, size, preset, browser name |
+| tween | a 120x80 drawing with three base tracks and a windowed add layer | frame count, per-frame delay, size, track count, browser name |
 
 The manifest is a plain text file beside the fixture, one `key=value` per line, plus a line per frame with its delay and a hash of its pixels. Hashes are of the composited canvas, not of the file or of one patch: the encoder writes deltas, so a frame's picture only exists after every frame up to it has been drawn.
 
@@ -41,7 +42,7 @@ The Rust gate adds:
 - The hygiene checks ported from the Python gate: ASCII only, LF only, no secrets, no machine paths, and every markdown link resolving. They live in `rust/crates/anikit-cli/tests/repo_hygiene.rs`.
 - A memory check: a 1000-frame run stays within the stated multiple of a 100-frame run (part 03). The test is `tests/memory.rs` in `anikit-core` and reads the peak resident set from the operating system.
 
-The Rust gate runs in GitHub Actions on every push to `main` and every pull request (`.github/workflows/ci.yml`), on Linux and on Windows. A developer machine is a convenience, not the gate: a release asset is only ever produced by `.github/workflows/release.yml` on a tag (09, row 20).
+The Rust gate runs in GitHub Actions on every push to `main` and every pull request (`.github/workflows/ci.yml`), on Linux x86_64, Linux arm64, Windows and macOS. The arm64 and macOS jobs build the release binary, and the arm64 job runs the text and images routes from it. A developer machine is a convenience, not the gate: a release asset is only ever produced by `.github/workflows/release.yml` on a tag (09, row 20).
 
 ## 8.4 Deletion order
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0
+
+### New features
+
+#### All platforms
+
+* Fourth route, `anikit tween`: a static SVG drawing is moved by a JSON timeline of absolute times. The tween crate supplies keyframes, easing, springs, arcs, ballistic motion and layers; transform, opacity, fill, stroke and stroke width are written per frame through one browser page.
+* Release assets for Linux aarch64 (static musl), macOS Apple silicon and macOS Intel, beside the x86_64 Linux and Windows builds.
+
+### Changes
+
+* The tween route is the first consumer of `anikit-tween`; no new crate was added.
+* `anikit-render-svg` exposes one page and capture path, shared by the vector and tween routes.
+* CI builds the arm64 Linux and both macOS targets; the arm64 job also runs the text and images routes from the musl binary.
+* The skill documents the tween route, its timeline grammar and the browser requirement that now covers both browser routes.
+
 ## 0.2.0
 
 ### New features

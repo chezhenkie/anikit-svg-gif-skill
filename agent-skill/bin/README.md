@@ -5,11 +5,14 @@ This folder holds the `anikit` binary for the host, copied from a release asset:
 | Platform | Asset | Name here |
 |---|---|---|
 | Linux x86_64, glibc or musl | `anikit-linux-x86_64` | `anikit` |
+| Linux aarch64, musl | `anikit-linux-aarch64` | `anikit` |
 | Windows x86_64 | `anikit-windows-x86_64.exe` | `anikit.exe` |
+| macOS Apple silicon | `anikit-macos-aarch64` | `anikit` |
+| macOS Intel | `anikit-macos-x86_64` | `anikit` |
 
 A fresh clone has no binary in this folder. If there is none for the host, the platform is unsupported: the skill does not build or download one while making a GIF.
 
 ```sh
-gh release download v0.2.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
+gh release download v0.3.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
 chmod +x agent-skill/bin/anikit
 ```

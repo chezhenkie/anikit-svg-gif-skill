@@ -1,0 +1,24 @@
+route=tween
+input=input/scene.json
+reference=reference.gif
+fps=10
+duration_s=1
+tracks=3
+layers=1
+width=120
+height=80
+frame_count=10
+total_ms=1000
+colors_requested=255
+browser=ungoogled-chromium
+note=pixel hashes recorded from the first Rust run; flat art at whole-pixel positions
+frame 0 delay_ms=100 box_x=19.5 hash=b3bf39ddbd9b514d0e19ff1e90bf73b88917db0b14ac71bee7b57c6342610b39
+frame 1 delay_ms=100 box_x=25.5 hash=4366be775297b830a058832e9b1cfc1f74b39e86385b472c5b35fdcbe1be0afc
+frame 2 delay_ms=100 box_x=31.5 hash=51a331c4b850ac6982ea23a619f5b39515a1f36e7acd480ff00cf5fed5417063
+frame 3 delay_ms=100 box_x=37.5 hash=243a09130ffbf01816ed24e0317caf110af8d7afd32b1e7cec864ed2c29eaac9
+frame 4 delay_ms=100 box_x=43.5 hash=97569dd9c02341e504e7e84026f3a347a26e84c19ea064928545d433304d0679
+frame 5 delay_ms=100 box_x=49.5 hash=99174ea44722e2b76a18a897a5c10d5c114b6cbe205fc4faddc1cf028a61872f
+frame 6 delay_ms=100 box_x=55.5 hash=b0c19cdd0433b57413548f905cc8b0ae1754fcb0f16c0e9cc9b093b4b25d2e98
+frame 7 delay_ms=100 box_x=61.5 hash=76dc9080da728bbe9d9b3abb47be1322ec9028a94a94bf6e0dd3c36dc0b71904
+frame 8 delay_ms=100 box_x=67.5 hash=3ff0d437757c39207cec3f065e4f0aff38d1901bcce2c18056bf932a7714dfa9
+frame 9 delay_ms=100 box_x=73.5 hash=1272e833710101c4bd03740673973b95a04c7e1992f6a8802ea0c802e3afdbcb

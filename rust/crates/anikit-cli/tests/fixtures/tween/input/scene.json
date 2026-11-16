@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "canvas": {"w": 120, "h": 80, "bg": "#ffffff", "fps": 10},
+  "timing": {"loop": "once", "rate": 1},
+  "tracks": [
+    {"id": "box-move", "kind": "svg.transform", "src": "art.svg#box",
+     "keys": [
+       {"t": 0, "translate": [0, 0]},
+       {"t": 1000, "translate": [60, 0]}
+     ]},
+    {"id": "box-fade", "kind": "svg.opacity", "src": "art.svg#box",
+     "keys": [
+       {"t": 0, "value": 1},
+       {"t": 1000, "value": 0.5}
+     ]},
+    {"id": "box-paint", "kind": "svg.fill", "src": "art.svg#box",
+     "keys": [
+       {"t": 0, "value": "#c82020"},
+       {"t": 1000, "value": "#2040d0"}
+     ]}
+  ],
+  "layers": [
+    {"id": "flash", "order": 1, "window": [300, 700],
+     "weight": [{"t": 0, "value": 1}, {"t": 1000, "value": 0}],
+     "bindings": [
+       {"target": "box-fade", "op": "add", "keys": [{"t": 0, "value": 0.2}]}
+     ]}
+  ]
+}

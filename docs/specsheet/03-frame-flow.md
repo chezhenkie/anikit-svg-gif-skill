@@ -1,6 +1,6 @@
 # 03-frame-flow
 
-Status: every route streams through the sink. The text route renders up to twelve palette samples, then each frame at its cumulative presentation time; the images and vector routes already worked that way. `stream_gif` is the only writer, so the merge and rounding rules exist once.
+Status: every route streams through the sink. The text route renders up to twelve palette samples, then each frame at its cumulative presentation time; the images and vector routes already worked that way, and the tween route samples its prepared plan at each presentation time. `stream_gif` is the only writer, so the merge and rounding rules exist once.
 
 ## 3.1 Why two passes
 

@@ -1,6 +1,6 @@
 # Documentation
 
-The skill turns text frames, a folder of images, or an SVG animation into one looping GIF. This folder holds three kinds of document, and they are kept apart on purpose.
+The skill turns text frames, a folder of images, an SVG animation, or a static SVG drawing with a JSON timeline into one looping GIF. This folder holds three kinds of document, and they are kept apart on purpose.
 
 - [specsheet/](specsheet/00-overview.md) is binding. It states what the system does and what the Rust port must satisfy. Start with the overview, which holds the table of contents and the design rules.
 - `research/` is evidence. Measurements, sources and prior art sit there, and a specsheet wins wherever the two disagree.
@@ -18,8 +18,9 @@ The skill turns text frames, a folder of images, or an SVG animation into one lo
 2. [Behaviour baseline](specsheet/01-behaviour-baseline.md): what the frozen Python did, and what the binary reproduces.
 3. [Crate split](specsheet/02-crate-split.md) and [frame flow](specsheet/03-frame-flow.md): how the Rust workspace is shaped.
 4. Parts 04 to 07: the tween crate, from time and keys to layers.
-5. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical.
-6. [Decisions](specsheet/09-decisions.md): what is settled and what is still open.
+5. [Tween route](specsheet/11-tween-route.md): how a JSON timeline becomes the fourth route.
+6. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical.
+7. [Decisions](specsheet/09-decisions.md): what is settled and what is still open.
 
 ## Research notes
 

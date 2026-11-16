@@ -1,20 +1,21 @@
 ---
 name: animated-gif
-description: "Build animated GIFs from ASCII text frames, a folder of images, or an SVG or HTML animation, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, animate ASCII art, turn photos into a slideshow GIF, or animate an SVG."
+description: "Build animated GIFs from ASCII text frames, a folder of images, an SVG or HTML animation, or a JSON timeline over a static SVG drawing, with palette, timing, looping, scaling and validation handled. Use when asked to make, convert, resize, slow down or fix an animated GIF, animate ASCII art, turn photos into a slideshow GIF, animate an SVG, or keyframe an SVG drawing."
 license: MIT
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Animated GIF
 
-One binary, three routes, one assembly core. Pick the route that matches the input.
+One binary, four routes, one assembly core. Pick the route that matches the input.
 
 | Input | Command | Motion |
 |---|---|---|
 | Text frames with ANSI colors | `bin/anikit ascii` | frame sequence |
 | Folder of photos or images | `bin/anikit images` | holds, crossfade, Ken Burns |
 | SVG or HTML animation | `bin/anikit vector` | SMIL, CSS, or preset rotate/pulse/fade |
+| Static SVG drawing and a JSON timeline | `bin/anikit tween` | keyframes, easing, springs, ballistic motion, layers |
 
 Every route ends in the same core: one palette across the loop, 10 ms timing grid, identical consecutive frames merged into longer delays, delta frames, atomic write, read-back verification.
 
@@ -22,7 +23,7 @@ Every route ends in the same core: one palette across the loop, 10 ms timing gri
 
 `bin/anikit` is one platform binary (`bin/anikit.exe` on Windows). It needs no Python, no Node and no package manager. When the host has no binary for its platform, report the platform as unsupported and stop: do not build, download or substitute one during a GIF run.
 
-The vector route also needs an installed Chromium based browser. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly. Without either, Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`.
+The vector and tween routes also need an installed Chromium based browser. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly. Without either, Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`.
 
 A failed run prints one `FAIL ...` line on stderr and exits 1. Do not retry with the same arguments.
 
@@ -83,6 +84,41 @@ bin/anikit vector page.html -o project/page.gif --width 960 --height 540 --durat
 - `--dpr 2` captures at twice the viewport, for sharper text; the GIF is then twice the pixel size.
 - A JavaScript canvas or WebGL page is not driven by this route. Use a page that animates through CSS or SMIL, or pre-render frames and use the image route.
 
+## Tween route
+
+A static `.svg` drawing is moved by a JSON timeline. The timeline names the canvas, the frame rate, one track per property, and optional layers. Times are absolute milliseconds and the last key sets the duration.
+
+```json
+{
+  "version": 1,
+  "canvas": {"w": 480, "h": 270, "bg": "#0b0d12", "fps": 25},
+  "timing": {"loop": "cycle", "rate": 1.0},
+  "tracks": [
+    {"id": "mark-move", "kind": "svg.transform", "src": "mark.svg#mark",
+     "keys": [
+       {"t": 0, "translate": [0, 0], "easing": "ease-out"},
+       {"t": 800, "translate": [120, 40], "easing": "hold"},
+       {"t": 1000, "translate": [120, 40]}
+     ]}
+  ]
+}
+```
+
+```powershell
+bin/anikit tween scene.json -o project/scene.gif --preview project/scene.png
+```
+
+- Kinds: `svg.transform`, `svg.opacity`, `svg.fill`, `svg.stroke`, `svg.stroke-width`.
+- A transform key may set `translate` `[x, y]`, `rotate` degrees, `scale` (a number or `[x, y]`) and `skew` degrees. A part missing from a key keeps the previous key's value.
+- `svg.opacity`, `svg.fill` and `svg.stroke` keys carry `value`; `svg.stroke-width` carries a number. Colours are `#rgb` or `#rrggbb`.
+- `easing` is `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`, `hold`, `{"bezier": [x1, y1, x2, y2]}`, `{"steps": n, "at": "end"}` or `{"spring": {"stiffness": 400, "damping": 30, "mass": 1, "settle": 300}}`.
+- `svg.opacity` and `svg.stroke-width` keys may take `motion` instead of `easing`: `{"ballistic": {"plane": 0, "restitution": 0.5}}` or `{"arc": {"bend": 0.1, "easing": "ease-in-out"}}`. Transforms cannot use ballistic motion.
+- `timing.loop` is `once`, `cycle` or `pingpong` and maps time, not the GIF repeat count. `rate` may be negative. The GIF repeat count is still `--loop`.
+- A layer adds, multiplies or replaces a track under a time window and a weight: `{"id": "shake", "order": 1, "window": [300, 700], "weight": [{"t": 0, "value": 1}, {"t": 700, "value": 0}], "bindings": [{"target": "mark-move", "op": "add", "keys": [{"t": 0, "translate": [4, 0]}]}]}`. `order` decides application; bindings take `op` (`replace`, `add`, `multiply`, `accumulate`) and, for transforms, `mode` (`append` or `prepend`).
+- Every track must name the same `.svg` file, and `src` is `file.svg#elementId`. The root `svg` cannot be a target. The drawing's own CSS or SMIL animation is paused, so the timeline is the only motion.
+- Canvas size, fps and duration come from the JSON, not from flags. The frame count rounds the duration up at the canvas fps.
+- Path morphs, raster keys, ASCII grids and spatial masks are not supported by this route.
+
 ## Shared options
 
 - `--colors` 2 to 255. Lower it only when the palette is simple or the file must shrink.
@@ -99,7 +135,7 @@ A generated sequence becomes a folder of PNGs and the image route:
 bin/anikit images frames/ -o project/plot.gif --mode sequence --fps 10 --hold 0.1 --width 480 --height 270
 ```
 
-Frames must share one size and are sorted by name, so number them. `--hold` rounds to the frame grid: at `--fps 10`, `--hold 0.1` shows one frame per 100 ms. Use this route for data animations, generated diagrams or any frames the three routes above do not cover.
+Frames must share one size and are sorted by name, so number them. `--hold` rounds to the frame grid: at `--fps 10`, `--hold 0.1` shows one frame per 100 ms. Use this route for data animations, generated diagrams or any frames the four routes above do not cover.
 
 ## Contract
 
@@ -121,7 +157,7 @@ See [references/animated-gif-considerations.md](references/animated-gif-consider
 
 ## Files
 
-- `bin/anikit` - the binary: route parsing, the three routes, the shared core.
+- `bin/anikit` - the binary: route parsing, the four routes, the shared core.
 - `references/animated-gif-considerations.md` - format notes.
 - `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, checklist.
 

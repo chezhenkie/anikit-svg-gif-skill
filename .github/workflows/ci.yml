@@ -49,3 +49,36 @@ jobs:
         run: cargo test --manifest-path rust/Cargo.toml --workspace
       - name: release build
         run: cargo build --manifest-path rust/Cargo.toml --release -p anikit-cli
+
+  arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: toolchain
+        run: rustup toolchain install stable --profile minimal --target aarch64-unknown-linux-musl
+      - name: musl build
+        run: cargo build --manifest-path rust/Cargo.toml --release --target aarch64-unknown-linux-musl -p anikit-cli
+      - name: musl routes
+        run: |
+          set -eu
+          cd rust
+          bin=./target/aarch64-unknown-linux-musl/release/anikit
+          $bin ascii crates/anikit-cli/tests/fixtures/text/frames.txt -o "$RUNNER_TEMP/text.gif" --size 28 --width 480 --height 270
+          $bin images crates/anikit-cli/tests/fixtures/images/input -o "$RUNNER_TEMP/images.gif" --width 320 --height 180 --mode crossfade --fps 12 --hold 0.5 --transition 0.25
+          test -s "$RUNNER_TEMP/text.gif"
+          test -s "$RUNNER_TEMP/images.gif"
+      - name: static link
+        run: file rust/target/aarch64-unknown-linux-musl/release/anikit | grep -Eq "static(-pie)? linked"
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: toolchain
+        run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+      - name: build
+        run: cargo build --manifest-path rust/Cargo.toml --release --target ${{ matrix.target }} -p anikit-cli

@@ -13,10 +13,10 @@ Seven crates, one binary. Every package carries the `anikit-` prefix; this part 
 | anikit-tween | lib | timeline, tracks, keys, easing, property values, layers and composition |
 | anikit-render-text | lib | glyph grid, ANSI SGR parsing, glyph loading and metrics |
 | anikit-render-raster | lib | image decoding, EXIF rotation, fit, Ken Burns, crossfade, pixel adjustments |
-| anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation |
+| anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation, timeline-driven element state |
 | anikit-cli | bin | argument parsing, route dispatch, messages, exit codes, preview output |
 
-There is no render-web crate. HTML and JavaScript pages are out of scope for the port, so the vector route handles SVG plus pages whose animation is CSS, WAAPI or SMIL.
+There is no render-web crate. HTML and JavaScript pages are out of scope for the port, so the vector route handles SVG plus pages whose animation is CSS, WAAPI or SMIL. The tween route accepts an SVG drawing only, because its `src` names elements.
 
 ## 2.2 Dependency direction
 
@@ -46,7 +46,7 @@ The same graph as a picture: docs/ascii-crate-flow.txt.
 
 ## 2.4 Binary and subcommands
 
-One binary, `anikit` (`anikit.exe` on Windows), because the three routes share the core and a second executable would duplicate the writer and the error contract. The route is selected by a subcommand that matches the current script name, so `anikit ascii`, `anikit images` and `anikit vector` replace `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`.
+One binary, `anikit` (`anikit.exe` on Windows), because the four routes share the core and a second executable would duplicate the writer and the error contract. The text, images and vector subcommands keep the names of `ascii_gif.py`, `pics_gif.py` and `svg_gif.py`; `tween` is new in the Rust binary.
 
 The binary is produced by the `anikit-cli` package; the other packages are libraries and ship no executable. The skill's invocation table in README.md is updated in the same change that introduces the binary.
 
@@ -57,13 +57,13 @@ The binary is produced by the `anikit-cli` package; the other packages are libra
 | x86_64-pc-windows-msvc | anikit.exe | the installed skill path on Windows |
 | x86_64-unknown-linux-gnu | anikit | glibc distributions |
 | x86_64-unknown-linux-musl | anikit | static, runs on Alpine and in scratch containers |
-| aarch64-unknown-linux-musl | anikit | optional, same rules as x86_64 musl |
+| aarch64-unknown-linux-musl | anikit | static, same rules as x86_64 musl |
 | aarch64-apple-darwin, x86_64-apple-darwin | anikit | macOS, no special flags |
 
-The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector route depends on an installed Chromium, and on musl that is the distribution package, because the Playwright build is linked against glibc and will not start.
+The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector and tween routes depend on an installed Chromium, and on musl that is the distribution package, because the Playwright build is linked against glibc and will not start.
 
 ## 2.6 Delivery
 
-Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector route uses it.
+Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector and tween routes use it.
 
-The workflow builds x86_64 Windows and x86_64 static musl today. The Apple and aarch64 assets are added when the tween crate completes the Rust conversion; a host that needs one before then is reported as unsupported.
+The workflow builds x86_64 Windows, x86_64 static musl, aarch64 static musl and both Apple targets, and attaches each under its asset name. A host with no matching asset is reported as unsupported.

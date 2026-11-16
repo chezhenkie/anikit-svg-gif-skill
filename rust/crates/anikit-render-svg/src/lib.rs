@@ -5,8 +5,9 @@
 //! pushed straight into the core stream, so the loop is never held as images.
 
 mod browser;
-mod cdp;
-mod page;
+pub(crate) mod cdp;
+pub(crate) mod page;
+mod timeline;
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -20,6 +21,7 @@ use cdp::Session;
 
 pub use browser::discover;
 pub use page::{Preset, SvgSize, resolve_size, svg_size};
+pub use timeline::{TweenOptions, write_tween};
 
 /// How many frames feed the palette when the loop is longer than that.
 const SAMPLES: usize = 12;
@@ -77,9 +79,6 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
     let plan = FramePlan::uniform(count, fps)?;
 
     let exe = discover(options.browser.as_deref())?;
-    let mut browser = Browser::launch(&exe)?;
-    let socket = browser.page_web_socket()?;
-    let mut session = Session::connect(&socket)?;
 
     // An SVG is drawn in a page of our own; the base URL keeps its relative
     // references working. The guard removes the page before the run returns.
@@ -87,22 +86,18 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
         Some(text) => Some(write_page(input, text, width, height, options.background)?),
         None => None,
     };
-
-    session.call(
-        "Emulation.setDeviceMetricsOverride",
-        Some(json!({
-            "width": width,
-            "height": height,
-            "deviceScaleFactor": options.dpr,
-            "mobile": false,
-        })),
-    )?;
     let target = match &temp {
         Some(page) => page::file_url(&page.path)?,
         None => page::file_url(input)?,
     };
-    session.call("Page.navigate", Some(json!({ "url": target })))?;
-    wait_for_load(&mut session)?;
+    let mut page = Page::open(
+        &exe,
+        width,
+        height,
+        options.dpr,
+        &target,
+        options.background,
+    )?;
     let setup = page::js_setup(
         kind == Kind::Html,
         options.animate,
@@ -110,12 +105,8 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
         options.duration,
         options.background,
     );
-    evaluate(&mut session, &setup, true)?;
+    page.evaluate(&setup, true)?;
 
-    let mut capture = Capturer {
-        session,
-        background: options.background,
-    };
     let picks = SAMPLES.min(count);
     let mut samples = Vec::with_capacity(picks);
     for pick in 0..picks {
@@ -124,7 +115,7 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
         } else {
             (pick as f64 * (count - 1) as f64 / (picks - 1) as f64).round() as usize
         };
-        samples.push(capture.frame(time_of(index, fps))?);
+        samples.push(page.frame(time_of(index, fps))?);
     }
 
     let mut stream = stream_gif(
@@ -143,13 +134,13 @@ pub fn write_animation(input: &Path, out: &Path, options: &Options) -> Result<Re
         let pts = plan
             .presentation_us(index)
             .ok_or_else(|| Error::invalid(format!("frame {index} is outside the plan")))?;
-        let frame = capture.frame(time_of(index, fps))?;
+        let frame = page.frame(time_of(index, fps))?;
         if first.is_none() {
             first = Some(frame.clone());
         }
         stream.push(index as u32, pts, &frame)?;
     }
-    drop(capture);
+    drop(page);
     let summary = stream.finish()?;
     let first = first.ok_or_else(|| Error::invalid("no frames were captured"))?;
     Ok(Rendered { summary, first })
@@ -210,7 +201,7 @@ impl Drop for PageDir {
 }
 
 /// Write the wrapping page beside no input, under the system temp directory.
-fn write_page(
+pub(crate) fn write_page(
     input: &Path,
     svg: &str,
     width: u32,
@@ -280,15 +271,74 @@ fn evaluate(session: &mut Session, expression: &str, await_promise: bool) -> Res
     Ok(reply)
 }
 
-/// A page that can be seeked and captured.
+/// A launched browser with one page target, sized and navigated.
+///
+/// The browser is the field that is never read: it must outlive the session and
+/// kills its process and profile when the page is dropped.
+pub(crate) struct Page {
+    capturer: Capturer,
+    _browser: Browser,
+}
+
+impl Page {
+    pub(crate) fn open(
+        exe: &Path,
+        width: u32,
+        height: u32,
+        dpr: u32,
+        target: &str,
+        background: [u8; 3],
+    ) -> Result<Page> {
+        let mut browser = Browser::launch(exe)?;
+        let socket = browser.page_web_socket()?;
+        let mut capturer = Capturer {
+            session: Session::connect(&socket)?,
+            background,
+        };
+        capturer.session.call(
+            "Emulation.setDeviceMetricsOverride",
+            Some(json!({
+                "width": width,
+                "height": height,
+                "deviceScaleFactor": dpr,
+                "mobile": false,
+            })),
+        )?;
+        capturer
+            .session
+            .call("Page.navigate", Some(json!({ "url": target })))?;
+        wait_for_load(&mut capturer.session)?;
+        Ok(Page {
+            capturer,
+            _browser: browser,
+        })
+    }
+
+    /// Run a script in the page.
+    pub(crate) fn evaluate(&mut self, script: &str, await_promise: bool) -> Result<Value> {
+        evaluate(&mut self.capturer.session, script, await_promise)
+    }
+
+    /// Take one screenshot, decoded and matted onto the background.
+    pub(crate) fn shoot(&mut self) -> Result<Frame> {
+        self.capturer.shoot()
+    }
+
+    /// Seek every clock to one time and take a screenshot.
+    fn frame(&mut self, seconds: f64) -> Result<Frame> {
+        self.evaluate(&page::js_seek(seconds), false)?;
+        self.shoot()
+    }
+}
+
+/// A page that can be captured.
 struct Capturer {
     session: Session,
     background: [u8; 3],
 }
 
 impl Capturer {
-    fn frame(&mut self, seconds: f64) -> Result<Frame> {
-        evaluate(&mut self.session, &page::js_seek(seconds), false)?;
+    fn shoot(&mut self) -> Result<Frame> {
         let reply = self.session.call(
             "Page.captureScreenshot",
             Some(json!({
