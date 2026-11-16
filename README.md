@@ -1,12 +1,12 @@
 # Animated GIF
 
-An animation maker and translator in one binary. It reads motion from four different sources - text frames, an image folder, a live SVG or HTML page, or a keyframe timeline you write yourself - and renders a finished loop on your own machine. GIF is the output that ships today; the tween engine at the centre is the part that generalises.
+An animation maker and translator in one binary. It reads motion from four different sources - text frames, an image folder, a live SVG or HTML page, or a keyframe timeline you write yourself - and renders a finished loop on your own machine. It writes GIF today; the tween engine underneath is what makes other directions possible.
 
-- **Keyframes are the point.** Tracks, easing curves, springs, arcs, ballistic motion, layers and weights. You describe the motion once and the frames are generated from it, instead of drawing every frame by hand.
-- **Four ways in, one pipeline.** ASCII frames, image folders, live SVG or HTML animation, and a JSON timeline over a static drawing share one timing, palette and compositing core, so a hold or a loop means the same thing on every route.
-- **Timelines are data.** The canonical format is plain JSON with absolute times, explicit easing and named layers, so a scene can be generated, diffed, reviewed or handed to an agent like any other source file.
-- **One native binary.** No Python, no Node, no package manager. A Chromium browser is required only by the routes that read a live page or render a timeline.
-- **Deterministic and verified.** One palette across the loop, timing on the 10 ms grid, held frames merged, changed rectangles only, and every written file read back before its path is printed.
+- **Keyframes are the point.** Tracks, easing curves, springs, arcs, ballistic motion, layers and weights. Describe the motion once and the frames are generated from it, instead of drawing each one by hand.
+- **Four ways in, one engine.** ASCII frames, image folders, live SVG or HTML animation, and a JSON timeline over a static drawing are timed, coloured and composited the same way, so a hold or a loop means the same thing on every route.
+- **Timelines are data.** A scene is plain JSON: absolute times, explicit easing, named layers. Generate it, diff it, review it or hand it to an agent like any other source file.
+- **One native binary.** No Python, no Node, no package manager. A Chromium browser is needed only by the routes that read a live page or render a timeline.
+- **Deterministic and verified.** One palette across the loop, timing on the 10 ms grid, holds merged, only changed pixels written, and every file read back before its path is printed.
 
 ## Samples
 
