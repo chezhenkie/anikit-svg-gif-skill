@@ -158,9 +158,15 @@ fn installed() -> Vec<PathBuf> {
         push(local.clone(), "Google/Chrome/Application/chrome.exe");
         push(local, "BraveSoftware/Brave-Browser/Application/brave.exe");
         push(program.clone(), "Google/Chrome/Application/chrome.exe");
-        push(program.clone(), "BraveSoftware/Brave-Browser/Application/brave.exe");
+        push(
+            program.clone(),
+            "BraveSoftware/Brave-Browser/Application/brave.exe",
+        );
         push(program_x86.clone(), "Google/Chrome/Application/chrome.exe");
-        push(program_x86.clone(), "BraveSoftware/Brave-Browser/Application/brave.exe");
+        push(
+            program_x86.clone(),
+            "BraveSoftware/Brave-Browser/Application/brave.exe",
+        );
         push(program_x86, "Microsoft/Edge/Application/msedge.exe");
         push(program, "Microsoft/Edge/Application/msedge.exe");
     } else if cfg!(target_os = "macos") {
