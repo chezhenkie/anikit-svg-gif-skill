@@ -61,7 +61,7 @@ The binary is produced by the `anikit-cli` package; the other packages are libra
 | Linux arm, musl | anikit | static, same rules as x86_64 musl |
 | macOS arm | anikit | Apple silicon, no special flags |
 
-The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector, tween and import routes depend on an installed Chromium; on musl the distribution package is the only source of one.
+The text and images routes must build for every target with no system libraries beyond libc. The text route carries its own face in the binary, so a musl build and Alpine need no font package. The vector, tween and import routes depend on an installed Chromium based browser; on musl the distribution package is the only source of one.
 
 ## 2.6 Delivery
 

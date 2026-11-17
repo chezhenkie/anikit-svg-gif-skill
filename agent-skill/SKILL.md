@@ -27,7 +27,7 @@ The output extension chooses the format on the four frame routes: `.gif`, `.png`
 
 `bin/anikit` is one platform binary (`bin/anikit.exe` on Windows). It needs no Python, no Node and no package manager. When the host has no binary for its platform, report the platform as unsupported and stop: do not build, download or substitute one during a GIF run.
 
-The vector and import routes, and the tween route when it writes GIF or APNG, also need an installed Chromium based browser. An SVG export does not. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly. Without either, Chromium, Google Chrome and Edge are searched in their install locations, then on `PATH`.
+The vector and import routes, and the tween route when it writes GIF or APNG, also need an installed Chromium based browser: Chromium, Google Chrome, ungoogled Chromium, Brave or Edge. An SVG export does not. `GIFKIT_BROWSER` or `--browser PATH` names one explicitly, including any other Chromium based browser. Without either, Chromium, Google Chrome, Brave and Edge are searched in their install locations, then on `PATH`.
 
 A failed run prints one `FAIL ...` line on stderr and exits 1. Do not retry with the same arguments.
 

@@ -22,12 +22,14 @@ const START_TIMEOUT: Duration = Duration::from_secs(20);
 const POLL: Duration = Duration::from_millis(20);
 
 /// Names looked up on PATH, in order.
-const PATH_NAMES: [&str; 6] = [
+const PATH_NAMES: [&str; 8] = [
     "ungoogled-chromium",
     "chromium",
     "chromium-browser",
     "google-chrome",
     "google-chrome-stable",
+    "brave-browser",
+    "brave",
     "msedge",
 ];
 
@@ -153,15 +155,19 @@ fn installed() -> Vec<PathBuf> {
             }
         };
         push(local.clone(), "Chromium/Application/chrome.exe");
-        push(local, "Google/Chrome/Application/chrome.exe");
+        push(local.clone(), "Google/Chrome/Application/chrome.exe");
+        push(local, "BraveSoftware/Brave-Browser/Application/brave.exe");
         push(program.clone(), "Google/Chrome/Application/chrome.exe");
+        push(program.clone(), "BraveSoftware/Brave-Browser/Application/brave.exe");
         push(program_x86.clone(), "Google/Chrome/Application/chrome.exe");
+        push(program_x86.clone(), "BraveSoftware/Brave-Browser/Application/brave.exe");
         push(program_x86, "Microsoft/Edge/Application/msedge.exe");
         push(program, "Microsoft/Edge/Application/msedge.exe");
     } else if cfg!(target_os = "macos") {
         for path in [
             "/Applications/Chromium.app/Contents/MacOS/Chromium",
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
         ] {
             found.push(PathBuf::from(path));
@@ -417,12 +423,25 @@ mod tests {
 
     #[test]
     fn msedge_on_path_is_found_and_chromium_still_wins() {
-        let dir = std::env::temp_dir().join(format!("anikit-path-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("anikit-path-edge-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("msedge"), b"").unwrap();
         let path = dir.clone().into_os_string();
         assert_eq!(on_path(&path), Some(dir.join("msedge")));
+        std::fs::write(dir.join("chromium"), b"").unwrap();
+        assert_eq!(on_path(&path), Some(dir.join("chromium")));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn brave_on_path_is_found_and_chromium_still_wins() {
+        let dir = std::env::temp_dir().join(format!("anikit-path-brave-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("brave-browser"), b"").unwrap();
+        let path = dir.clone().into_os_string();
+        assert_eq!(on_path(&path), Some(dir.join("brave-browser")));
         std::fs::write(dir.join("chromium"), b"").unwrap();
         assert_eq!(on_path(&path), Some(dir.join("chromium")));
         let _ = std::fs::remove_dir_all(&dir);
