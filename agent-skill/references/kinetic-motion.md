@@ -36,7 +36,7 @@ Read this section before a copied track, echo, follow-through or opacity stagger
 
 10. Follow-through is a delay: one to two frames per link (40 to 80 ms) at 25 fps, and fewer links at 12 fps rather than longer delays. A copied track has no spring, a `gain` field does not exist, and a copy clamps at the source end, so in cycle mode it must wrap modulo the duration.
 11. Keep positions sub-pixel through the move and snap only at render. Snapping every frame turns a 0.4 px move into 1 px jumps.
-12. Nothing may still be moving at the loop seam. Position and velocity must match across it: a spring or chain must be at rest, while a linear or bezier camera may carry constant velocity. A camera that pans across a repeating drawing may jump one tile at the seam, because the pixels then match; without tiling it must return to its start. A rest before the seam lasts 3 frames or more, 120 ms at 25 fps and 250 ms at 12; one frame, even doubled at the seam to 80 ms, reads as a pause.
+12. Nothing may still be moving at the loop seam. Position and velocity must match across it: a spring or chain must be at rest, while a linear or bezier camera may carry constant velocity. A camera that pans across a repeating drawing may jump one tile at the seam, because the pixels then match; without tiling it must return to its start. A rest is the settled, supported pose at the end of a move: the body has stopped on a surface, its contact face is flat along the normal, and the last sample already shows that pose. It is the only hold longer than one contact frame. Keep it for at least 3 frame times, 120 ms at 25 fps and 250 ms at 12, through the seam; one frame, even doubled at the seam to 80 ms, reads as a pause. An apex, a turning point or any pose mid-flight is not a rest, even where velocity is zero for an instant: every frame there must be a new pose, and a ball that hangs at the top of a bounce is a defect. A contact inside a bounce is one held frame of max(40 ms, one frame) on the surface and never becomes a rest.
 
 ## Defaults
 
@@ -92,12 +92,13 @@ Slow deformation (flag, cloth, jelly) needs a mesh: one track of vertex offsets,
 Run this checklist before reporting, alongside the format validation checklist in animated-gif-considerations.md.
 
 - Every move has a frame count, and the ends of a rest-to-rest move are slower than the middle.
-- Every contact exists as a held frame on a frame time, at least max(40 ms, one frame).
+- Every contact exists as a held frame on a frame time, at least max(40 ms, one frame); it is not a rest.
+- No two flight frames are identical: an apex turns, never pauses, and no bounce starts or ends with a hold.
 - Every contact face is flat along the contact normal, and a bounce restores it between contacts.
 - Bounce heights decay, and the last bounce is small enough to read as a stop.
 - Overshoot stays within 6 px of travel, measured at the furthest point; today keep the travel small.
 - Copies are staggered by at least one frame, and the loop divides by copies times stagger.
-- Nothing is still moving at the loop point, a rest before it holds 3 frames, and a seam hold counts twice.
+- Nothing is still moving at the loop point; the only rest is the settled supported pose at the seam, it holds 3 frames or more, and a seam hold counts twice.
 - The frame budget holds: 2 s at 25 fps is 50 sampled frames before merging; the stored count is lower.
 
 Full specification: docs/specsheet/10-kinetic-motion.md in the source repository.

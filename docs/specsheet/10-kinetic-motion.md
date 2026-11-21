@@ -45,7 +45,7 @@ A spring gains two fields, because a settle cannot be reproduced from stiffness 
 ## 10.3 Contact, bounce and settle
 
 - Every contact reads as a held frame, but the plan has no contact-time hook yet: a 40 ms contact is one frame at 25 fps, and at 12 fps one frame is 80 or 90 ms, so the hold is max(40 ms, one frame) and its key sits on a frame time. A contact of zero frames reads as a bounce off nothing, and it is the commonest single error in a tweened bounce.
-- A rest position inside a loop holds for at least 3 frame times, 120 ms at 25 fps and 250 ms at 12; one frame reads as a pause. The plan shows its last sample through the tail, so the pose must be settled by that sample.
+- A rest is the settled, supported pose at the end of a move, held through the loop seam for at least 3 frame times, 120 ms at 25 fps and 250 ms at 12; one frame reads as a pause. The plan shows its last sample through the tail, so that sample must already be the settled pose. A rest is the only hold longer than one contact frame. A momentary zero velocity is not a rest: an apex or any mid-flight pose must change every frame and never repeat, so a ball that hangs at the top of a bounce is a defect.
 - Successive bounce heights fall by the square of restitution and the intervals fall by restitution; the sequence is geometric in time and height, never a linear spacing. A height ratio between 0.35 and 0.55 reads natural, which is restitution 0.59 to 0.74; the cartoon default of 0.5 gives 0.25. Above 0.7 it looks mechanical; below 0.2 it looks like sand.
 - A GIF has no room for a full decay. A 100 px drop at restitution 0.55 runs 30 frames to rest at gravity 1400 and a 1 px minimum bounce, so cut to two bounces and a settle, or lower restitution to 0.4.
 - Squash preserves area in two dimensions: width = 1 / height. A 20 percent squash widens 25 percent. Contact squash is 15 to 25 percent, stretch at speed 15 to 30 percent. The compressed face is the contact face: the bottom on a floor, the side on a wall, the top on a ceiling, with the flattening along that normal. Squash and stretch are not implemented; a ballistic key that names either is refused, so draw the deformation into the art or bake the frames.
@@ -111,7 +111,8 @@ At mu 0.5 and gravity 1400 a slide of 100 px is 374 px/s over 535 ms, and the la
 | never settles | damping below 0.3, no settle cap | damping 0.5 or above, three overshoots maximum |
 | contradicts mass | elastic on heavy, slow ease-in on light | z 0.8 to 1.0 heavy, 0.4 to 0.6 light |
 | too smooth | no holds, everything overlapping | one or two frame holds, 2 to 3 px per frame |
-| rest not read | a single frame of rest at the loop point | settle 3 frame times before the seam |
+| rest not read | a single frame of rest at the loop point | settle on the support for 3 frame times before the seam |
+| apex freeze | repeated frames at the top of a bounce | every flight frame is a new pose; rest only on the support |
 | bounce like a sine | equal heights or equal intervals | heights by e squared, intervals by e |
 | pixel crawl | rounding every frame | snap at render only |
 | loop seam | a spring or chain still moving | settle before the end |
