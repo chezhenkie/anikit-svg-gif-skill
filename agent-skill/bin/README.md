@@ -1,5 +1,7 @@
 # Binary
 
+The release page also carries a skill bundle that already contains this binary at `bin/anikit` (`bin/anikit.exe` on Windows). The manual download below is for a clone or a single binary.
+
 This folder holds the `anikit` binary for the host, copied from a release asset:
 
 | Platform | Asset | Name here |
@@ -13,6 +15,6 @@ This folder holds the `anikit` binary for the host, copied from a release asset:
 A fresh clone has no binary in this folder. If there is none for the host, the platform is unsupported: the skill does not build or download one while making an animation.
 
 ```sh
-gh release download v0.7.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
+gh release download v0.8.1 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
 chmod +x agent-skill/bin/anikit
 ```

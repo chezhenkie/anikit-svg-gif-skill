@@ -57,15 +57,11 @@ A host without a matching asset is reported as unsupported; the skill never buil
 
 ## Install
 
-The skill payload is in `agent-skill/`. Clone the repository, download the asset for the platform into `agent-skill/bin/`, then copy that folder into the skills folder for your agent and name the copy `anikit`. The folder name must match the `name` in `SKILL.md`.
+There are two ways in. The bundle is one download and already holds the skill text and the binary. The manual route takes the repository for the text and a loose release asset for the binary. Both end with the same `anikit` folder in a skills directory.
 
-```sh
-git clone https://github.com/chezhenkie/anikit-svg-gif-skill.git
-gh release download v0.8.0 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
-chmod +x agent-skill/bin/anikit
-```
+### Bundle
 
-On Windows use `--pattern anikit-windows-x86_64.exe --output agent-skill/bin/anikit.exe`, or `anikit-windows-arm.exe` on a Windows arm host. Assets are also on the releases page of the repository.
+Download the bundle for the platform (`anikit-skill-<version>-<platform>.zip`) from the releases page and extract the `anikit` folder into the skills directory for your agent. That is the whole install: no clone, no shell command, no build. The folder name must match the `name` in `SKILL.md`.
 
 | Agent | All projects | One project |
 |---|---|---|
@@ -74,7 +70,19 @@ On Windows use `--pattern anikit-windows-x86_64.exe --output agent-skill/bin/ani
 | Pi | `~/.pi/agent/skills` | `.pi/skills` |
 | OMP | `~/.omp/agent/skills` | `.omp/skills` |
 
-Copy `anikit-svg-gif-skill/agent-skill` to the path from the table as `anikit`. `~` is your home directory; if your shell does not expand it, use the full path. For example:
+The result is `skills/anikit/SKILL.md`, `skills/anikit/INSTALL.md`, `skills/anikit/bin/anikit` (`anikit.exe` on Windows) and `skills/anikit/references/`.
+
+### Manual
+
+The loose binaries on the release page are the manual route. A binary is only the program; `SKILL.md` and the references come from the repository. Clone it, download the matching asset into `agent-skill/bin/`, then copy `agent-skill` into the skills folder as `anikit`.
+
+```sh
+git clone https://github.com/chezhenkie/anikit-svg-gif-skill.git
+gh release download v0.8.1 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
+chmod +x agent-skill/bin/anikit
+```
+
+On Windows use `--pattern anikit-windows-x86_64.exe --output agent-skill/bin/anikit.exe`, or `anikit-windows-arm.exe` on a Windows arm host. The assets are also on the releases page.
 
 ```powershell
 Copy-Item -Recurse anikit-svg-gif-skill/agent-skill "$HOME/.config/opencode/skills/anikit"
@@ -84,7 +92,7 @@ Copy-Item -Recurse anikit-svg-gif-skill/agent-skill "$HOME/.config/opencode/skil
 cp -r anikit-svg-gif-skill/agent-skill ~/.config/opencode/skills/anikit
 ```
 
-Codex scans `.agents/skills` from the current folder up to the repository root. Pi and OMP scan one level under `skills/`. Restart the agent if the skill does not appear.
+`~` is your home directory; if your shell does not expand it, use the full path. Codex scans `.agents/skills` from the current folder up to the repository root. Pi and OMP scan one level under `skills/`. Restart the agent if the skill does not appear.
 
 ## Use
 
