@@ -60,7 +60,7 @@ A host without a matching asset is reported as unsupported; the skill never buil
 
 ## Install
 
-The skill payload is in `agent-skill/`. Clone the repository, download the asset for the platform into `agent-skill/bin/`, then copy that folder into the skills folder for your agent and name the copy `animated-gif`. The folder name must match the `name` in `SKILL.md`.
+The skill payload is in `agent-skill/`. Clone the repository, download the asset for the platform into `agent-skill/bin/`, then copy that folder into the skills folder for your agent and name the copy `anikit`. The folder name must match the `name` in `SKILL.md`.
 
 ```sh
 git clone https://github.com/chezhenkie/anikit-svg-gif-skill.git
@@ -77,14 +77,14 @@ On Windows use `--pattern anikit-windows-x86_64.exe --output agent-skill/bin/ani
 | Pi | `~/.pi/agent/skills` | `.pi/skills` |
 | OMP | `~/.omp/agent/skills` | `.omp/skills` |
 
-Copy `anikit-svg-gif-skill/agent-skill` to the path from the table as `animated-gif`. `~` is your home directory; if your shell does not expand it, use the full path. For example:
+Copy `anikit-svg-gif-skill/agent-skill` to the path from the table as `anikit`. `~` is your home directory; if your shell does not expand it, use the full path. For example:
 
 ```powershell
-Copy-Item -Recurse anikit-svg-gif-skill/agent-skill "$HOME/.config/opencode/skills/animated-gif"
+Copy-Item -Recurse anikit-svg-gif-skill/agent-skill "$HOME/.config/opencode/skills/anikit"
 ```
 
 ```sh
-cp -r anikit-svg-gif-skill/agent-skill ~/.config/opencode/skills/animated-gif
+cp -r anikit-svg-gif-skill/agent-skill ~/.config/opencode/skills/anikit
 ```
 
 Codex scans `.agents/skills` from the current folder up to the repository root. Pi and OMP scan one level under `skills/`. Restart the agent if the skill does not appear.
@@ -95,9 +95,9 @@ Ask for the animation and name the input. The agent picks the route, runs one co
 
 | Agent | Invocation |
 |---|---|
-| OpenCode | `@animated-gif` |
-| Codex | `$animated-gif` |
-| Pi | `/skill:animated-gif` |
+| OpenCode | `@anikit` |
+| Codex | `$anikit` |
+| Pi | `/skill:anikit` |
 | OMP | `anikit` |
 
 Codex also lists installed skills with `/skills`.

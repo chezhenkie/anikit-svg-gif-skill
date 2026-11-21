@@ -1,8 +1,8 @@
-# 00-overview.md - animated-gif skill
+# 00-overview.md - anikit skill
 
 ## Header
 
-- Title: animated-gif skill - animation output from text frames, image folders, SVG pages and a JSON tween timeline, frames back out of a GIF or APNG, and an animated SVG back into a timeline, in one Rust binary.
+- Title: anikit skill - animation output from text frames, image folders, SVG pages and a JSON tween timeline, frames back out of a GIF or APNG, and an animated SVG back into a timeline, in one Rust binary.
 - Purpose: the reference for the skill and its binary: the six routes, the shared frame writer for GIF and APNG, the SVG export and import, the frame flow, and the tween crate that carries keyframes and layers. Specsheet and code together describe the system.
 - Stakeholders: the person and the agent invoking the skill, users of the public repository, and the runtime the vector and tween routes need: an installed Chromium based browser.
 - Status: one Rust binary ships six routes and three animation output formats. The Python payload is deleted; it stays at tag python-freeze as a reference for behaviour, not an authority. The Rust workspace carries core, time, all four render routes and the tween crate; the tween crate implements parts 04 to 07 for number, opacity, transform and colour, and carries the path, raster and grid plans of part 06, with a correspondence fallback for paths whose command counts differ. The tween route is the crate's first consumer and renders an SVG drawing from the canonical JSON timeline; it also exports that timeline as an animated SVG. The extract route runs the other way: it reads a GIF or APNG back into numbered PNG frames and a timing manifest, and the images route rebuilds the timeline from that manifest. The import route closes the loop from an animated SVG to the canonical timeline, so the vector route can feed the tween engine.

@@ -224,7 +224,7 @@ fn the_skill_header_names_the_skill_and_a_version() {
             })
             .map(|value| value.trim().trim_matches('"').to_string())
     };
-    assert_eq!(field("name").as_deref(), Some("animated-gif"));
+    assert_eq!(field("name").as_deref(), Some("anikit"));
     assert_eq!(field("license").as_deref(), Some("MIT"));
     let version = field("version").expect("metadata version");
     let parts: Vec<&str> = version.split('.').collect();
