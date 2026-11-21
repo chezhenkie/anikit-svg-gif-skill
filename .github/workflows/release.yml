@@ -60,6 +60,16 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: bundles
+        shell: bash
+        run: |
+          for asset in dist/anikit-*; do
+            python3 tools/make_bundle.py \
+              --binary "$asset" \
+              --asset "$(basename "$asset")" \
+              --tag "$GITHUB_REF_NAME" \
+              --out dist
+          done
       - name: release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,4 +78,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* \
             --verify-tag \
             --title "anikit $GITHUB_REF_NAME" \
-            --notes "One binary with six routes: ascii, images, vector and tween render animation, extract turns a GIF or APNG into frames and a manifest, and import turns an animated SVG into the timeline. Output is GIF, APNG and an SVG export from the tween route. Download the asset for the platform and install it as bin/anikit (bin/anikit.exe on Windows). See CHANGELOG.md for the change list."
+            --notes "One binary with six routes: ascii, images, vector and tween render animation, extract turns a GIF or APNG into frames and a manifest, and import turns an animated SVG into the timeline. Output is GIF, APNG and an SVG export from the tween route. The skill bundle (anikit-skill-<version>-<platform>.zip) is the easy route: extract the anikit folder into your agent's skills folder and it is installed. The loose anikit-* binaries are the manual route: clone the repository for SKILL.md and the references, put the binary in agent-skill/bin, then copy that folder. See CHANGELOG.md for the change list."
