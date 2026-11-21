@@ -1,0 +1,9 @@
+test,run,prompt,session,status,product,note
+blank-context,baseline,prompts/blank-context/baseline.txt,ses_e0315d682ffeHTjUgbmOpEVimd,valid,,
+blank-context,task-small-draft,prompts/blank-context/task-small-draft.txt,ses_e0315773cffeLUtJppL7Habazu,draft,,geometry error: the square left the canvas
+blank-context,task-small-clip,prompts/blank-context/task-small-clip.txt,ses_e0312e291ffe9qm1duvjIkb0a7,draft,,geometry error: the square still crossed the right edge
+blank-context,task-small,prompts/blank-context/task-small.txt,ses_e0310e1a6ffe48UjlxL8e095aV,valid,task-small.gif,
+blank-context,task-small-auto,prompts/blank-context/task-small-auto.txt,ses_e030d5e6dffeaO3lUz6bj7l6ib,valid,task-small-auto.gif,no file paths: the skill's own triggers decide what to read
+blank-context,task-medium,prompts/blank-context/task-medium.txt,ses_e0315773cffd4IBfxdzhv1iA4k,valid,task-medium.gif,
+agent-rounds,color,prompts/agent-rounds/color.txt,ses_e02cf944cffeDPP4c2VFH0Dp5v,draft,,second attempt; brief carried no-ffmpeg/Node
+agent-rounds,kinetic,prompts/agent-rounds/kinetic.txt,ses_e02cf944cffdGnsBrQoofp0ixt,draft,,second attempt; brief carried no-ffmpeg/Node

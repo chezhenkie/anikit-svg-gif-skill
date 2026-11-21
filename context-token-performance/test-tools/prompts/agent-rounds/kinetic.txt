@@ -1,0 +1,19 @@
+You are making three kinetic-motion demonstration animations with the anikit skill. Work only inside {repo}\scratch\agent-kinetic-outline-02\ (create it). Do not touch tracked repo files, do not commit, do not run WSL, do not use ffmpeg or Node.
+
+Read first:
+- {skill}\SKILL.md (follow its workflow and checklists)
+- {skill}\references\kinetic-motion.md (the principles you must demonstrate)
+- {skill}\references\animated-gif-considerations.md (mandatory before palette, dither, loop, format, scale)
+The binary is {skill}\bin\anikit.exe.
+
+Style constraint, hard: black background, white outline artwork only (thin white strokes on black; antialiasing greys are fine, no fills, no colour). Draw your own SVG or use the tween route.
+
+Task: three separate animations, 480x270, each demonstrating a different principle from the kinetic reference, EXCLUDING the Surfaces section entirely (no pour, no pile, no splash crown, no water/sand bulk). Good candidates: a drop with squash and a held contact frame plus geometric bounce decay; a rest-to-rest move with eased ends, an arc and a small keyed overshoot; a cradle or wave propagation with correct spacing; a camera pan with a seam or a return. Choose three that together cover distinct rules. Each must be a finished, looping animation with a rest before the seam of at least 3 frame times.
+
+Quality bar:
+- Every number (fps, delay, g, restitution, hold, rest) must be consistent with the reference rules and stated in your notes with the rule it follows.
+- Pick 25 fps where the rule needs contact precision; 12 fps only where allowed, and then halve frame counts and hold the milliseconds.
+- Run the motion checklist and the format validation checklist before declaring each done, verify each file's header and frame count (anikit extract inside your folder for frames).
+- Deliver three .gif or .apng files plus notes.md: principle per animation, parameters, timing table with frame times and holds, palette/dither/loop and why.
+
+Report back: the three file paths with sizes and frame counts, one line per animation on the principle it shows, and any rule you had to bend and why.

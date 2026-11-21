@@ -1,0 +1,17 @@
+You are making three animations from scratch with the anikit skill. Work only inside {repo}\scratch\agent-color-02\ (create it). Do not touch tracked repo files, do not commit, do not run WSL, do not use ffmpeg or Node.
+
+Read first:
+- {skill}\SKILL.md (this is the skill; follow its workflow and its checklists)
+- {skill}\references\animated-gif-considerations.md (mandatory before choosing palette, dither, loop, format, scale)
+- {skill}\references\kinetic-motion.md (mandatory before choosing fps, delay, easing or a preset)
+The binary is {skill}\bin\anikit.exe.
+
+Task: invent and produce three distinct, finished animations, all 480x270, 25 fps unless a rule argues otherwise. Be creative and colourful; pick whatever appeals from the skill's routes (tween scene JSON, vector SVG, ASCII text, images folder). The three must differ in technique or subject and each must be a real, played-out animation with a proper loop, not a test card. Original artwork only; draw your own SVG/ASCII visuals.
+
+Quality bar:
+- Follow the skill's motion rules: rests at loop ends, contact frames held, geometric bounce decay, easing at rest-to-rest ends, no one-frame stall.
+- Follow the format rules: palette and dither choice justified, loop mode correct, delays on the 10 ms grid.
+- Run the motion checklist and the format validation checklist from the references before declaring each done, and verify each file by reading its header and frame count (anikit extract is a fine check; keep extracted frames inside your folder).
+- Deliver three .gif or .apng files plus one notes.md describing each: subject, technique, fps, timing decisions, palette/dither/loop choice, and exactly which reference rule each choice follows.
+
+Report back: the three file paths with sizes and frame counts, one line per animation on what it shows, and any rule you had to bend and why.
