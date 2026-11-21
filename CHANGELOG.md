@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.2
+
+### Changes
+
+* The skill bundle ships the current skill and reference text; the 0.8.1 bundles carried an earlier copy. A rest is a supported end pose held at least 3 frame times at the seam, an apex or any mid-flight pose is never a rest, and a contact holds one frame.
+* The page route notes state that JavaScript in a page runs in the browser without Node, and that only a seekable CSS, WAAPI or SMIL timeline is captured; a script that writes positions every frame has none.
+* The smoke run renders the wall, ceiling and ramp contact scenes and checks their frame counts, so a timeline that no longer reproduces a contact fails the check.
+* The repository hygiene test matches credential prefixes only at a token start, so a name like `task-small` no longer trips it.
+
 ## 0.8.1
 
 ### Changes

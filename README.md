@@ -78,7 +78,7 @@ The loose binaries on the release page are the manual route. A binary is only th
 
 ```sh
 git clone https://github.com/chezhenkie/anikit-svg-gif-skill.git
-gh release download v0.8.1 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
+gh release download v0.8.2 --repo chezhenkie/anikit-svg-gif-skill --pattern anikit-linux-x86_64 --output agent-skill/bin/anikit
 chmod +x agent-skill/bin/anikit
 ```
 
