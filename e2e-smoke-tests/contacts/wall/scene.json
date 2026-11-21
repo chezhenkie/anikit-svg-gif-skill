@@ -7,24 +7,24 @@
      "keys": [
        {"t": 0, "translate": [240, 54], "scale": 1},
        {"t": 200, "translate": [240, 54], "scale": 1, "easing": "ease-in"},
-       {"t": 1080, "translate": [401, 54], "easing": "linear"},
-       {"t": 1120, "scale": [0.78, 1.282051282], "easing": "ease-out"},
+       {"t": 1040, "translate": [383, 54], "scale": 1, "easing": "linear"},
+       {"t": 1080, "translate": [401, 54], "scale": [0.78, 1.282051282], "easing": "ease-out"},
        {"t": 2280, "translate": [240, 54], "scale": 1}
      ]},
     {"id": "ball-move", "kind": "svg.transform", "src": "art.svg#ball",
      "keys": [
        {"t": 0, "translate": [240, 135], "scale": 1},
        {"t": 200, "translate": [240, 135], "scale": 1, "easing": "ease-in"},
-       {"t": 1080, "translate": [401, 135], "easing": "linear"},
-       {"t": 1120, "scale": [0.78, 1.282051282], "easing": "ease-out"},
+       {"t": 1040, "translate": [383, 135], "scale": 1, "easing": "linear"},
+       {"t": 1080, "translate": [401, 135], "scale": [0.78, 1.282051282], "easing": "ease-out"},
        {"t": 2280, "translate": [240, 135], "scale": 1}
      ]},
     {"id": "blob-move", "kind": "svg.transform", "src": "art.svg#blob",
      "keys": [
        {"t": 0, "translate": [240, 216], "scale": 1},
        {"t": 200, "translate": [240, 216], "scale": 1, "easing": "ease-in"},
-       {"t": 1080, "translate": [401, 216], "easing": "linear"},
-       {"t": 1120, "scale": [0.78, 1.282051282], "easing": "ease-out"},
+       {"t": 1040, "translate": [383, 216], "scale": 1, "easing": "linear"},
+       {"t": 1080, "translate": [401, 216], "scale": [0.78, 1.282051282], "easing": "ease-out"},
        {"t": 2280, "translate": [240, 216], "scale": 1}
      ]}
   ],
