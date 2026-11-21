@@ -33,12 +33,12 @@ A failed run prints one `FAIL ...` line on stderr and exits 1. Do not retry with
 
 ## Workflow
 
-1. Choose the route from the table. Read the matching section below, and read [references/kinetic-motion.md](references/kinetic-motion.md) before setting fps, delay, easing or a preset.
+1. Choose the route from the table. Read the matching section below, then read both references before choosing a format or motion: [references/animated-gif-considerations.md](references/animated-gif-considerations.md) before palette, dither, loop, output format or scale, and [references/kinetic-motion.md](references/kinetic-motion.md) before fps, delay, easing or a preset.
 2. Run the binary with an explicit output path inside the project being worked on. Do not write to a system temp directory or the Desktop.
 3. Keep the printed summary: frame count, duration, pixel size. A printed path is a verified file.
 4. For visual work, open the GIF or write `--preview preview.png` and inspect that still before reporting.
 5. Report the absolute path plus settings that matter: fps, size, duration, mode.
-6. Run the motion checklist in `references/kinetic-motion.md` before reporting. A move with no held contact, a bounce that does not decay, or a spring still moving at the loop point is a defect, not a preference.
+6. Run the motion checklist in `references/kinetic-motion.md` and the validation checklist in `references/animated-gif-considerations.md` before reporting. A move with no held contact, a bounce that does not decay, or a spring still moving at the loop point is a defect, not a preference.
 
 ## ASCII route
 
@@ -192,12 +192,12 @@ Frames must share one size and are sorted by name, so number them. `--hold` roun
 - Frames stream through the encoder, so memory follows the canvas rather than the frame count.
 - Glyph coverage follows the chosen face; a codepoint the font lacks draws an empty box.
 
-See [references/animated-gif-considerations.md](references/animated-gif-considerations.md) for format constraints and the reasoning behind these defaults.
+Read [references/animated-gif-considerations.md](references/animated-gif-considerations.md) for the format constraints and the reasoning behind these defaults.
 
 ## Files
 
 - `bin/anikit` - the binary: route parsing, the six routes, the GIF and APNG writers, the SVG export and import.
-- `references/animated-gif-considerations.md` - format notes.
+- `references/animated-gif-considerations.md` - mandatory format rules: palette, dither, delay floor, loop seam, scaling, alternatives, validation checklist.
 - `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, sand and water, deformation, what the timeline refuses, checklist.
 
 Source and release binaries: https://github.com/chezhenkie/anikit-svg-gif-skill

@@ -1,8 +1,10 @@
 # Animated GIF considerations
 
-Format constraints and the defaults the tools in this skill are built on. Numbers are specifics of GIF89a and common viewers, not preferences. GIF is the default output; APNG uses truecolor frames and the same timing and merge rules, so the palette and dither notes below do not apply to it.
+Mandatory before choosing or overriding a format default, and the validation checklist runs before delivery. Format constraints and the defaults the tools in this skill are built on. Numbers are specifics of GIF89a and common viewers, not preferences. GIF is the default output; APNG uses truecolor frames and the same timing and merge rules, so the palette and dither notes below do not apply to it.
 
 ## Format constraints
+
+Read this section before choosing .gif, .apng or .svg, setting a delay under 20 ms, relying on transparency, setting a loop count, or promising a capability the format lacks.
 
 - GIF is 8-bit indexed: at most 256 colors per frame. Truecolor and alpha gradients are impossible without banding.
 - Delays are stored in centiseconds. Viewers round or clamp small values; Chrome maps 10 ms or less to 100 ms. Keep delays at 20 ms or more.
@@ -11,6 +13,8 @@ Format constraints and the defaults the tools in this skill are built on. Number
 - One file can mix per-frame delays, dimensions and local palettes, but uniform size and a shared palette are what prevent jitter.
 
 ## Timing
+
+Read this section before snapping delays to the 10 ms grid, merging identical frames, applying a speed factor, or closing a loop.
 
 - Precompute animation state on a fixed grid. Never drive frames from a wall clock; output must be deterministic and reproducible.
 - Merge consecutive identical states into one frame with a longer delay. Holds and duplicated frames cost nothing visually and shrink the file.
@@ -33,6 +37,8 @@ def scaled_durations(runs, speed):
 
 ## Palette
 
+Read this section before `--colors`, `--dither`, transparency, brand colors, gradients, or a scene whose colors change across frames.
+
 - Build one palette for all frames from frames sampled across the loop, using median cut. A palette taken from one frame misses colors that appear later and causes flicker.
 - Reserve one index when transparency is needed: 255 colors, index 0 transparent.
 - `dither=NONE` for flat art, text and diagrams. Dithering adds noise, breaks glyph edges and increases size.
@@ -41,11 +47,15 @@ def scaled_durations(runs, speed):
 
 ## Frames and determinism
 
+Read this section before expecting byte-identical reruns, atomic write and readback, a preview still, or a large frame count.
+
 - Render every frame the same way, with the same font, viewport and background. Two runs over the same input must produce identical files.
 - Write to a temp file, read it back, verify frame count, duration sum and pixel size, then rename. A printed path should always point to a complete file.
 - Save a still preview of one frame. Palette problems and layout errors are visible without playing the animation.
 
 ## ASCII
+
+Read this section before the ascii route, a custom font, glyphs outside the default coverage, ANSI or tabs, or a grid above roughly 120x40.
 
 - Use a monospace font and a fixed advance: `x = col * advance`, `y = row * line_height`. Centering each glyph individually breaks the grid.
 - Line height comes from font ascent plus descent, not from the point size alone.
@@ -56,6 +66,8 @@ def scaled_durations(runs, speed):
 
 ## Image folders
 
+Read this section before the images route with EXIF, mixed sizes, transparency, Ken Burns zoom or hundreds of photos, and before estimating holds and transitions.
+
 - Sort files naturally, so `pic-2` comes before `pic-10`.
 - Apply EXIF orientation before cropping. Phone photos are routinely sideways without it.
 - Fit every image to one canvas: cover crops, contain pads on a background color. Mixing sizes is not possible in one GIF frame sequence.
@@ -64,6 +76,8 @@ def scaled_durations(runs, speed):
 - Hundreds of photos at 800 px will exhaust memory and produce an unusable file. Cut count, width or fps first.
 
 ## SVG and HTML
+
+Read this section before vector, tween, SVG export or import, and when the page uses CSS, SMIL, JS canvas, WebGL, external fonts or relative assets, or when choosing `--dpr` or a browser.
 
 - SVG needs a rasterizer. The binary drives an installed Chromium based browser directly over the DevTools protocol, which handles CSS, SMIL, filters, text and web fonts consistently.
 - Pause animations, then seek each frame to an explicit time. Web Animations exposes `currentTime`; SMIL exposes `setCurrentTime`. Screenshots taken against real time are not deterministic.
@@ -76,6 +90,8 @@ def scaled_durations(runs, speed):
 
 ## Scaling and size
 
+Read this section before choosing canvas dimensions, downscaling or a host file-size cap, and before deciding whether to cut fps or dimensions.
+
 - Render at the target size. If downscaling, resize each frame with LANCZOS; resizing the finished GIF does not work.
 - Keep ASCII cells at least 8x16 px so glyph strokes survive quantization.
 - Reduce dimensions before frame count when text must stay sharp. Reduce fps before dimensions when motion is the point.
@@ -83,11 +99,15 @@ def scaled_durations(runs, speed):
 
 ## Alternatives
 
+Read this section before proposing WebM, MP4, WebP or ffmpeg, and when APNG's color or alpha is the reason for the choice.
+
 - APNG: truecolor, alpha, precise timing, browser support. Larger files, patchy support in chat apps.
 - WebM or MP4: best for long, high-fps, truecolor sequences. Needs codec tooling and is not an image.
 - GIF remains the most portable option for READMEs, chat and email.
 
 ## Validation checklist
+
+Run this checklist before reporting, alongside the motion checklist in kinetic-motion.md.
 
 - Frame count and duration sum match intent.
 - Dimensions and file size are acceptable for the host.

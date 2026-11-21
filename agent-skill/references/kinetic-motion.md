@@ -1,13 +1,17 @@
 # Kinetic motion
 
-Mandatory before choosing fps, delay, easing or a preset. Motion that reads as physical comes from spacing, contact and weight, not from a curve name. Numbers assume 480x270 at 25 fps; at 12 fps hold the milliseconds and halve the frame counts, because one frame there is 80 or 90 ms. What the timeline cannot express is listed under Not available.
+Mandatory before choosing fps, delay, easing or a preset, and before any contact, spring, chain, surface or deformation decision. Motion that reads as physical comes from spacing, contact and weight, not from a curve name. Numbers assume 480x270 at 25 fps; at 12 fps hold the milliseconds and halve the frame counts, because one frame there is 80 or 90 ms. What the timeline cannot express is listed under Not available.
 
 ## Timing
+
+Read this section before setting or changing fps, delay, hold, transition, duration, frame count or loop mode, and before compressing a move to 12 fps.
 
 1. Give every move a frame count as well as a duration. At 25 fps a frame is 40 ms; at 12 fps the delay runs 80, 90, 80 in each 250 ms, so a 40 ms band is under one frame.
 2. Spacing is timing: in a rest-to-rest move the first and last gap between frames is at most 30 percent of the largest gap. A 100 px move over 10 frames has a middle gap near 20 px and end gaps of 1 to 3 px. Apply the test once to the whole move, not to each bounce or settle. A move that starts or ends at speed, such as an exit or a camera pan, is not bound at that end; judge it at the seam instead.
 
 ## Contact and weight
+
+Read this section before placing a landing, impact, bounce, drop, slide or any held contact, and before a 12 fps plan with contacts.
 
 3. Every contact is a held frame of max(40 ms, one frame): one frame at 25 fps, two for a heavy object, one frame of 80 or 90 ms at 12 fps. Put the contact on a frame time, because the plan has no contact-time hook between samples. A contact of zero frames reads as a bounce off nothing.
 4. Bounce heights fall by restitution squared and the intervals by restitution. A physical ball reads at a height ratio of 0.35 to 0.55, which is restitution 0.59 to 0.74; the cartoon default of 0.5 gives 0.25. A GIF rarely has room, so cut to two bounces and a settle.
@@ -17,16 +21,22 @@ Mandatory before choosing fps, delay, easing or a preset. Motion that reads as p
 
 ## Curves
 
+Read this section before any overshoot, arc, spring-versus-bezier choice, spring damping, frequency or settle, or bezier handle, and before claiming the 6 px cap.
+
 8. Overshoot is measured from the evaluated curve, not written into a control point: with the second handle at 1, y1 1.05 gives 0.04 percent and y1 1.4 gives about 5.3 percent. The 6 px cap is not implemented; it applies to every property at the furthest point of the element, so keep travel small.
 9. Springs are for reactions (landing, settle, follow-through, interruption); beziers are for choreography (entrance, exit, camera, loop). A spring retargets a value, a bezier hits a mark. Damping 0.4 to 0.55 is playful, 0.6 to 0.75 confident, 0.8 to 0.95 crisp, 1.0 and above never overshoots. Frequency 8 to 12 rad/s is heavy, 15 to 25 normal, 30 to 40 snappy. An arc with bend 0.1 bows a 100 px move by 5 px. One gravity per scene: 1400 px/s^2 for a cartoon read, 981 for a plausible one.
 
 ## Chains and finish
+
+Read this section before a copied track, echo, follow-through or opacity stagger, and before expecting a `gain` or delay field.
 
 10. Follow-through is a delay: one to two frames per link (40 to 80 ms) at 25 fps, and fewer links at 12 fps rather than longer delays. A copied track has no spring, a `gain` field does not exist, and a copy clamps at the source end, so in cycle mode it must wrap modulo the duration.
 11. Keep positions sub-pixel through the move and snap only at render. Snapping every frame turns a 0.4 px move into 1 px jumps.
 12. Nothing may still be moving at the loop seam. Position and velocity must match across it: a spring or chain must be at rest, while a linear or bezier camera may carry constant velocity. A camera that pans across a repeating drawing may jump one tile at the seam, because the pixels then match; without tiling it must return to its start. A one-frame hold at the seam displays as two frames, 80 ms at 25 fps, and it reads only while the rest of the frame is still.
 
 ## Defaults
+
+Read this section before overriding a row, or whenever the scene is an entrance, exit, drop, bounce, slide, shake, pulse or camera.
 
 Frames are at 25 fps; at 12 fps hold the durations and halve the frame counts.
 
@@ -47,12 +57,16 @@ A slide is constant deceleration at mu 0.5 and g 1400: 100 px needs 374 px/s ove
 
 ## Not available
 
+Read this section before using or requesting friction, squash, stretch, smear, gain, mesh, particles, spatial masks, path keys or raster keys.
+
 - `friction`, `squash`, `stretch`: refused on a ballistic key.
 - `smear`, `gain`, a chain binding delay and a contact time between frames: no field exists. A 6 px overshoot cap: not implemented.
 - Path morphs, raster keys, ASCII grids, spatial masks: refused on the tween route.
 - Particles, per-vertex meshes, simulation: not implemented.
 
 ## Surfaces
+
+Read this section before sand, water, a pour, pile, avalanche, splash, wave, droplets, rings or staggered copies.
 
 Sand and water are bulk shapes, not particles: at 100 px/m a grain is 0.01 to 0.05 px and a droplet 0.2 to 0.5 px, so draw the silhouette and texture it.
 
@@ -63,11 +77,15 @@ Sand and water are bulk shapes, not particles: at 100 px/m a grain is 0.01 to 0.
 
 ## Deformation
 
+Read this section before a dent, net, cloth, flag, jelly, pose swap, or a fast small object that reads as a streak.
+
 Fast deformation is a pose swap: a 25 to 40 px net dent completes in 1.4 to 3 frames at 25 fps and rebounds once, so three to five drawn poses on opacity holds read as a simulation, the first already at full depth; the approach is not drawn. A 7.5 px ball at 40 m/s moves 160 px per frame and never reads as a dot: start near contact and draw a streak.
 
 Slow deformation (flag, cloth, jelly) needs a mesh: one track of vertex offsets, projective cells about 16 by 10 for 0.5 to 1 px of error, matrix3d on clipped cell copies. The timeline has no mesh kind and refuses path kinds, so draw poses or render frames instead, and treat any mesh export as baked.
 
 ## Before delivering
+
+Run this checklist before reporting, alongside the format validation checklist in animated-gif-considerations.md.
 
 - Every move has a frame count, and the ends of a rest-to-rest move are slower than the middle.
 - Every contact exists as a held frame on a frame time, at least max(40 ms, one frame).
