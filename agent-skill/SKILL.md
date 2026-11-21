@@ -199,5 +199,6 @@ Read [references/animated-gif-considerations.md](references/animated-gif-conside
 - `bin/anikit` - the binary: route parsing, the six routes, the GIF and APNG writers, the SVG export and import.
 - `references/animated-gif-considerations.md` - mandatory format rules: palette, dither, delay floor, loop seam, scaling, alternatives, validation checklist.
 - `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, sand and water, deformation, what the timeline refuses, checklist.
+- `references/contact-face.png` - the contact-face diagram: floor, wall, ceiling and angled surface, free, contact and recovering. Look at it before drawing a contact, a bounce or a deformation on any shape.
 
 Source and release binaries: https://github.com/chezhenkie/anikit-svg-gif-skill

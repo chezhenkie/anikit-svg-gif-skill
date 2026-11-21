@@ -11,13 +11,17 @@ Read this section before setting or changing fps, delay, hold, transition, durat
 
 ## Contact and weight
 
-Read this section before placing a landing, impact, bounce, drop, slide or any held contact, and before a 12 fps plan with contacts.
+Read this section before placing a landing, impact, bounce, drop, slide or any held contact, and before a 12 fps plan with contacts. Look at contact-face.png before choosing the contact face on any shape.
 
 3. Every contact is a held frame of max(40 ms, one frame): one frame at 25 fps, two for a heavy object, one frame of 80 or 90 ms at 12 fps. Put the contact on a frame time, because the plan has no contact-time hook between samples. A contact of zero frames reads as a bounce off nothing.
 4. Bounce heights fall by restitution squared and the intervals by restitution, so the decay is geometric, never linear. A physical ball reads at a height ratio of 0.35 to 0.55, which is restitution 0.59 to 0.74; the cartoon default of 0.5 gives 0.25. A GIF rarely has room, so cut to two bounces and a settle.
 5. The last pixels sell the weight: the settle is the final 2 to 3 px over 2 to 3 frames, at 0.5 to 1 px per frame. Stop a spring at 0.5 px or 2 px/s, and never let it cross the loop point. A settle is capped at 1.5 times its segment rather than refused, so in cycle mode a spring must reach rest before the segment ends.
 6. Squash preserves area: width = 1 / height, contact squash 15 to 25 percent, stretch at speed 15 to 30 percent. The compressed face is the contact face: the bottom on a floor, the side on a wall, the top on a ceiling. The parser refuses `squash` and `stretch`, so draw the deformation into the art or bake the frames.
 7. Weight is carried by the edges, not the middle. Heavy means 6 to 10 frames (240 to 400 ms) of anticipation against 2 to 3 (80 to 120 ms), a contact of 2 to 4 frames (80 to 160 ms) against 1, 0 or 1 bounces against 3 to 5, and 2 percent overshoot against 8 to 12. Gravity is the same for all masses; a heavy object does not fall faster.
+
+![Contact face on a floor, a wall, a ceiling and an angled surface](contact-face.png)
+
+The figure shows a floor, a wall, a ceiling and an angled surface, each as free, contact and recovering. The orange line is the contact face, flat along the contact normal; the teal arrow is that normal; the dashed outline is the free shape. The body bulges away from the surface so the area is kept, which is why the sides of a squashed ball bow out. The rule follows the surface, not the shape: a rounded square, an irregular blob or a ball flattens the face that meets the surface and recovers in place. A bounce is a run of these contacts, each one flattening the face and restoring it before the next, and a pose-swap deformation starts with the face already flat.
 
 ## Curves
 
@@ -79,9 +83,9 @@ Sand and water are bulk shapes, not particles: at 100 px/m a grain is 0.01 to 0.
 
 Read this section before a dent, net, cloth, flag, jelly, pose swap, or a fast small object that reads as a streak.
 
-Fast deformation is a pose swap: a 25 to 40 px net dent completes in 1.4 to 3 frames at 25 fps and rebounds once, so three to five drawn poses on opacity holds read as a simulation, the first already at full depth; the approach is not drawn. A 7.5 px ball at 40 m/s moves 160 px per frame and never reads as a dot: start near contact and draw a streak.
+Fast deformation is a pose swap: a 25 to 40 px net dent completes in 1.4 to 3 frames at 25 fps and rebounds once, so three to five drawn poses on opacity holds read as a simulation, the first already at full depth and already showing the flat contact face from contact-face.png; the approach is not drawn. A 7.5 px ball at 40 m/s moves 160 px per frame and never reads as a dot: start near contact and draw a streak.
 
-Slow deformation (flag, cloth, jelly) needs a mesh: one track of vertex offsets, projective cells about 16 by 10 for 0.5 to 1 px of error, matrix3d on clipped cell copies. The timeline has no mesh kind and refuses path kinds, so draw poses or render frames instead, and treat any mesh export as baked.
+Slow deformation (flag, cloth, jelly) needs a mesh: one track of vertex offsets, projective cells about 16 by 10 for 0.5 to 1 px of error, matrix3d on clipped cell copies. A part that meets a surface uses the face in contact-face.png as a boundary: the vertices on the surface stay flat along the normal while the rest of the body deforms. The timeline has no mesh kind and refuses path kinds, so draw poses or render frames instead, and treat any mesh export as baked.
 
 ## Before delivering
 
@@ -89,6 +93,7 @@ Run this checklist before reporting, alongside the format validation checklist i
 
 - Every move has a frame count, and the ends of a rest-to-rest move are slower than the middle.
 - Every contact exists as a held frame on a frame time, at least max(40 ms, one frame).
+- Every contact face is flat along the contact normal, and a bounce restores it between contacts.
 - Bounce heights decay, and the last bounce is small enough to read as a stop.
 - Overshoot stays within 6 px of travel, measured at the furthest point; today keep the travel small.
 - Copies are staggered by at least one frame, and the loop divides by copies times stagger.
