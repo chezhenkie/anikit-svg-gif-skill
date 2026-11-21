@@ -269,10 +269,10 @@ impl Lerp for Transform {
     }
 
     fn lerp(&self, other: &Transform, t: f64) -> Transform {
-        if t <= 0.0 {
+        if t == 0.0 {
             return *self;
         }
-        if t >= 1.0 {
+        if t == 1.0 {
             return *other;
         }
         let a = self.decompose();
@@ -526,6 +526,16 @@ mod tests {
         let d = middle.decompose();
         assert!(close(d.rotation, 0.6, 1e-9));
         assert!(close(d.scale_x, 1.5, 1e-9));
+    }
+
+    #[test]
+    fn transform_lerp_extrapolates_past_the_ends() {
+        let a = Transform::translate(0.0, 0.0);
+        let b = Transform::translate(100.0, 0.0);
+        let past = a.lerp(&b, 1.05);
+        assert!(close(past.tx, 105.0, 1e-9), "{}", past.tx);
+        let before = a.lerp(&b, -0.05);
+        assert!(close(before.tx, -5.0, 1e-9), "{}", before.tx);
     }
 
     #[test]

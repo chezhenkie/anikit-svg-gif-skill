@@ -21,12 +21,13 @@ pub trait Lerp: Clone + PartialEq + core::fmt::Debug {
     /// `self += other * k`, component by component.
     fn add_scaled(&mut self, other: &Self, k: f64);
 
-    /// Interpolate, exact at both endpoints.
+    /// Interpolate, exact at both endpoints and linear outside them, so a
+    /// curve that overshoots can pass the end key.
     fn lerp(&self, other: &Self, t: f64) -> Self {
-        if t <= 0.0 {
+        if t == 0.0 {
             return self.clone();
         }
-        if t >= 1.0 {
+        if t == 1.0 {
             return other.clone();
         }
         let mut out = self.zero_like();
@@ -83,9 +84,9 @@ impl Lerp for f64 {
     }
 
     fn lerp(&self, other: &f64, t: f64) -> f64 {
-        if t <= 0.0 {
+        if t == 0.0 {
             *self
-        } else if t >= 1.0 {
+        } else if t == 1.0 {
             *other
         } else {
             *self + (*other - *self) * t
@@ -119,9 +120,9 @@ impl Lerp for f32 {
     }
 
     fn lerp(&self, other: &f32, t: f64) -> f32 {
-        if t <= 0.0 {
+        if t == 0.0 {
             *self
-        } else if t >= 1.0 {
+        } else if t == 1.0 {
             *other
         } else {
             *self + (*other - *self) * t as f32
@@ -890,6 +891,22 @@ mod tests {
         let eased = number_track(eased).prepare().unwrap();
         assert!((plain.sample(250_000) - eased.sample(250_000)).abs() > 0.1);
         assert_eq!(plain.sample(750_000), eased.sample(750_000));
+    }
+
+    #[test]
+    fn an_eased_segment_can_pass_its_end_key() {
+        let curve = number_track(vec![
+            Key::new(0, 0.0).ease(Ease::cubic(0.42, 1.4, 0.58, 1.0)),
+            Key::new(1_000_000, 100.0),
+        ])
+        .prepare()
+        .unwrap();
+        let peak = (1..100)
+            .map(|i| curve.sample(i * 10_000))
+            .fold(0.0_f64, f64::max);
+        assert!(peak > 100.0, "peak was {peak}");
+        assert_eq!(curve.sample(0), 0.0);
+        assert_eq!(curve.sample(1_000_000), 100.0);
     }
 
     #[test]
