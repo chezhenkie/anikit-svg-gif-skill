@@ -34,7 +34,7 @@ The four are white line work on black, generated with the other samples by `tool
 6. [Output formats](specsheet/12-output-formats.md): GIF, APNG and the SVG export.
 7. [Extract and rebuild](specsheet/13-extract-and-rebuild.md): frames and timing back out, and the manifest that rebuilds them.
 8. [Import](specsheet/14-import.md): an animated SVG sampled back into the timeline.
-9. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical.
+9. [Kinetic motion](specsheet/10-kinetic-motion.md): what makes a move read as physical, from contact and weight to sand, water and deformation.
 10. [Decisions](specsheet/09-decisions.md): what is settled and what is still open.
 
 ## Research notes

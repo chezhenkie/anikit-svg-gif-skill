@@ -28,7 +28,7 @@ The Rust binary keeps the commands and the visible behaviour, streams frames ins
 | [07-tween-composition.md](07-tween-composition.md) | layers, weights, composite operations, per-type add rules, masks |
 | [08-fixtures-and-gate.md](08-fixtures-and-gate.md) | fixture export, structural checks, the gate, and the order Python files are deleted |
 | [09-decisions.md](09-decisions.md) | one row per open question, with the lean and the status |
-| [10-kinetic-motion.md](10-kinetic-motion.md) | motion that reads as physical: contact holds, weight cues, bounce decay, springs against beziers, defaults |
+| [10-kinetic-motion.md](10-kinetic-motion.md) | motion that reads as physical: contact holds, weight cues, bounce decay, springs against beziers, surfaces, deformation, defaults |
 | [11-tween-route.md](11-tween-route.md) | the tween route: JSON grammar, element state, frame count, errors and tests |
 | [12-output-formats.md](12-output-formats.md) | output choice by extension, the APNG writer, the SVG export, errors and tests |
 | [13-extract-and-rebuild.md](13-extract-and-rebuild.md) | the extract route, the timing manifest, and rebuilding the timeline through the images route |

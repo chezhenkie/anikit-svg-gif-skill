@@ -124,7 +124,7 @@ bin/anikit tween scene.json -o project/scene.svg
 - Every track must name the same `.svg` file, and `src` is `file.svg#elementId`. The root `svg` cannot be a target. The drawing's own CSS or SMIL animation is switched off on each target, so the timeline is the only motion and an imported scene renders once.
 - Canvas size, fps and duration come from the JSON, not from flags. The frame count rounds the duration up at the canvas fps.
 - An SVG export needs no browser. It writes the sampled plan as CSS keyframes inside the drawing and prints `N samples` instead of frames. It replaces any authored transform or CSS animation on the properties it drives, and it keeps the drawing's own size, not the canvas size. `--preview` is refused with `.svg`.
-- Path morphs, raster keys, ASCII grids and spatial masks are not supported by this route.
+- Path morphs, raster keys, ASCII grids, spatial masks and per-vertex meshes are not supported by this route.
 
 ## Import route
 
@@ -198,6 +198,6 @@ See [references/animated-gif-considerations.md](references/animated-gif-consider
 
 - `bin/anikit` - the binary: route parsing, the six routes, the GIF and APNG writers, the SVG export and import.
 - `references/animated-gif-considerations.md` - format notes.
-- `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, checklist.
+- `references/kinetic-motion.md` - mandatory motion rules: spacing, contact holds, weight, bounce decay, spring and curve choice, defaults, sand and water, deformation, what the timeline refuses, checklist.
 
 Source and release binaries: https://github.com/chezhenkie/anikit-svg-gif-skill

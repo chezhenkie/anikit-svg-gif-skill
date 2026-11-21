@@ -1,41 +1,80 @@
 # Kinetic motion
 
-Mandatory before choosing fps, delay, easing or a preset. Motion that reads as physical comes from spacing, contact and weight, not from a curve name. Numbers assume 480x270 at 25 fps; at 12 fps use the long end of each range.
+Mandatory before choosing fps, delay, easing or a preset. Motion that reads as physical comes from spacing, contact and weight, not from a curve name. Numbers assume 480x270 at 25 fps; at 12 fps hold the milliseconds and halve the frame counts, because one frame there is 80 or 90 ms. What the timeline cannot express is listed under Not available.
 
-## Rules
+## Timing
 
-1. Give every move a frame count as well as a duration. At 25 fps a frame is 40 ms; at 12 fps the delay alternates 80 and 90 ms.
-2. Spacing is timing: the first and last gap between frames must be at most 30 percent of the middle gap. A 100 px move over 10 frames has a middle gap near 20 px and end gaps of 1 to 3 px.
-3. Every contact is a held frame: one frame at 25 fps, two for a heavy object, one or two at 12 fps. A contact of zero frames reads as a bounce off nothing.
-4. Bounce heights fall by restitution squared and the intervals fall by restitution. A height ratio of 0.35 to 0.55 reads natural. A GIF rarely has room, so cut to two bounces and a settle.
-5. The last pixels sell the weight: the final 2 to 3 px take 2 to 3 frames, at 0.5 to 1 px per frame. Stop a spring at 0.5 px or 2 px/s, and never let it cross the loop point.
-6. Squash preserves area: width = 1 / height. Contact squash 15 to 25 percent, stretch at speed 15 to 30 percent.
-7. Weight is carried by the edges, not the middle. Heavy means 6 to 10 frames of anticipation against 2 to 3, a longer contact, 0 or 1 bounces against 3 to 5, and 2 percent overshoot against 8 to 12. Gravity is the same for all masses; a heavy object does not fall faster.
-8. Overshoot is measured from the evaluated curve, not written into a control point: y1 1.05 gives 0.04 percent, y1 1.4 gives about 5.3 percent. The 6 px cap is planned but not implemented, so keep travel small.
-9. Springs are for reactions (landing, settle, follow-through, interruption); beziers are for choreography (entrance, exit, camera, loop). Damping 0.4 to 0.55 is playful, 0.6 to 0.75 confident, 0.8 to 1.0 crisp, 1.0 never overshoots.
-10. Follow-through is a delay: one to two frames per link at 25 fps, damping at or above 0.35, gain at or below 0.85. Fewer links at 12 fps, not longer delays.
+1. Give every move a frame count as well as a duration. At 25 fps a frame is 40 ms; at 12 fps the delay runs 80, 90, 80 in each 250 ms, so a 40 ms band is under one frame.
+2. Spacing is timing: in a rest-to-rest move the first and last gap between frames is at most 30 percent of the largest gap. A 100 px move over 10 frames has a middle gap near 20 px and end gaps of 1 to 3 px. Apply the test once to the whole move, not to each bounce or settle. A move that starts or ends at speed, such as an exit or a camera pan, is not bound at that end; judge it at the seam instead.
+
+## Contact and weight
+
+3. Every contact is a held frame of max(40 ms, one frame): one frame at 25 fps, two for a heavy object, one frame of 80 or 90 ms at 12 fps. Put the contact on a frame time, because the plan has no contact-time hook between samples. A contact of zero frames reads as a bounce off nothing.
+4. Bounce heights fall by restitution squared and the intervals by restitution. A physical ball reads at a height ratio of 0.35 to 0.55, which is restitution 0.59 to 0.74; the cartoon default of 0.5 gives 0.25. A GIF rarely has room, so cut to two bounces and a settle.
+5. The last pixels sell the weight: the settle is the final 2 to 3 px over 2 to 3 frames, at 0.5 to 1 px per frame. Stop a spring at 0.5 px or 2 px/s, and never let it cross the loop point. A settle is capped at 1.5 times its segment rather than refused, so in cycle mode a spring must reach rest before the segment ends.
+6. Squash preserves area: width = 1 / height, contact squash 15 to 25 percent, stretch at speed 15 to 30 percent. The parser refuses `squash` and `stretch`, so draw the deformation into the art or bake the frames.
+7. Weight is carried by the edges, not the middle. Heavy means 6 to 10 frames (240 to 400 ms) of anticipation against 2 to 3 (80 to 120 ms), a contact of 2 to 4 frames (80 to 160 ms) against 1, 0 or 1 bounces against 3 to 5, and 2 percent overshoot against 8 to 12. Gravity is the same for all masses; a heavy object does not fall faster.
+
+## Curves
+
+8. Overshoot is measured from the evaluated curve, not written into a control point: with the second handle at 1, y1 1.05 gives 0.04 percent and y1 1.4 gives about 5.3 percent. The 6 px cap is not implemented; it applies to every property at the furthest point of the element, so keep travel small.
+9. Springs are for reactions (landing, settle, follow-through, interruption); beziers are for choreography (entrance, exit, camera, loop). A spring retargets a value, a bezier hits a mark. Damping 0.4 to 0.55 is playful, 0.6 to 0.75 confident, 0.8 to 0.95 crisp, 1.0 and above never overshoots. Frequency 8 to 12 rad/s is heavy, 15 to 25 normal, 30 to 40 snappy. An arc with bend 0.1 bows a 100 px move by 5 px. One gravity per scene: 1400 px/s^2 for a cartoon read, 981 for a plausible one.
+
+## Chains and finish
+
+10. Follow-through is a delay: one to two frames per link (40 to 80 ms) at 25 fps, and fewer links at 12 fps rather than longer delays. A copied track has no spring, a `gain` field does not exist, and a copy clamps at the source end, so in cycle mode it must wrap modulo the duration.
 11. Keep positions sub-pixel through the move and snap only at render. Snapping every frame turns a 0.4 px move into 1 px jumps.
-12. Nothing may still be moving at the loop seam.
+12. Nothing may still be moving at the loop seam. Position and velocity must match across it: a spring or chain must be at rest, while a linear or bezier camera may carry constant velocity. A camera that pans across a repeating drawing may jump one tile at the seam, because the pixels then match; without tiling it must return to its start. A one-frame hold at the seam displays as two frames, 80 ms at 25 fps, and it reads only while the rest of the frame is still.
 
 ## Defaults
 
-| case | travel | duration | motion | follow-through |
+Frames are at 25 fps; at 12 fps hold the durations and halve the frame counts.
+
+| case | travel | duration | motion | status |
 |---|---|---|---|---|
-| entrance | 4 to 60 px | 240 to 320 ms | bezier (0, 0, 0.2, 1), overshoot 2 to 4 percent | one link, 40 ms |
-| exit | 4 to 60 px | 120 to 200 ms | bezier (0.4, 0, 1, 1) | none |
-| drop | 40 to 200 px | 240 to 520 ms | ballistic, gravity 1400, restitution 0.5, two bounces | squash 20 percent |
-| bounce | 8 to 40 px | 320 to 400 ms | spring, k 400, c 30 | one link, 40 ms |
-| slide | 40 to 200 px | 320 to 480 ms | decelerate plus friction, mu 0.5 | one frame tail |
-| shake | 2 to 4 px | 120 to 200 ms | spring layer, 4 to 6 cycles, decay 0.5 | weight fade |
-| pulse | scale 1.00 to 1.05 | 320 to 400 ms | bezier (0.4, 0, 0.2, 1) | none |
-| camera | 100 to 480 px | 800 to 1600 ms | linear or (0.4, 0, 0.2, 1) | parallax 2 to 6 px |
+| entrance | 4 to 60 px | 240 to 320 ms | bezier (0, 0, 0.2, 1), then a 2 to 4 percent overshoot key | ok; one link, 40 ms |
+| exit | 4 to 60 px | 120 to 200 ms | bezier (0.4, 0, 1, 1) | ok |
+| drop | 40 to 200 px | 240 to 540 ms | keyed fall or ballistic scalar, g 1400, cartoon e 0.5, two bounces | ok; squash is refused |
+| bounce | 8 to 40 px | 320 to 400 ms | spring, k 400, c 30 | ok; one link, 40 ms |
+| slide | 40 to 200 px | T = sqrt(2d/(mu g)), 340 to 760 ms | cubic-bezier(0.333, 0.667, 0.667, 1), v0 = 2d/T | ease only; friction is refused |
+| shake | 2 to 4 px | 120 to 200 ms | spring layer, 4 to 6 cycles, decay 0.5 | ok |
+| pulse | scale 1.00 to 1.05 | 320 to 400 ms | bezier (0.4, 0, 0.2, 1) | ok |
+| camera | 100 to 480 px | 800 to 1600 ms | linear or (0.4, 0, 0.2, 1) | ok; parallax 2 to 6 px |
+
+The route refuses ballistic motion on a transform, so a fall is keyed there. A fall time of sqrt(2h/g) usually lands between frames: 100 px at g 1400 is 378 ms, so key 400 ms and 112 px, or choose g to fit the frame.
+
+A slide is constant deceleration at mu 0.5 and g 1400: 100 px needs 374 px/s over 535 ms, and the last 20 percent of the distance takes 45 percent of the time. Round T to a whole frame: 535 ms at 12 fps becomes 580 ms, and the last sample can sit a fraction short of the distance.
+
+## Not available
+
+- `friction`, `squash`, `stretch`: refused on a ballistic key.
+- `smear`, `gain`, a chain binding delay and a contact time between frames: no field exists. A 6 px overshoot cap: not implemented.
+- Path morphs, raster keys, ASCII grids, spatial masks: refused on the tween route.
+- Particles, per-vertex meshes, simulation: not implemented.
+
+## Surfaces
+
+Sand and water are bulk shapes, not particles: at 100 px/m a grain is 0.01 to 0.05 px and a droplet 0.2 to 0.5 px, so draw the silhouette and texture it.
+
+- Sand: a pour is a 2 to 4 px ribbon tapering 20 to 40 percent, with 24 to 40 dots of 1, 1.5 and 2 px at 60/30/10. A pile is a triangle, 2:3 rise to run (base three times the height) when dry, 1:1 damp, 1:2 saturated, and its height grows as sqrt(t). An avalanche starts 2 to 3 degrees above repose, moves the face 2 to 4 px over 2 to 3 frames, then holds the new slope. A pour is monotone, so play it once or start from a seeded pile; it cannot loop by itself.
+- Water: a splash runs crown, jet, droplets, rings. The crown is one held pose at 25 fps and cannot exist at 12; the jet is held 1 to 2 frames; 5 to 20 droplets leave staggered 1 to 2 frames; two or three 1 px rings fade as r^-0.5. A wave band is three or four strips with staggered phase, not one sine.
+- Copies: two or three extra copies at 40 to 60 percent opacity, with the main element at full, spaced by the per-frame travel, or one copy at 12 fps. Stagger them 40, 80 or 120 ms at 25 fps and 80, 170 or 250 ms at 12. The timeline has no copy field, so each copy is its own track and element.
+- Palette: material colours must be exact entries; dither only areas over 4 px; the palette keeps at most 12 samples, so include a 1 to 2 frame crown or dent in the picks. APNG when colour matters.
+
+## Deformation
+
+Fast deformation is a pose swap: a 25 to 40 px net dent completes in 1.4 to 3 frames at 25 fps and rebounds once, so three to five drawn poses on opacity holds read as a simulation, the first already at full depth; the approach is not drawn. A 7.5 px ball at 40 m/s moves 160 px per frame and never reads as a dot: start near contact and draw a streak.
+
+Slow deformation (flag, cloth, jelly) needs a mesh: one track of vertex offsets, projective cells about 16 by 10 for 0.5 to 1 px of error, matrix3d on clipped cell copies. The timeline has no mesh kind and refuses path kinds, so draw poses or render frames instead, and treat any mesh export as baked.
 
 ## Before delivering
 
-- Every move has a frame count, and the ends are slower than the middle.
-- Every contact exists as a held frame.
+- Every move has a frame count, and the ends of a rest-to-rest move are slower than the middle.
+- Every contact exists as a held frame on a frame time, at least max(40 ms, one frame).
 - Bounce heights decay, and the last bounce is small enough to read as a stop.
-- Nothing is still moving at the loop point.
-- The frame budget holds: 2 s at 25 fps is 50 frames.
+- Overshoot stays within 6 px of travel, measured at the furthest point; today keep the travel small.
+- Copies are staggered by at least one frame, and the loop divides by copies times stagger.
+- Nothing is still moving at the loop point, and a seam hold counts twice.
+- The frame budget holds: 2 s at 25 fps is 50 sampled frames before merging; the stored count is lower.
 
 Full specification: docs/specsheet/10-kinetic-motion.md in the source repository.
