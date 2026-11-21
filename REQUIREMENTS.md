@@ -33,7 +33,7 @@ Images are read from PNG, JPEG, GIF, WebP, BMP and TIFF, with EXIF orientation a
 
 The vector route, the tween route when it writes GIF or APNG, and the import route start a Chromium based browser once per run. Chromium, Google Chrome, Brave and Edge are searched in their install locations, then on `PATH`; `--browser PATH` or `GIFKIT_BROWSER` names one explicitly, so any other Chromium based browser works too. The browser runs headless, so no display server is needed. It starts with its own sandbox, and only a process that exits before opening its debugging port is started again with `--no-sandbox`, so a host that restricts unprivileged user namespaces still runs the routes. The page has no access to local files beyond the ones it loads itself: a script cannot read a further file through `fetch` or `XMLHttpRequest`. Scripts inside the drawing do run and can reach the network, so the artwork is trusted input until a script policy exists. A writable temporary directory is needed for the browser profile, which is removed when the run ends or fails.
 
-The route has been tested with Chromium 146, ungoogled-chromium 156 and the Chrome on the GitHub Actions runners. No minimum version is enforced.
+The route has been tested with Chrome 146, ungoogled-chromium 156 and the Chrome on the GitHub Actions runners. No minimum version is enforced.
 
 ## Fonts
 
@@ -47,7 +47,7 @@ No Python, Node, Playwright, ffmpeg, ImageMagick, package manager or network acc
 
 The workspace builds with stable Rust and cargo. CI checks formatting on Linux x86_64, runs `cargo clippy -D warnings` and `cargo test --workspace` on Linux x86_64, Windows x86_64 and Windows arm, and builds and smoke-tests the release binary on every target, with the static-link check on the two musl jobs. Release assets are built on GitHub Actions from a version tag, one runner per target; building all five locally needs the matching hosts or cross toolchains.
 
-Every crate is pure Rust and the shipped assets are static where the platform needs it, so no C compiler or system library is required on the build host or the target. The only dev-only tools are cargo, rustup and Python for the smoke script and the sample generator.
+Every crate is pure Rust and the shipped assets are static where the platform needs it, so no C library is required on the build host or the target; the host still needs its platform linker. The only dev-only tools are cargo, rustup and Python for the smoke script and the sample generator.
 
 ## Disk and memory
 
