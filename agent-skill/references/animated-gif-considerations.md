@@ -65,7 +65,7 @@ Read this section before the images route with EXIF, mixed sizes, transparency, 
 
 ## SVG and HTML
 
-Read this section before vector, tween, SVG export or import, and when the page uses CSS, SMIL, JS canvas, WebGL, external fonts or relative assets, or when choosing `--dpr` or a browser.
+Read this section before vector, tween, SVG export or import, and when the page uses CSS, SMIL, WAAPI, a script that starts animations, a JS canvas, WebGL, external fonts or relative assets, or when choosing `--dpr` or a browser.
 
 - SVG needs a rasterizer. The binary drives an installed Chromium based browser directly over the DevTools protocol, which handles CSS, SMIL, filters, text and web fonts consistently.
 - Pause animations, then seek each frame to an explicit time. Web Animations exposes `currentTime`; SMIL exposes `setCurrentTime`. Screenshots taken against real time are not deterministic.
@@ -73,7 +73,7 @@ Read this section before vector, tween, SVG export or import, and when the page 
 - Relative images, fonts and CSS in an SVG resolve against its own directory through a base URL.
 - Preset transforms need a transform origin at the center and `transform-box: fill-box` inside SVG. Rotating the root can clip corners at the viewport edge.
 - `devicePixelRatio` 2 doubles captured pixels for crisper text; the GIF is twice as large.
-- JS-driven canvas and WebGL pages are outside this tool. They need a frame hook that renders at a requested time, or pre-rendered frames.
+- JavaScript is not the limit; a seekable timeline is. The browser runs the page's scripts, inline or from a file, with no Node, and a script may start CSS or WAAPI animations. A canvas or WebGL surface, or a script that writes positions by hand every frame, has no timeline to position, so it needs a frame hook that renders at a requested time, or pre-rendered frames.
 - External web fonts and network assets make capture slow and non-deterministic. Inline them when possible.
 
 ## Scaling and size

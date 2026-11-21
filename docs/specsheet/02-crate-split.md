@@ -16,7 +16,7 @@ Seven crates, one binary. Every package carries the `anikit-` prefix; this part 
 | anikit-render-svg | lib | browser discovery, page construction, seek and capture, preset animation, timeline-driven element state, SVG export, and sampling an animated SVG into a timeline |
 | anikit-cli | bin | argument parsing, route dispatch, messages, exit codes, preview output |
 
-There is no render-web crate. HTML and JavaScript pages are out of scope for the port, so the vector route handles SVG plus pages whose animation is CSS, WAAPI or SMIL. The tween route accepts an SVG drawing only, because its `src` names elements.
+There is no render-web crate. The browser runs the page's HTML, CSS and JavaScript, and a script may start the CSS or WAAPI animations the route seeks. The vector route handles SVG plus pages whose animation is CSS, WAAPI or SMIL. A canvas or WebGL loop, or any script that writes positions every frame, has no seekable timeline and is out of scope. The tween route accepts an SVG drawing only, because its `src` names elements.
 
 ## 2.2 Dependency direction
 

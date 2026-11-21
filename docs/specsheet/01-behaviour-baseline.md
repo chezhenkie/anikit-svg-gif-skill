@@ -22,7 +22,7 @@ Images input: png, jpg, jpeg, webp, bmp, tif, tiff and gif, sorted naturally, EX
 
 Vector route flags: `--width`, `--height` (default from the drawing), `--duration` (default 2 s), `--fps` (default 15), `--animate none|rotate|pulse|fade` (default none), `--selector`, `--background`, `--dpr` 1 or 2, `--browser PATH`, and the environment variable `GIFKIT_BROWSER`.
 
-Vector input: an .svg is wrapped in a page at the requested viewport; an .html page is opened as is. CSS animations, WAAPI animations and SMIL are paused and seeked to explicit times, so frames do not depend on wall clock. A JavaScript canvas page needs its own frame hook and is not driven by the tool.
+Vector input: an .svg is wrapped in a page at the requested viewport; an .html page is opened as is. CSS animations, WAAPI animations and SMIL are paused and seeked to explicit times, so frames do not depend on wall clock. JavaScript needs no Node and runs in the browser; a page script may create the CSS or WAAPI animations the route seeks. A canvas page, or a script that writes positions every frame, needs its own frame hook and is not driven by the tool.
 
 Every route accepts a canvas side from 8 to 8192 px. An explicit size outside that range, or a source whose own size resolves above it, fails before any frame is rendered, with the limit in the message.
 

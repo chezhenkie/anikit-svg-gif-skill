@@ -8,6 +8,8 @@ metadata:
 
 # anikit
 
+This skill makes and converts animated GIFs, APNGs and SVGs with one bundled binary. It gives the route, the settings and the motion values, so nothing is derived from physics or searched in the repository and one job should finish in one session.
+
 The binary has six routes and one shared timing core; pick the route that matches the input.
 
 | Input | Command | Motion |
@@ -90,7 +92,8 @@ bin/anikit vector page.html -o project/page.gif --width 960 --height 540 --durat
 - Presets: `rotate`, `pulse`, `fade`, applied to the svg root or to `--selector`.
 - `--width` and `--height` default to the SVG `width`/`height` or `viewBox`.
 - `--dpr 2` captures at twice the viewport, for sharper text; the GIF is then twice the pixel size.
-- A JavaScript canvas or WebGL page is not driven by this route. Use a page that animates through CSS or SMIL, or pre-render frames and use the image route.
+- JavaScript is part of the page and needs no Node: the browser runs it, inline or from a `.js` file next to the page. A script that creates Web Animations with `element.animate` is captured like any other WAAPI animation.
+- A script that redraws a canvas or moves elements by hand on every animation frame has no timeline to seek. Use CSS, WAAPI or SMIL, or pre-render frames and use the image route.
 
 ## Tween route
 
@@ -139,7 +142,7 @@ bin/anikit import banner.svg -o project/banner.json --duration 3 --fps 25
 bin/anikit tween project/banner.json -o project/banner.gif
 ```
 
-- The drawing must animate through CSS, WAAPI or SMIL. Every animated element needs an id; the root `svg` cannot be the target.
+- The drawing must animate through CSS, WAAPI or SMIL. A script may create those animations; the browser runs the page's JavaScript and no Node is involved. Every animated element needs an id; the root `svg` cannot be the target.
 - `--duration` is the sampled interval, default 2 seconds, and `--fps` the scene and sample rate, default 25. The fps must put its delay on the 10 ms grid: 1, 2, 4, 5, 10, 20, 25 or 50. This keeps the frame count and the scene exact at its own frame times. Pass the drawing's real length, or the scene holds two seconds wherever the animation is shorter or longer.
 - Only transform, opacity, fill, stroke and stroke-width are imported. Other properties are reported with `WARN`; a drawing with nothing else importable fails.
 - Values come from the rendered page, so CSS and SMIL both work. The source easing is baked into the samples and every segment is linear; render the imported scene at the import fps for an exact match.

@@ -192,7 +192,7 @@ The browser and its temporary profile are removed on success and on failure. The
 
 - One drawing per scene. Several files would need several viewports or a shared coordinate space, and no user has asked for one.
 - The root `svg` cannot be a target, because the route wraps targets in a `g`.
-- The drawing should be static. Its own animation is paused; a JavaScript canvas or WebGL drawing is out of scope, as on the vector route.
+- The drawing should be static. Its own CSS, SMIL or WAAPI animation is cancelled; a script that changes the drawing at run time is out of scope, as on the vector route.
 - No path, raster or grid kinds, no spatial masks and no alpha-only colour. Those are the open rows named by parts 06, 07 and 09; a route that needs one closes it with a test in its own part first.
 - The browser is required for GIF and APNG, so those outputs are unsupported where the vector route is unsupported (02.5, 09 row 20). The SVG export needs no browser.
 - SVG export covers the five property kinds and replaces any authored transform or CSS animation on those properties of a target element. Part 12.

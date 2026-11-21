@@ -174,7 +174,7 @@ The suite covers the GIF and APNG writers, timing, the four exported fixtures an
 - GIF is 8-bit indexed and caps at 256 colors. Photos band; use `--dither floyd` or write APNG for truecolor.
 - Viewers clamp short delays. The tools keep delays at 20 ms or more.
 - Frames stream through the encoder, so memory follows the canvas rather than the frame count.
-- SVG and HTML capture covers CSS, SMIL and WAAPI animation. JS-driven canvas or WebGL pages need their own frame hook or pre-rendered frames.
+- SVG and HTML capture covers CSS, SMIL and WAAPI animation, including animations a page script creates. JavaScript runs in the browser and needs no Node; a canvas or WebGL surface, or a script that writes positions every frame, needs its own frame hook or pre-rendered frames.
 - The tween route moves one static SVG drawing. Its timeline can change transform, opacity, fill, stroke and stroke width; the rest is listed under Not implemented yet.
 - Glyph coverage follows the chosen face. Missing block or box glyphs render as empty boxes.
 
