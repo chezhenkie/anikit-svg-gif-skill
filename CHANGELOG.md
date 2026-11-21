@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0
+
+### Changes
+
+* Eased and spring values pass their end key. `Lerp::lerp` and its f32, f64 and Transform overrides extrapolate outside 0 to 1, so a curve or spring overshoot reaches the frame; the 0.7.0 build clamped the sample at the key. Two tests pin it.
+* The motion references gain three rules: a rest inside a loop holds for at least 3 frame times, bounce heights and intervals decay geometrically, and squash flattens the contact face along the normal on a floor, wall, ceiling or angled surface. The rule applies to any shape.
+* The contact-face diagram ships in `agent-skill/references/contact-face.png` and is named by the motion reference, the skill file list and the delivery checklist.
+* The skill states its token budget: the motion values live in tables, one animation is meant to finish inside one context of roughly 260K, and the agent reads the references once and composes from the presets.
+* The README leads with motion as numbers, token economy and the path for small and local models, and gains a Not implemented yet chapter for friction, squash, stretch, smear, gain, chain delay, contact times, the overshoot cap, path and raster keys, masks, particles and meshes.
+* The format reference drops its Python sample, its transparent-GIF line and its APNG alpha claim; the suite text names the memory checks, the requirements name Chrome 146 and the platform linker, and the text-versus-size advice is consistent.
+
 ## 0.7.0
 
 ### Changes
