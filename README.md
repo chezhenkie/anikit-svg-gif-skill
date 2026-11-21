@@ -1,13 +1,13 @@
 # anikit
 
-Make animations and convert them between formats. One native binary builds a GIF, APNG or animated SVG from text frames, a folder of images, a web page or a timeline written as JSON, and turns existing animations back into frames, JSON or SVG you can edit.
+An animation maker and converter for GIF, APNG and SVG. It builds an animation from text frames, an image folder, a web page or a timeline, and converts in both directions: animated SVG to a timeline, GIF or APNG to frames with timing, and back.
 
-- Text, images, web pages and JSON timelines all become an animation.
-- Converts between formats: animated SVG to a JSON timeline and back, GIF or APNG to frames with timing, and frames back to an animation.
-- The animation know-how is built in: timing, easing, springs, bounce and weight, so a smaller local model gets a good result in a few turns.
+- Six functions in one binary: `ascii`, `images`, `vector`, `tween`, `import`, `extract`. Four render an animation; two turn one back into editable pieces.
+- The craft of motion is built in: timing, easing, springs, bounce, weight and contacts, written as concrete values rather than left to the model.
+- Smaller local models get a good result without long iteration, and the work fits in one session.
 - You can still write any key, curve or layer yourself.
-- One binary, no Python, Node or package manager. A browser is needed only for web pages and JSON timelines; the SVG export needs none.
-- The output file name chooses the format; the binary handles timing, palette and checking.
+- One binary, no Python, Node or package manager. A browser is needed only for web pages and timelines; the SVG export needs none.
+- The file name chooses GIF, APNG or SVG; timing, palette and checking are handled.
 
 ## Samples
 
