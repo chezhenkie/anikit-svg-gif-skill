@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
+  <rect x="0" y="0" width="480" height="270" fill="#f2efe6"/>
+  <line x1="400" y1="0" x2="400" y2="270" stroke="#33333d" stroke-width="4"/>
+  <defs><clipPath id="wallclip"><rect x="-1000" y="-1000" width="1400" height="3000"/></clipPath></defs>
+  <g clip-path="url(#wallclip)">
+    <rect id="square" x="-56" y="-28" width="56" height="56" rx="8" fill="#d9541f"/>
+    <circle id="ball" cx="-28" cy="0" r="28" fill="#d9541f"/>
+    <path id="blob" d="M -4.3 -26 A 80 80 0 0 1 -4.3 26 C -26 28 -48 20 -54 4 C -59 -12 -46 -25 -28 -27 Z" fill="#d9541f"/>
+  </g>
+</svg>

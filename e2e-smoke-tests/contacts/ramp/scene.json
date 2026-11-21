@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "canvas": {"w": 480, "h": 270, "bg": "#f4f1ea", "fps": 25},
+  "timing": {"loop": "once", "rate": 1},
+  "tracks": [
+    {"id": "box-contact", "kind": "svg.transform", "src": "art.svg#box",
+     "keys": [
+       {"t": 0, "translate": [214.6429, 125.6215], "rotate": -25, "scale": [1, 1], "easing": "ease-in-out"},
+       {"t": 280, "translate": [240, 180], "rotate": -25, "scale": [1, 1], "easing": "linear"},
+       {"t": 320, "translate": [240.6339, 181.3595], "rotate": -25, "scale": [1.282051, 0.78], "easing": "ease-out"},
+       {"t": 560, "translate": [240, 180], "rotate": -25, "scale": [1, 1], "easing": "linear"},
+       {"t": 600, "translate": [240, 180], "rotate": -25, "scale": [1, 1]}
+     ]}
+  ],
+  "layers": []
+}

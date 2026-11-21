@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "canvas": {"w": 480, "h": 270, "bg": "#f2efe6", "fps": 25},
+  "timing": {"loop": "cycle", "rate": 1.0},
+  "tracks": [
+    {"id": "square-move", "kind": "svg.transform", "src": "art.svg#square",
+     "keys": [
+       {"t": 0, "translate": [240, 54], "scale": 1},
+       {"t": 200, "translate": [240, 54], "scale": 1, "easing": "ease-in"},
+       {"t": 1100, "translate": [401, 54], "easing": "linear"},
+       {"t": 1140, "scale": [0.78, 1.282051282], "easing": "ease-out"},
+       {"t": 2280, "translate": [240, 54], "scale": 1}
+     ]},
+    {"id": "ball-move", "kind": "svg.transform", "src": "art.svg#ball",
+     "keys": [
+       {"t": 0, "translate": [240, 135], "scale": 1},
+       {"t": 200, "translate": [240, 135], "scale": 1, "easing": "ease-in"},
+       {"t": 1100, "translate": [401, 135], "easing": "linear"},
+       {"t": 1140, "scale": [0.78, 1.282051282], "easing": "ease-out"},
+       {"t": 2280, "translate": [240, 135], "scale": 1}
+     ]},
+    {"id": "blob-move", "kind": "svg.transform", "src": "art.svg#blob",
+     "keys": [
+       {"t": 0, "translate": [240, 216], "scale": 1},
+       {"t": 200, "translate": [240, 216], "scale": 1, "easing": "ease-in"},
+       {"t": 1100, "translate": [401, 216], "easing": "linear"},
+       {"t": 1140, "scale": [0.78, 1.282051282], "easing": "ease-out"},
+       {"t": 2280, "translate": [240, 216], "scale": 1}
+     ]}
+  ],
+  "layers": []
+}

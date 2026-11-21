@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
+  <rect x="0" y="0" width="480" height="40" fill="#4a5568"/>
+  <g id="stone">
+    <polygon points="-34,0 34,0 34,3 43,28 30,56 4,90 -30,74 -41,30 -34,3" fill="#c98a3c"/>
+    <polygon points="-22,14 6,10 24,34 2,58 -26,44" fill="#a8702a"/>
+    <polygon points="-14,66 -4,62 8,74 -2,82" fill="#8c5c22"/>
+  </g>
+</svg>

@@ -24,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "rust" / "crates" / "anikit-cli" / "tests" / "fixtures"
+CONTACTS = ROOT / "e2e-smoke-tests" / "contacts"
 
 FRAMES = re.compile(r"(\d+) frames, (\d+(?:\.\d+)?) s, (\d+) x (\d+)")
 SAMPLES = re.compile(r"(\d+) samples, (\d+(?:\.\d+)?) s, (\d+) x (\d+)")
@@ -185,6 +186,13 @@ def main() -> int:
              out / "tween.gif", FRAMES, 10, (120, 80))
         case(report, "tween apng", binary, ["tween", str(scene), "-o", str(out / "tween.apng")],
              out / "tween.apng", FRAMES, 10, (120, 80))
+        # Contact scenes: a body meets a surface at an angle, a shape the route
+        # samples as a transform and a clip. They catch a timeline that no longer
+        # reproduces the authored contact.
+        for name, frames in (("wall", 53), ("ceiling", 21), ("ramp", 15)):
+            case(report, f"contact {name}", binary,
+                 ["tween", str(CONTACTS / name / "scene.json"), "-o", str(out / f"contact-{name}.gif")],
+                 out / f"contact-{name}.gif", FRAMES, frames, (480, 270))
 
         source = out / "tween.gif"
         frames = out / "frames"
