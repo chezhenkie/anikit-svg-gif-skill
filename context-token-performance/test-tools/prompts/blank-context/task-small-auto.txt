@@ -1,3 +1,3 @@
-Make an animated GIF at {repo}\token-economy-testing\test-tools\runs\blank-context\task-small-auto\out.gif: 480x270, 25 fps, 1 s loop, white background. A 60x60 red square starts at rest with its left edge at x = 210, moves to x = 420 over 800 ms with ease-in-out, and rests for the remaining 200 ms. Use the anikit skill for the animation and put the drawing and scene.json in the same folder.
+Make an animated GIF at {repo}\context-token-performance\test-tools\runs\blank-context\task-small-auto\out.gif: 480x270, 25 fps, 1 s loop, white background. A 60x60 red square starts at rest with its left edge at x = 210, moves to x = 420 over 800 ms with ease-in-out, and rests for the remaining 200 ms. Use the anikit skill for the animation and put the drawing and scene.json in the same folder.
 
 Stop when out.gif exists. Print its absolute path and byte size.

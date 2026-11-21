@@ -1,5 +1,5 @@
-Use the installed anikit skill. Read {skill}\SKILL.md and both reference files in {skill}\references before you start. The binary is {skill}\bin\anikit.exe. Write only inside {repo}\token-economy-testing\test-tools\runs\task-small.
+Use the installed anikit skill. Read {skill}\SKILL.md and both reference files in {skill}\references before you start. The binary is {skill}\bin\anikit.exe. Write only inside {repo}\context-token-performance\test-tools\runs\task-small.
 
-Produce one GIF at {repo}\token-economy-testing\test-tools\runs\task-small\out.gif: 480x270, 25 fps, 1 s loop, white background. A 60x60 red square starts at rest with its left edge at x = 210, moves to x = 450 over 800 ms with ease-in-out, and rests for the remaining 200 ms. Put the drawing and scene.json in the same folder. The last sample is the rest.
+Produce one GIF at {repo}\context-token-performance\test-tools\runs\task-small\out.gif: 480x270, 25 fps, 1 s loop, white background. A 60x60 red square starts at rest with its left edge at x = 210, moves to x = 450 over 800 ms with ease-in-out, and rests for the remaining 200 ms. Put the drawing and scene.json in the same folder. The last sample is the rest.
 
 Stop when out.gif exists. Print its absolute path and byte size.

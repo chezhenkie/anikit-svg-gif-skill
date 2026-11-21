@@ -15,7 +15,7 @@ The `product` column names the finished animation in `reports/`, and the report 
 1. Run the baseline prompt first. It is a fresh session asked only to reply OK; its fill is the fixed overhead every other run in that test pays.
 2. Vary one axis per pair of runs. Hold the other axis constant.
 3. Every prompt is self-contained: exact input paths, the task rules the skill does not supply, one deliverable, one stop condition, and no request to report tokens.
-4. Do not name the skill's own files. Loading SKILL.md and its references is the skill's job; naming them measures a forced read and hides whether the triggers work.
+4. Do not name the skill's own files. Loading SKILL.md and its references is the skill's job; naming them measures a forced read, not what the job costs on its own.
 5. Run each prompt once in a new session and take the session id from the return.
 6. Add the id to `sessions.csv` and run `python test-tools/report.py`.
 
