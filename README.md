@@ -142,6 +142,7 @@ The tween route reads one JSON file: `anikit tween scene.json -o scene.apng`. Th
 | `agent-skill/bin/` | The installed binary |
 | `agent-skill/references/animated-gif-considerations.md` | Format constraints and defaults |
 | `agent-skill/references/kinetic-motion.md` | Motion rules, presets, checklist |
+| `agent-skill/references/contact-face.png` | Contact-face diagram: floor, wall, ceiling and angled surface |
 | `rust/` | The source workspace, one crate per stage |
 | `tools/make_docs.py` | Regenerates the sample animations |
 | `e2e-smoke-tests/` | Route smoke checks against a built binary |
@@ -168,8 +169,21 @@ The suite covers the GIF and APNG writers, timing, the four exported fixtures an
 - Viewers clamp short delays. The tools keep delays at 20 ms or more.
 - Frames stream through the encoder, so memory follows the canvas rather than the frame count.
 - SVG and HTML capture covers CSS, SMIL and WAAPI animation. JS-driven canvas or WebGL pages need their own frame hook or pre-rendered frames.
-- The tween route moves one static SVG drawing. Its timeline can change transform, opacity, fill, stroke and stroke width; path morphs, raster keys and spatial masks are not part of it yet.
+- The tween route moves one static SVG drawing. Its timeline can change transform, opacity, fill, stroke and stroke width; the rest is listed under Not implemented yet.
 - Glyph coverage follows the chosen face. Missing block or box glyphs render as empty boxes.
+
+## Not implemented yet
+
+The timeline and the routes stop short of several effects. A scene that names a refused field fails before rendering; the rest have no field, so they are drawn into the art or baked as frames.
+
+- `friction`, `squash` and `stretch` on a ballistic key: refused. Contact squash and stretch are drawn into the art or baked, and a slide uses constant deceleration instead of friction.
+- `smear`: no field. Draw the copies or bake the smear into a frame.
+- `gain`: no field. A copied track carries the source value and clamps at the source end.
+- A chain binding delay: no field. A chain is a copied track with its keys shifted later.
+- A contact time between frames: no field. A contact is held on a frame time, at least max(40 ms, one frame).
+- A 6 px overshoot cap: not implemented. Overshoot is measured from the evaluated curve; keep travel small until the cap exists.
+- Path morphs, raster keys, ASCII grids and spatial masks: refused on the tween route. ASCII art goes through the ascii route as text frames, not as a timeline property.
+- Particles, per-vertex meshes and simulation: not implemented. Draw poses or render frames; a mesh export is baked and does not round trip through import.
 
 ## License
 
