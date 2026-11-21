@@ -1,18 +1,18 @@
 # Requirements
 
-anikit runs from one binary per host. Three routes also need a Chromium based browser, and the ascii route embeds its own font. This page lists what each host and route needs and what the build needs; install commands and the asset names are in [README.md](README.md), and [docs/specsheet/](docs/specsheet/00-overview.md) holds the binding behaviour rules.
+anikit runs from one binary per host. Three routes also need a Chromium based browser, and the ascii route embeds its own font. This page lists what each host and route needs and what the build needs; install commands and the bundle names are in [README.md](README.md), and [docs/specsheet/](docs/specsheet/00-overview.md) holds the binding behaviour rules.
 
 ## Host platforms
 
-| Host | Asset | Notes |
+| Host | Bundle | Notes |
 |---|---|---|
-| Linux x86_64, glibc | `anikit-linux-x86_64` | static musl build; runs on glibc and musl systems |
-| Linux arm, musl | `anikit-linux-arm` | static build |
-| Windows x86_64 | `anikit-windows-x86_64.exe` | |
-| Windows arm | `anikit-windows-arm.exe` | |
-| macOS arm | `anikit-macos-arm` | Apple silicon |
+| Linux x86_64, glibc | `anikit-skill-<version>-linux-x86_64.zip` | static musl build; runs on glibc and musl systems |
+| Linux arm, musl | `anikit-skill-<version>-linux-arm.zip` | static build |
+| Windows x86_64 | `anikit-skill-<version>-windows-x86_64.zip` | |
+| Windows arm | `anikit-skill-<version>-windows-arm.zip` | |
+| macOS arm | `anikit-skill-<version>-macos-arm.zip` | Apple silicon |
 
-A host without a matching asset is unsupported: the skill reports it and does not build or download a binary. There is no 32-bit asset and no Intel mac asset.
+A host without a matching bundle is unsupported: the skill reports it and does not build or download a binary. There is no 32-bit bundle and no Intel mac bundle.
 
 ## Per route
 
@@ -41,13 +41,13 @@ The ascii route carries DejaVu Sans Mono 2.37 in the binary, so a host needs no 
 
 ## Nothing else
 
-No Python, Node, Playwright, ffmpeg, ImageMagick, package manager or network access is needed at run time. The skill takes the binary from a GitHub release asset and never downloads or builds anything while making an animation. The browser of the three page routes is the only runtime requirement outside the binary.
+No Python, Node, Playwright, ffmpeg, ImageMagick, package manager or network access is needed at run time. The skill takes the binary from the skill bundle on the release page and never downloads or builds anything while making an animation. The browser of the three page routes is the only runtime requirement outside the binary.
 
 ## Build
 
-The workspace builds with stable Rust and cargo. CI checks formatting on Linux x86_64, runs `cargo clippy -D warnings` and `cargo test --workspace` on Linux x86_64, Windows x86_64 and Windows arm, and builds and smoke-tests the release binary on every target, with the static-link check on the two musl jobs. Release assets are built on GitHub Actions from a version tag, one runner per target; building all five locally needs the matching hosts or cross toolchains.
+The workspace builds with stable Rust and cargo. CI checks formatting on Linux x86_64, runs `cargo clippy -D warnings` and `cargo test --workspace` on Linux x86_64, Windows x86_64 and Windows arm, and builds and smoke-tests the release binary on every target, with the static-link check on the two musl jobs. Release binaries and skill bundles are built on GitHub Actions from a version tag, one runner per target; building all five locally needs the matching hosts or cross toolchains.
 
-Every crate is pure Rust and the shipped assets are static where the platform needs it, so no C library is required on the build host or the target; the host still needs its platform linker. The only dev-only tools are cargo, rustup and Python for the smoke script and the sample generator.
+Every crate is pure Rust and the shipped assets are static where the platform needs it, so no C library is required on the build host or the target; the host still needs its platform linker. The only dev-only tools are cargo, rustup and Python for the smoke script, the sample generator and the bundle builder.
 
 ## Disk and memory
 

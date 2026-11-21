@@ -65,6 +65,6 @@ The text and images routes must build for every target with no system libraries 
 
 ## 2.6 Delivery
 
-Every release attaches the binaries built for the targets in 2.5 as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector, tween and import routes use it.
+Every release attaches the binaries built for the targets in 2.5 and one skill bundle per target as release assets (09, row 20). Builds run in GitHub Actions on the tag, so no developer machine produces a release asset and the installed skill never downloads, unpacks or builds anything while a GIF is made. A host with no matching asset is told so plainly instead of falling back to a compiler or a package manager. The only runtime requirement outside the binary is the browser of row 19, and only the vector, tween and import routes use it.
 
 The workflow builds Windows x86_64, Windows arm, Linux x86_64 static musl, Linux arm static musl and macOS arm, and attaches each under its asset name. A host with no matching asset is reported as unsupported.

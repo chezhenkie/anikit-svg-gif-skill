@@ -45,15 +45,15 @@ All four are white line work on black, built from JSON timelines by the same gen
 
 `anikit` is one binary per platform and needs no Python, no Node and no package manager. The vector and import routes, and the tween route when it writes GIF or APNG, also need a Chromium based browser; `--browser PATH` or `GIFKIT_BROWSER` names one, and otherwise Chromium, Google Chrome, Brave and Edge are searched in their install locations and on `PATH`. The full list, per host, per route and for the build, is in [REQUIREMENTS.md](REQUIREMENTS.md).
 
-| Platform | Release asset | Install as |
-|---|---|---|
-| Linux x86_64, glibc or musl | `anikit-linux-x86_64` | `agent-skill/bin/anikit` |
-| Linux arm, musl | `anikit-linux-arm` | `agent-skill/bin/anikit` |
-| Windows x86_64 | `anikit-windows-x86_64.exe` | `agent-skill/bin/anikit.exe` |
-| Windows arm | `anikit-windows-arm.exe` | `agent-skill/bin/anikit.exe` |
-| macOS arm | `anikit-macos-arm` | `agent-skill/bin/anikit` |
+| Platform | Bundle |
+|---|---|
+| Linux x86_64, glibc or musl | `anikit-skill-<version>-linux-x86_64.zip` |
+| Linux arm, musl | `anikit-skill-<version>-linux-arm.zip` |
+| Windows x86_64 | `anikit-skill-<version>-windows-x86_64.zip` |
+| Windows arm | `anikit-skill-<version>-windows-arm.zip` |
+| macOS arm | `anikit-skill-<version>-macos-arm.zip` |
 
-A host without a matching asset is reported as unsupported; the skill never builds or downloads a binary while making an animation.
+A host without a matching bundle is reported as unsupported; the skill never builds or downloads a binary while making an animation. The release page also carries the bare binary for each platform, for the manual route below.
 
 ## Install
 
