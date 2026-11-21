@@ -53,4 +53,6 @@ The Rust binary keeps the commands and the visible behaviour, streams frames ins
 
 Specsheets in this folder are binding: they state what the system does and what the code must satisfy. README.md and docs/index.md are written for humans and stay short. docs/research/ holds evidence, measurements and prior art: it is never binding, and a specsheet wins where the two disagree.
 
+Reader-facing text, including README.md, docs/index.md, the repository About and release notes, addresses a competent developer who has not read this spec. It says what the tool does, what goes in, what comes out and what the reader gets. Internal names such as route, tween, frame plan, context and token budget stay out unless the sentence explains them in plain words. A bullet that reduces a sentence to a label and a colon, a slogan, and copy that oversimplifies the subject are defects.
+
 Part and section numbers are stable, so a citation such as section 3.2 keeps resolving after later edits. A rule that is still open appears in 09 and is cited by row number from the part it affects.
