@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.1
+
+### Changes
+
+* The release ships a skill bundle for each platform: one zip holding `SKILL.md`, `INSTALL.md`, the references and the matching binary, so the install is a single extract into the skills folder. The loose binaries stay on the release page as the manual route.
+* `tools/make_bundle.py` builds the five bundles in the release workflow from the checked-in skill files, and the release notes name the bundle and the manual route.
+* The README leads its install chapter with the bundle and keeps the manual route below it, as a checkout plus an asset download with the two steps stated separately.
+* The skill is named anikit in `SKILL.md` and in the installed folder; the README intro, the repository About and the voice rule are written for a reader who has not seen the spec.
+* The bin README points at the bundle and its download example is on the current tag.
+
 ## 0.8.0
 
 ### Changes
