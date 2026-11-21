@@ -10,17 +10,17 @@ An animation maker with a keyframe engine at its centre: text frames, image fold
 
 | text frames | image folder | SVG animation | keyframes |
 |---|---|---|---|
-| [<img src="demo-ascii.gif" width="190" alt="Animated ASCII loading bar">](demo-ascii.gif) | [<img src="demo-pics.gif" width="190" alt="The same dune ridge crossfading through dawn, noon and night">](demo-pics.gif) | [<img src="demo-svg.gif" width="190" alt="A glowing heart beating beside a scrolling ECG trace">](demo-svg.gif) | [<img src="demo-tween.gif" width="190" alt="An orrery of three planets and a comet orbiting a pulsing sun">](demo-tween.gif) |
+| [<img src="demos/demo-ascii.gif" width="190" alt="Animated ASCII loading bar">](demos/demo-ascii.gif) | [<img src="demos/demo-pics.gif" width="190" alt="The same dune ridge crossfading through dawn, noon and night">](demos/demo-pics.gif) | [<img src="demos/demo-svg.gif" width="190" alt="A glowing heart beating beside a scrolling ECG trace">](demos/demo-svg.gif) | [<img src="demos/demo-tween.gif" width="190" alt="An orrery of three planets and a comet orbiting a pulsing sun">](demos/demo-tween.gif) |
 
-The image sample is one dune ridge at three times of day, the SVG sample is an authored pulse monitor, and the keyframe sample is an orrery on a JSON timeline. The keyframe sample is also written as [APNG](demo-tween.apng) and as an [animated SVG](demo-tween.svg); the SVG plays in a browser without a script.
+The image sample is one dune ridge at three times of day, the SVG sample is an authored pulse monitor, and the keyframe sample is an orrery on a JSON timeline. The keyframe sample is also written as [APNG](demos/demo-tween.apng) and as an [animated SVG](demos/demo-tween.svg); the SVG plays in a browser without a script.
 
 ## Kinetic studies
 
 | Gravity | Momentum |
 |:---:|:---:|
-| [<img src="demo-kinetic-drop.gif" width="190" alt="A ball entering from the left and bouncing twice across the frame">](demo-kinetic-drop.gif) | [<img src="demo-kinetic-cradle.gif" width="190" alt="Five balls exchanging an impulse in a cradle">](demo-kinetic-cradle.gif) |
+| [<img src="demos/demo-kinetic-drop.gif" width="190" alt="A ball entering from the left and bouncing twice across the frame">](demos/demo-kinetic-drop.gif) | [<img src="demos/demo-kinetic-cradle.gif" width="190" alt="Five balls exchanging an impulse in a cradle">](demos/demo-kinetic-cradle.gif) |
 | Ballistic | Follow-through |
-| [<img src="demo-kinetic-leap.gif" width="190" alt="An outlined box leaping between two ledges">](demo-kinetic-leap.gif) | [<img src="demo-kinetic-wave.gif" width="190" alt="A damped pulse travelling through hanging rods">](demo-kinetic-wave.gif) |
+| [<img src="demos/demo-kinetic-leap.gif" width="190" alt="An outlined box leaping between two ledges">](demos/demo-kinetic-leap.gif) | [<img src="demos/demo-kinetic-wave.gif" width="190" alt="A damped pulse travelling through hanging rods">](demos/demo-kinetic-wave.gif) |
 
 The four are white line work on black, generated with the other samples by `tools/make_docs.py`.
 

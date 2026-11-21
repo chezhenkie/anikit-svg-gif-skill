@@ -1,7 +1,7 @@
 """Generate the sample animations used by the README.
 
 Creates fixtures under scratch/docs and writes the four demo animations into
-docs/, plus the keyframe sample as APNG and as an animated SVG, and four white
+docs/demos, plus the keyframe sample as APNG and as an animated SVG, and four white
 line kinetic studies on black. The image sample is a dune ridge drawn at three
 times of day, the SVG sample is an authored pulse monitor, and the keyframe
 sample is an orrery driven by a JSON timeline.
@@ -25,6 +25,7 @@ import zlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
+DEMOS = DOCS / "demos"
 WORK = ROOT / "scratch" / "docs"
 ESC = chr(27)
 SAMPLES = (
@@ -341,7 +342,7 @@ def ascii_sample():
         frames.append("\n".join(frame))
     src = WORK / "loader.txt"
     src.write_text("\n---\n".join(frames) + "\n", encoding="ascii")
-    run("ascii", src, "-o", DOCS / "demo-ascii.gif",
+    run("ascii", src, "-o", DEMOS / "demo-ascii.gif",
         "--size", 28, "--delay", 140, "--width", 480, "--height", 270,
         "--bg", "#0b0d12")
 
@@ -352,7 +353,7 @@ def pics_sample():
     for name, scene in (("dune-1-dawn", DAWN), ("dune-2-noon", NOON),
                         ("dune-3-night", NIGHT)):
         write_rgb_png(folder / (name + ".png"), STILL_W, STILL_H, dune_bytes(scene))
-    run("images", folder, "-o", DOCS / "demo-pics.gif",
+    run("images", folder, "-o", DEMOS / "demo-pics.gif",
         "--mode", "crossfade", "--fps", 14, "--hold", 1.0,
         "--transition", 0.8, "--width", STILL_W, "--height", STILL_H)
 
@@ -370,7 +371,7 @@ def ecg_path(period=160, beats=8, start=-160, base=226):
     return " ".join(parts)
 
 
-def svg_sample(fps=25, out_dir=DOCS):
+def svg_sample(fps=25, out_dir=DEMOS):
     trace = ecg_path()
     style = """
 #heart { transform-box: fill-box; transform-origin: center;
@@ -453,7 +454,7 @@ def orbit_point(t, duration, rx, ry, tilt_deg, turns, phase, direction, cx=240.0
             cy + ox * math.sin(tilt) + oy * math.cos(tilt))
 
 
-def tween_sample(duration=3600, fps=20, out_dir=DOCS):
+def tween_sample(duration=3600, fps=20, out_dir=DEMOS):
     step = 1000 // fps
     times = list(range(0, duration + 1, step))
 
@@ -618,7 +619,7 @@ def tween_sample(duration=3600, fps=20, out_dir=DOCS):
 
 
 def kinetic_render(name, drawing, scene):
-    """Write one kinetic scene and render it to docs/demo-kinetic-<name>.gif."""
+    """Write one kinetic scene and render it to docs/demos/demo-kinetic-<name>.gif."""
     folder = WORK / "kinetic"
     folder.mkdir(parents=True, exist_ok=True)
     (folder / (name + ".svg")).write_text(
@@ -628,7 +629,7 @@ def kinetic_render(name, drawing, scene):
     (folder / (name + ".json")).write_text(
         json.dumps(scene, indent=1) + "\n", encoding="ascii")
     run("tween", folder / (name + ".json"),
-        "-o", DOCS / ("demo-kinetic-%s.gif" % name))
+        "-o", DEMOS / ("demo-kinetic-%s.gif" % name))
 
 
 def kinetic_scene(duration, tracks):
@@ -942,13 +943,14 @@ def main():
         shutil.rmtree(WORK)
     WORK.mkdir(parents=True)
     DOCS.mkdir(parents=True, exist_ok=True)
+    DEMOS.mkdir(parents=True, exist_ok=True)
     ascii_sample()
     pics_sample()
     svg_sample()
     tween_sample()
     kinetic_samples()
     for name in SAMPLES:
-        path = DOCS / name
+        path = DEMOS / name
         print("%s  %.1f KB" % (name, path.stat().st_size / 1024.0))
     return 0
 
