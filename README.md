@@ -3,7 +3,7 @@
 An animation maker with a keyframe engine at its centre. One native binary turns text frames, an image folder, a live SVG or HTML page, or a JSON timeline over a static drawing into a GIF, APNG or animated SVG. The same routes convert animations back into pieces you can edit or rebuild.
 
 - Motion as numbers: the bundled motion reference holds spacing, contact holds, bounce decay and spring and curve defaults, so the agent reads a table instead of inventing physics.
-- Token economy: the motion rules, routes and checklists live in the skill, so a job needs one command and a short context.
+- Token economy: the motion rules, routes and checklists live in the skill, so a job fits in about 260K of context and finishes in one session.
 - A clear path for small, open-weight and local models: one route per input, one command per route, presets and two checklists, so a model animates above its initial skill without a render-and-fix loop.
 - Presets cover the common cases; the JSON timeline takes any key, curve, layer or hand-drawn pose.
 - A translator between animation formats: animated SVG, CSS or SMIL into the JSON timeline, a timeline out as animated SVG, and GIF or APNG into timed PNG frames.

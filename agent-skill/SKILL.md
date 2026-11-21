@@ -23,6 +23,10 @@ Every frame route ends in the same core: 10 ms timing grid, identical consecutiv
 
 The output extension chooses the format on the four frame routes: `.gif`, `.png` or `.apng`, and `.svg` on the tween route. Extract takes a folder and import writes a `.json` timeline. An unknown extension fails before rendering.
 
+## Token budget
+
+One animation is meant to finish in one context, including the 260K windows common on small and local models. Read this file and both references once, choose one route, run one command per attempt, and run the two checklists. The motion values are in the tables; derive nothing from physics and search nothing in the repository.
+
 ## Binary
 
 `bin/anikit` is one platform binary (`bin/anikit.exe` on Windows). It needs no Python, no Node and no package manager. When the host has no binary for its platform, report the platform as unsupported and stop: do not build, download or substitute one during a GIF run.
