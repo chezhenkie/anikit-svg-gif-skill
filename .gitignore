@@ -14,3 +14,5 @@ __pycache__/
 Thumbs.db
 desktop.ini
 .DS_Store
+# local release downloads
+releases/
