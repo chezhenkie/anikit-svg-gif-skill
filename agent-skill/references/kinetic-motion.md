@@ -1,6 +1,6 @@
 # Kinetic motion
 
-Mandatory before choosing fps, delay, easing or a preset, and before any contact, spring, chain, surface or deformation decision. Motion that reads as physical comes from spacing, contact and weight, not from a curve name. Numbers assume 480x270 at 25 fps; at 12 fps hold the milliseconds and halve the frame counts, because one frame there is 80 or 90 ms. What the timeline cannot express is listed under Not available.
+Mandatory before choosing fps, delay, easing or a preset, and before any contact, spring, chain, surface or deformation decision. Motion that reads as physical comes from spacing, contact and weight, not from a curve name. Numbers assume 480x270 at 25 fps; at 12 fps hold the milliseconds and halve the frame counts, because one frame there is 80 or 90 ms. What the timeline cannot express is listed under Not implemented yet.
 
 ## Timing
 
@@ -59,7 +59,7 @@ The route refuses ballistic motion on a transform, so a fall is keyed there. A f
 
 A slide is constant deceleration at mu 0.5 and g 1400: 100 px needs 374 px/s over 535 ms, and the last 20 percent of the distance takes 45 percent of the time. Round T to a whole frame: 535 ms at 12 fps becomes 580 ms, and the last sample can sit a fraction short of the distance.
 
-## Not available
+## Not implemented yet
 
 Read this section before using or requesting friction, squash, stretch, smear, gain, mesh, particles, spatial masks, path keys or raster keys.
 

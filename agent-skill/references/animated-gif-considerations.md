@@ -1,6 +1,6 @@
 # Animated GIF considerations
 
-Mandatory before choosing or overriding a format default, and the validation checklist runs before delivery. Format constraints and the defaults the tools in this skill are built on. Numbers are specifics of GIF89a and common viewers, not preferences. GIF is the default output; APNG uses truecolor frames and the same timing and merge rules, so the palette and dither notes below do not apply to it.
+Mandatory before choosing or overriding a format default, and the validation checklist runs before delivery. Format constraints and the defaults the tools in this skill are built on. Numbers are specifics of GIF89a and common viewers, not preferences. GIF is the portable choice; APNG uses truecolor frames and the same timing and merge rules, so the palette and dither notes below do not apply to it.
 
 ## Format constraints
 
@@ -14,24 +14,12 @@ Read this section before choosing .gif, .apng or .svg, setting a delay under 20 
 
 ## Timing
 
-Read this section before snapping delays to the 10 ms grid, merging identical frames, applying a speed factor, or closing a loop.
+Read this section before snapping delays to the 10 ms grid, merging identical frames, applying a timing rate, or closing a loop.
 
 - Precompute animation state on a fixed grid. Never drive frames from a wall clock; output must be deterministic and reproducible.
 - Merge consecutive identical states into one frame with a longer delay. Holds and duplicated frames cost nothing visually and shrink the file.
-- Snap delays to the 10 ms grid through cumulative time, then emit differences, so rounding error cannot accumulate:
-
-```python
-def scaled_durations(runs, speed):
-    out, elapsed, emitted = [], 0, 0
-    for _state, ms in runs:
-        elapsed += ms
-        target = round(elapsed / speed / 10) * 10
-        out.append(max(20, target - emitted))
-        emitted += out[-1]
-    return out
-```
-
-- A speed factor scales delays, not the timeline. Resampling would duplicate or drop states.
+- Snap delays to the 10 ms grid through cumulative time, then emit differences, so rounding error cannot accumulate: `target = round(elapsed / 10) * 10`, `delay = max(20, target - emitted)`, then `emitted += delay`.
+- A timing rate maps time rather than resampling the frames; resampling would duplicate or drop states.
 - The loop must contain whole cycles. A seam that jumps in position, color or brightness is the most visible defect in a looping GIF.
 - Frame count is the main cost driver. Halve fps before halving dimensions when text legibility matters.
 
@@ -40,7 +28,7 @@ def scaled_durations(runs, speed):
 Read this section before `--colors`, `--dither`, transparency, brand colors, gradients, or a scene whose colors change across frames.
 
 - Build one palette for all frames from frames sampled across the loop, using median cut. A palette taken from one frame misses colors that appear later and causes flicker.
-- Reserve one index when transparency is needed: 255 colors, index 0 transparent.
+- The routes matte transparency onto their background color, so every output is opaque. A transparent GIF would reserve index 0 and 255 colors; no route writes one.
 - `dither=NONE` for flat art, text and diagrams. Dithering adds noise, breaks glyph edges and increases size.
 - Floyd-Steinberg dithering helps photographic gradients and skin tones. It also makes the GIF larger and grainier on flat regions.
 - Quantization can shift exact brand colors. Verify the rendered output, not the source, when color accuracy matters.
@@ -94,14 +82,14 @@ Read this section before choosing canvas dimensions, downscaling or a host file-
 
 - Render at the target size. If downscaling, resize each frame with LANCZOS; resizing the finished GIF does not work.
 - Keep ASCII cells at least 8x16 px so glyph strokes survive quantization.
-- Reduce dimensions before frame count when text must stay sharp. Reduce fps before dimensions when motion is the point.
+- Reduce the frame count before the dimensions when text must stay sharp. Reduce the dimensions before the frame count when motion is the point.
 - Check the output size against the host. Chat and README embeds often cap around 5-10 MB.
 
 ## Alternatives
 
-Read this section before proposing WebM, MP4, WebP or ffmpeg, and when APNG's color or alpha is the reason for the choice.
+Read this section before proposing WebM, MP4, WebP or ffmpeg, and when APNG's color is the reason for the choice.
 
-- APNG: truecolor, alpha, precise timing, browser support. Larger files, patchy support in chat apps.
+- APNG: truecolor, precise timing, browser support. The writer stores RGB8 without alpha; files are larger, and chat apps support it patchily.
 - WebM or MP4: best for long, high-fps, truecolor sequences. Needs codec tooling and is not an image.
 - GIF remains the most portable option for READMEs, chat and email.
 
