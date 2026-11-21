@@ -1,15 +1,13 @@
 # anikit
 
-An animation maker with a keyframe engine at its centre. One native binary turns text frames, an image folder, a live SVG or HTML page, or a JSON timeline over a static drawing into a GIF, APNG or animated SVG. The same routes convert animations back into pieces you can edit or rebuild.
+Make animations and convert them between formats. One native binary builds a GIF, APNG or animated SVG from text frames, a folder of images, a web page or a timeline written as JSON, and turns existing animations back into frames, JSON or SVG you can edit.
 
-- Motion as numbers: the bundled motion reference holds spacing, contact holds, bounce decay and spring and curve defaults, so the agent reads a table instead of inventing physics.
-- Token economy: the motion rules, routes and checklists live in the skill, so a job fits in about 260K of context and finishes in one session.
-- A clear path for small, open-weight and local models: one route per input, one command per route, presets and two checklists, so a model animates above its initial skill without a render-and-fix loop.
-- Presets cover the common cases; the JSON timeline takes any key, curve or layer you write.
-- A translator between animation formats: animated SVG, CSS or SMIL into the JSON timeline, a timeline out as animated SVG, and GIF or APNG into timed PNG frames.
-- A tweener at the centre: absolute key times, bezier, spring, step and hold easing, ballistic drops, arcs and weighted layers.
-- The output extension picks the format; the binary handles timing, palette, dither and the read-back check.
-- One binary, no Python, Node or package manager. A Chromium based browser is needed only for live pages and tween renders; the SVG export works without one.
+- Text, images, web pages and JSON timelines all become an animation.
+- Converts between formats: animated SVG to a JSON timeline and back, GIF or APNG to frames with timing, and frames back to an animation.
+- The animation know-how is built in: timing, easing, springs, bounce and weight, so a smaller local model gets a good result in a few turns.
+- You can still write any key, curve or layer yourself.
+- One binary, no Python, Node or package manager. A browser is needed only for web pages and JSON timelines; the SVG export needs none.
+- The output file name chooses the format; the binary handles timing, palette and checking.
 
 ## Samples
 

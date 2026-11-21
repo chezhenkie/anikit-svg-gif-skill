@@ -25,7 +25,7 @@ The output extension chooses the format on the four frame routes: `.gif`, `.png`
 
 ## Token budget
 
-One animation is meant to finish in one context, including the roughly 260K windows common on small and local models. Read this file and both references once, choose one route, run one command per attempt, and run the two checklists. The motion values are in the tables; derive nothing from physics and search nothing in the repository.
+One animation is meant to finish in one session. Read this file and both references once, choose one route, run one command per attempt, and run the two checklists. The motion values are in the tables; derive nothing from physics and search nothing in the repository.
 
 ## Binary
 
