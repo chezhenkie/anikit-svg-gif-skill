@@ -9,11 +9,32 @@ Model: DeepSeek V4.1 Flash. Fixed overhead: **10,047 tokens**.
 | run | context token cost | overhead | time | product |
 |---|---:|---:|---:|---|
 | baseline | 10,047 | 0 | 1s | - |
-| task-small | 29,180 | 19,133 | 1m 12s | [task-small.gif](task-small.gif) |
-| task-small-auto | 26,375 | 16,328 | 1m 00s | [task-small-auto.gif](task-small-auto.gif) |
-| task-medium | 76,814 | 66,767 | 7m 17s | [task-medium.gif](task-medium.gif) |
+| task-small | 29,180 | 19,133 | 1m 12s | task-small.gif (missing) |
+| task-small-auto | 26,375 | 16,328 | 1m 00s | task-small-auto.gif (missing) |
+| task-medium | 76,814 | 66,767 | 7m 17s | task-medium.gif (missing) |
 
 Overhead is the part the task added on top of the fixed cost.
+
+## agent-rounds
+
+
+Two subagents ran in parallel from the parent session, one task each, to measure what a three-animation job costs a fresh agent. Costs are per child session; the parent is not counted. There is no baseline row for this group, so no fixed overhead is claimed and the blank-context baseline is not reused.
+
+Constraints given to both agents:
+- Work only in the named scratch folder. Do not edit tracked files, commit, or run WSL.
+- Do not use ffmpeg or Node. This is a project constraint, not a skill rule, and it restricts the tooling available in this round.
+- Read SKILL.md and both references. Follow palette, dither, loop, format, fps, delay and easing rules. Canvas 480x270, 25 fps unless a rule argues otherwise.
+- Three finished animations, original artwork, proper loops, notes.md per set.
+- Task A: colour, any route, three distinct subjects.
+- Task B: black background, white outline only, kinetic principles with the Surfaces section excluded.
+- Run the motion and format checklists, then verify each file's header and frame count with extract.
+
+Contamination in this round:
+- The brief carries the no-ffmpeg/Node restriction above, which the skill does not impose. Results are only comparable with that restriction in mind.
+- The installed kinetic reference was edited after both agents had read it, so they worked from the earlier wording.
+- An earlier pair was interrupted and is excluded: its outputs are in scratch/agent-color-01 and scratch/agent-kinetic-outline-01, and are not test products.
+
+No valid runs yet.
 
 ## Method
 
