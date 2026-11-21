@@ -32,7 +32,7 @@ Read this section before a copied track, echo, follow-through or opacity stagger
 
 10. Follow-through is a delay: one to two frames per link (40 to 80 ms) at 25 fps, and fewer links at 12 fps rather than longer delays. A copied track has no spring, a `gain` field does not exist, and a copy clamps at the source end, so in cycle mode it must wrap modulo the duration.
 11. Keep positions sub-pixel through the move and snap only at render. Snapping every frame turns a 0.4 px move into 1 px jumps.
-12. Nothing may still be moving at the loop seam. Position and velocity must match across it: a spring or chain must be at rest, while a linear or bezier camera may carry constant velocity. A camera that pans across a repeating drawing may jump one tile at the seam, because the pixels then match; without tiling it must return to its start. A one-frame hold at the seam displays as two frames, 80 ms at 25 fps, and it reads only while the rest of the frame is still.
+12. Nothing may still be moving at the loop seam. Position and velocity must match across it: a spring or chain must be at rest, while a linear or bezier camera may carry constant velocity. A camera that pans across a repeating drawing may jump one tile at the seam, because the pixels then match; without tiling it must return to its start. A rest before the seam lasts 3 frames or more, 120 ms at 25 fps and 250 ms at 12; one frame, even doubled at the seam to 80 ms, reads as a pause.
 
 ## Defaults
 
@@ -92,7 +92,7 @@ Run this checklist before reporting, alongside the format validation checklist i
 - Bounce heights decay, and the last bounce is small enough to read as a stop.
 - Overshoot stays within 6 px of travel, measured at the furthest point; today keep the travel small.
 - Copies are staggered by at least one frame, and the loop divides by copies times stagger.
-- Nothing is still moving at the loop point, and a seam hold counts twice.
+- Nothing is still moving at the loop point, a rest before it holds 3 frames, and a seam hold counts twice.
 - The frame budget holds: 2 s at 25 fps is 50 sampled frames before merging; the stored count is lower.
 
 Full specification: docs/specsheet/10-kinetic-motion.md in the source repository.

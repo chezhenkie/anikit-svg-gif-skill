@@ -45,6 +45,7 @@ A spring gains two fields, because a settle cannot be reproduced from stiffness 
 ## 10.3 Contact, bounce and settle
 
 - Every contact reads as a held frame, but the plan has no contact-time hook yet: a 40 ms contact is one frame at 25 fps, and at 12 fps one frame is 80 or 90 ms, so the hold is max(40 ms, one frame) and its key sits on a frame time. A contact of zero frames reads as a bounce off nothing, and it is the commonest single error in a tweened bounce.
+- A rest position inside a loop holds for at least 3 frame times, 120 ms at 25 fps and 250 ms at 12; one frame reads as a pause. The plan shows its last sample through the tail, so the pose must be settled by that sample.
 - Successive bounce heights fall by the square of restitution and the intervals fall by restitution. A height ratio between 0.35 and 0.55 reads natural, which is restitution 0.59 to 0.74; the cartoon default of 0.5 gives 0.25. Above 0.7 it looks mechanical; below 0.2 it looks like sand.
 - A GIF has no room for a full decay. A 100 px drop at restitution 0.55 runs 30 frames to rest at gravity 1400 and a 1 px minimum bounce, so cut to two bounces and a settle, or lower restitution to 0.4.
 - Squash preserves area in two dimensions: width = 1 / height. A 20 percent squash widens 25 percent. Contact squash is 15 to 25 percent, stretch at speed 15 to 30 percent. Squash and stretch are not implemented; a ballistic key that names either is refused, so draw the deformation into the art or bake the frames.
@@ -109,6 +110,7 @@ At mu 0.5 and gravity 1400 a slide of 100 px is 374 px/s over 535 ms, and the la
 | never settles | damping below 0.3, no settle cap | damping 0.5 or above, three overshoots maximum |
 | contradicts mass | elastic on heavy, slow ease-in on light | z 0.8 to 1.0 heavy, 0.4 to 0.6 light |
 | too smooth | no holds, everything overlapping | one or two frame holds, 2 to 3 px per frame |
+| rest not read | a single frame of rest at the loop point | settle 3 frame times before the seam |
 | bounce like a sine | equal heights or equal intervals | heights by e squared, intervals by e |
 | pixel crawl | rounding every frame | snap at render only |
 | loop seam | a spring or chain still moving | settle before the end |
