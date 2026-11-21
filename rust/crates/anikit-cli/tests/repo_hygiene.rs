@@ -114,7 +114,7 @@ fn no_credentials_are_tracked() {
         }
         let text = std::fs::read_to_string(&path).expect("read text file");
         for (number, line) in text.lines().enumerate() {
-            if PREFIXES.iter().any(|prefix| line.contains(prefix)) {
+            if PREFIXES.iter().any(|prefix| starts_token(line, prefix)) {
                 problems.push(format!(
                     "{}:{}: possible credential",
                     relative(&path),
@@ -124,6 +124,16 @@ fn no_credentials_are_tracked() {
         }
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// A prefix counts only where a token starts, so "task-small" is not a key.
+fn starts_token(line: &str, prefix: &str) -> bool {
+    line.match_indices(prefix).any(|(at, _)| {
+        line[..at]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'))
+    })
 }
 
 #[test]
